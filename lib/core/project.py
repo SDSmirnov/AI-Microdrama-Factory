@@ -1,0 +1,74 @@
+"""
+Project dataclass: config, dirs, state, and runtime caches.
+"""
+import json
+import logging
+import os
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any
+
+from lib.core.prompts import load_prompts
+
+logger = logging.getLogger(__name__)
+
+
+@dataclass
+class Project:
+    # Directories
+    output_dir: Path = field(default_factory=lambda: Path("cinematic_render"))
+    ref_dir: Path = field(default_factory=lambda: Path("ref_thriller"))
+    panels_dir: Path = field(default_factory=lambda: Path("cinematic_render/panels"))
+    refined_dir: Path = field(default_factory=lambda: Path("cinematic_render/refined"))
+    image_prompts_dir: Path = field(default_factory=lambda: Path("cinematic_render/image_prompts"))
+
+    # Models (resolved from env at runtime)
+    text_model: str = field(default_factory=lambda: os.getenv('AI_TEXT_MODEL', 'gemini-2.5-pro'))
+    image_model: str = field(default_factory=lambda: os.getenv('AI_IMAGE_MODEL', 'google/gemini-3-pro-image-preview'))
+    gemini_model: str = field(default_factory=lambda: os.getenv('AI_GEMINI_MODEL', 'gemini-2.5-flash'))
+    max_workers: int = field(default_factory=lambda: int(os.getenv('AI_CONCURRENCY', '10')))
+
+    # API keys
+    openrouter_api_key: str = field(default_factory=lambda: os.getenv('OPENROUTER_API_KEY', ''))
+    gemini_api_key: str = field(default_factory=lambda: os.getenv('IMG_AI_API_KEY', '') or os.getenv('GOOGLE_API_KEY', ''))
+
+    # In-memory caches (populated by artist.load_character_refs())
+    character_images: dict = field(default_factory=dict)  # name → png path
+    character_info: dict = field(default_factory=dict)    # name → JSON metadata
+
+    # Token stats per model
+    token_stats: dict = field(default_factory=dict)
+
+    def state_path(self) -> Path:
+        return self.output_dir / "pipeline_state.json"
+
+    def load_state(self) -> dict:
+        p = self.state_path()
+        if p.exists():
+            return json.loads(p.read_text(encoding='utf-8'))
+        return {}
+
+    def save_state(self, state: dict):
+        self.state_path().write_text(json.dumps(state, indent=2), encoding='utf-8')
+
+    def ensure_dirs(self):
+        for d in [self.output_dir, self.ref_dir, self.panels_dir,
+                  self.refined_dir, self.image_prompts_dir]:
+            d.mkdir(parents=True, exist_ok=True)
+
+    def validate_env(self) -> list[str]:
+        """Return list of validation errors."""
+        errors = []
+        if not self.openrouter_api_key:
+            errors.append("OPENROUTER_API_KEY is not set")
+        return errors
+
+
+def load_project(use_custom: bool = False) -> tuple['Project', dict, dict]:
+    """
+    Create Project from env vars, load prompts, return (project, prompts, config).
+    """
+    project = Project()
+    project.ensure_dirs()
+    prompts, config = load_prompts(use_custom=use_custom)
+    return project, prompts, config

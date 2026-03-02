@@ -1,0 +1,202 @@
+"""
+All JSON schemas used across the pipeline, consolidated in one place.
+
+Sources:
+  SCREENPLAY_SCHEMA   — 01_cinematic_preroll.py:187
+  SCENE_SCHEMA        — 01_cinematic_preroll.py:214
+  CHARACTER_SCHEMA    — 01_cinematic_preroll.py:257
+  REVERSAL_SCHEMA     — 01_cinematic_preroll.py:272
+  PANEL_QA_SCHEMA     — 05_grid_quality_gate.py:102
+  UPDATED_REF_SCHEMA  — 06_continuity_enforcer.py:100
+  SCENE_REWRITE_SCHEMA — 06_continuity_enforcer.py:109
+"""
+
+SCREENPLAY_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "logline": {"type": "string"},
+        "title": {"type": "string"},
+        "characters": {"type": "array", "items": {"type": "string"}},
+        "nitpicker_report": {"type": "string"},
+        "shit_redo_report": {"type": "string"},
+        "episodes": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "episode_id": {"type": "integer"},
+                    "location": {"type": "string"},
+                    "daytime": {"type": "string"},
+                    "raw_narrative": {"type": "string", "description": "Full narative from the original text which was used for this episode, do not shorted used text, it will be used for the context"},
+                    "visual_continuity_rules": {"type": "string", "description": "Visual continunity enforcement for the next episode to avoid discrepancies throughout the movie. Never tell 'same', instead pass full details for the visual state."},
+                    "screenplay_instructions": {"type": "string", "description": "Very detailed instructions"},
+                },
+                "required": ["episode_id", "location", "daytime", "raw_narrative", "screenplay_instructions", "visual_continuity_rules"],
+            }
+        }
+    },
+    "required": ["logline", "title", "characters", "episodes", "nitpicker_report"],
+}
+
+SCENE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "scenes": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "scene_id": {"type": "integer"},
+                    "location": {"type": "string"},
+                    "pre_action_description": {"type": "string"},
+                    "panels": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "panel_index": {"type": "integer"},
+                                "visual_start": {"type": "string"},
+                                "visual_end": {"type": "string"},
+                                "motion_prompt": {"type": "string"},
+                                "is_reversed": {"type": "boolean", "description": "True if this panel's action must be revealed in reverse chronological order (e.g. fog clears to reveal a character, door opens and character comes in, charater looks in the window and then turns his face to camera etc). When true, visual_start describes the OBSCURED/FINAL state seen first by the viewer, and visual_end describes the REVEALED/ORIGIN state seen last."},
+                                "motion_prompt_reversed": {"type": "string", "description": "Populated ONLY when is_reversed is true. Describes the reversed playback motion: how the scene should visually transition from visual_start (obscured) to visual_end (revealed) as perceived by the viewer. Empty string when is_reversed is false."},
+                                "lights_and_camera": {"type": "string"},
+                                "dialogue": {"type": "string", "description": "Dialogue line, in Russian, add names and male/female indicators. E.g. 'Alice (old female): What a lovely cityscape here'. David (male kid): I know."},
+                                "voiceover": {"type": "string", "description": "Off-screen narration / inner monologue in Russian synced to panel action. Reveals subtext — what the viewer CANNOT see (fear, memory, desire). Never describes what is visually obvious. Add Male/Female voice indicator. Voiceover must not overlap dialogs. Use timestamps if needed, e.g. 'at 2.0s mark, after Alice finishes her line, Male Voiceover: Damn it!'"},
+                                "emotional_beat": {"type": "string", "description": "Dominant emotion of this panel (single word): tension, revelation, grief, desire, defiance, dread, relief, rage, longing, shock, shame, triumph"},
+                                "hook_type": {"type": "string", "description": "Role of this panel in episode dramaturgy: cold_open | escalation | confrontation | twist | cliffhanger | none"},
+                                "text_safe_composition": {"type": "boolean", "description": "True when key subjects (faces, hands, action) are composed in the middle 65% of frame height, leaving top 15% and bottom 20% clear for subtitle overlays."},
+                                "caption": {"type": "string"},
+                                "duration": {"type": "integer"},
+                                "references": {"type": "array", "items": {"type": "string"}},
+                                "location_references": {"type": "array", "items": {"type": "string"}, "description": "Location/environment references visible in this panel (rooms, buildings, outdoor settings). Used for panel-by-panel rendering to maintain location consistency."},
+                            },
+                            "required": ["panel_index", "visual_start", "visual_end", "motion_prompt", "is_reversed", "motion_prompt_reversed", "lights_and_camera", "dialogue", "voiceover", "emotional_beat", "hook_type", "text_safe_composition", "caption", "duration", "references", "location_references"]
+                        }
+                    }
+                },
+                "required": ["scene_id", "location", "panels"]
+            }
+        }
+    },
+    "required": ["scenes"]
+}
+
+CHARACTER_SCHEMA = {
+    "type": "array",
+    "items": {
+        "type": "object",
+        "properties": {
+            "name": {"type": "string", "description": "Name of the reference. Avoid punctuation, quotes and parenthesis, use only letters, digits and hyphens."},
+            "logline_subject_info": {"type": "string", "description": "One-sentence semantic description of who/what this is in the story (role, relationship, function). Used to deduplicate refs across runs — must be unique enough to distinguish from similarly-named entities."},
+            "visual_desc": {"type": "string", "description": "verbose detailed description for the reference image generation"},
+            "type": {"type": "string", "description": "Character, location, object, interface, room, vehicle"},
+            "video_visual_desc": {"type": "string", "description": "shorter visual description for character reference in the prerolls and video"},
+            "style_reference": {"type": "string", "description": "Name of the existing or new reference, for details consistency. E.g. for view to entrance, use view from entrance."},
+        },
+        "required": ["name", "logline_subject_info", "visual_desc", "type", "style_reference", "video_visual_desc"]
+    }
+}
+
+REVERSAL_SCHEMA = {
+    "type": "array",
+    "items": {
+        "type": "object",
+        "properties": {
+            "panel_index": {"type": "integer"},
+            "motion_prompt_reversed": {"type": "string"}
+        },
+        "required": ["panel_index", "motion_prompt_reversed"]
+    }
+}
+
+PANEL_QA_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "fidelity": {
+            "type": "integer",
+            "description": (
+                "Overall visual fidelity score 0-10. "
+                "10 = perfect match to references and description. "
+                "0 = completely wrong."
+            ),
+        },
+        "character_consistency": {
+            "type": "integer",
+            "description": (
+                "How well characters match their reference images 0-10. "
+                "Evaluate face, hair, build, clothing, helmet design. "
+                "0 if no characters expected. 10 = identical to reference."
+            ),
+        },
+        "composition_match": {
+            "type": "integer",
+            "description": (
+                "How well the panel matches the requested shot type, "
+                "camera angle, and framing 0-10."
+            ),
+        },
+        "artifacts": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": (
+                "List of specific visual artifacts or errors found: "
+                "extra fingers, melted faces, wrong number of people, "
+                "text/watermarks, broken geometry, etc."
+            ),
+        },
+        "needs_refinement": {
+            "type": "boolean",
+            "description": "True if the panel should be regenerated or refined.",
+        },
+        "refinement_prompt": {
+            "type": "string",
+            "description": (
+                "If needs_refinement is true: a precise prompt describing "
+                "WHAT to fix. Reference specific issues. "
+                "If false: empty string."
+            ),
+        },
+        "reasoning": {
+            "type": "string",
+            "description": "Brief explanation of the scores.",
+        },
+    },
+    "required": [
+        "fidelity",
+        "character_consistency",
+        "composition_match",
+        "artifacts",
+        "needs_refinement",
+        "refinement_prompt",
+        "reasoning",
+    ],
+}
+
+UPDATED_REF_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "visual_desc": {"type": "string", "description": "Highly detailed, comprehensive visual description incorporating all new scene details."},
+        "video_visual_desc": {"type": "string", "description": "Shorter summary of the updated description."}
+    },
+    "required": ["visual_desc", "video_visual_desc"]
+}
+
+SCENE_REWRITE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "panels": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "panel_index": {"type": "integer"},
+                    "visual_start": {"type": "string"},
+                    "visual_end": {"type": "string"}
+                },
+                "required": ["panel_index", "visual_start", "visual_end"]
+            }
+        }
+    },
+    "required": ["panels"]
+}

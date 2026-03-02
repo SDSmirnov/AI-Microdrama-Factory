@@ -1,0 +1,370 @@
+"""
+OpenRouter LLM backend — text and image generation.
+
+Text:  POST https://openrouter.ai/api/v1/chat/completions (JSON mode)
+Image: POST https://openrouter.ai/api/v1/chat/completions (modalities: image+text)
+"""
+import base64
+import json
+import logging
+import mimetypes
+from io import BytesIO
+from pathlib import Path
+from typing import Any
+
+import requests
+
+from lib.llm.base import BaseLLM, RateLimiter, retry_on_errors
+
+logger = logging.getLogger(__name__)
+
+OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
+
+
+def _openrouter_model(name: str) -> str:
+    """Auto-prefix model name with 'google/' if no provider prefix is present."""
+    if '/' not in name:
+        return f"google/{name}"
+    return name
+
+
+class OpenRouterLLM(BaseLLM):
+    """Text and image generation via OpenRouter API."""
+
+    def __init__(
+        self,
+        api_key: str,
+        text_model: str,
+        image_model: str,
+        text_rpm: int = 20,
+        image_rpm: int = 10,
+        system_prompt: str = "",
+    ):
+        self.api_key = api_key
+        self.text_model = text_model
+        self.image_model = image_model
+        self.system_prompt = system_prompt
+        self.text_limiter = RateLimiter(text_rpm)
+        self.image_limiter = RateLimiter(image_rpm)
+
+    def _headers(self) -> dict:
+        return {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+        }
+
+    def _model_name(self, name: str) -> str:
+        return _openrouter_model(name)
+
+    def _post_openrouter(self, payload: dict, timeout: int = 300) -> dict:
+        resp = requests.post(OPENROUTER_URL, json=payload, headers=self._headers(), timeout=timeout)
+        resp.raise_for_status()
+        return resp.json()
+
+    @staticmethod
+    def _extract_text(data: dict) -> str:
+        msg = data["choices"][0]["message"]
+        content = msg.get("content")
+        if isinstance(content, str):
+            return content
+        if isinstance(content, list):
+            parts = []
+            for part in content:
+                if isinstance(part, dict):
+                    text = part.get("text")
+                    if text:
+                        parts.append(text)
+            return "\n".join(parts)
+        return str(content or "")
+
+    @staticmethod
+    def _coerce_bytes(item, default_mime: str) -> tuple[bytes, str]:
+        if isinstance(item, bytes):
+            return item, default_mime
+        if isinstance(item, str):
+            p = Path(item)
+            data = p.read_bytes()
+            mime = mimetypes.guess_type(str(p))[0] or default_mime
+            return data, mime
+        if isinstance(item, Path):
+            data = item.read_bytes()
+            mime = mimetypes.guess_type(str(item))[0] or default_mime
+            return data, mime
+        if hasattr(item, "save"):  # PIL.Image-like object
+            with BytesIO() as buf:
+                item.save(buf, format="PNG")
+                return buf.getvalue(), "image/png"
+        raise TypeError(f"Unsupported media type: {type(item)!r}")
+
+    def _to_image_part(self, item) -> dict:
+        if isinstance(item, dict):
+            return item
+        if isinstance(item, str) and item.startswith("data:image/"):
+            return {"type": "image_url", "image_url": {"url": item}}
+        data, mime = self._coerce_bytes(item, "image/png")
+        b64 = base64.b64encode(data).decode("utf-8")
+        return {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{b64}"}}
+
+    def _to_video_part(self, item) -> dict:
+        if isinstance(item, dict):
+            return item
+        if isinstance(item, str) and item.startswith("data:video/"):
+            return {"type": "input_video", "video_url": {"url": item}}
+        data, mime = self._coerce_bytes(item, "video/mp4")
+        b64 = base64.b64encode(data).decode("utf-8")
+        return {"type": "input_video", "video_url": {"url": f"data:{mime};base64,{b64}"}}
+
+    def _normalize_multimodal_part(self, item, media: str = "image") -> dict:
+        if isinstance(item, dict):
+            return item
+        if isinstance(item, str):
+            try:
+                p = Path(item)
+                if p.exists():
+                    return self._to_image_part(p) if media == "image" else self._to_video_part(p)
+            except OSError:
+                pass
+            return {"type": "text", "text": item}
+        return self._to_image_part(item) if media == "image" else self._to_video_part(item)
+
+    # ------------------------------------------------------------------
+    # Text / JSON generation
+    # ------------------------------------------------------------------
+
+    def _call_openrouter(self, messages: list, schema: dict = None) -> str:
+        """POST to OpenRouter chat completions. Returns raw response text."""
+        payload: dict[str, Any] = {
+            "model": self._model_name(self.text_model),
+            "messages": messages,
+            "temperature": 0.5,
+            "max_tokens": 128000,
+        }
+        if schema:
+            payload["response_format"] = {
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "response",
+                    "schema": schema,
+                    "strict": False,
+                }
+            }
+        else:
+            payload["response_format"] = {"type": "json_object"}
+
+        data = self._post_openrouter(payload, timeout=300)
+        return self._extract_text(data)
+
+    def make_json(self, prompt: str, schema: dict = None) -> dict:
+        messages = []
+        if self.system_prompt:
+            messages.append({"role": "system", "content": self.system_prompt})
+        messages.append({"role": "user", "content": prompt})
+
+        self.text_limiter.acquire()
+        try:
+            content = self._call_openrouter(messages, schema)
+            logger.debug(content)
+            return json.loads(content)
+        except Exception as e:
+            logger.error(f"    ❌ JSON error: {e}")
+            raise
+
+    # ------------------------------------------------------------------
+    # Image generation
+    # ------------------------------------------------------------------
+
+    def make_image(
+        self,
+        prompt: str,
+        refs: list = None,
+        aspect_ratio: str = '9:16',
+        image_size: str = '2K',
+    ) -> bytes:
+        """
+        Generate an image via OpenRouter.
+
+        refs: list of OpenAI-style content parts:
+          {"type": "text", "text": "..."}
+          {"type": "image_url", "image_url": {"url": "data:image/png;base64,..."}}
+
+        Returns raw PNG bytes.
+        """
+        contents = [self._normalize_multimodal_part(item) for item in (refs or [])]
+        contents.append({"type": "text", "text": prompt})
+
+        @retry_on_errors(max_retries=3, backoff_factor=2)
+        def _call():
+            self.image_limiter.acquire()
+            payload = {
+                "model": self._model_name(self.image_model),
+                "modalities": ["image", "text"],
+                "messages": [{"role": "user", "content": contents}],
+                "image_config": {
+                    "aspect_ratio": aspect_ratio,
+                    "image_size": image_size,
+                },
+                "config": {"temperature": 0.45, 'seed': 37, 'top_p': 0.6}
+            }
+            data = self._post_openrouter(payload, timeout=180)
+            try:
+                image_url = data["choices"][0]["message"]["images"][0]["image_url"]["url"]
+                return base64.b64decode(image_url.split(",", 1)[1])
+            except (KeyError, IndexError, ValueError) as parse_err:
+                print(data)
+                raise RuntimeError(f"Unexpected image response format: {parse_err}") from parse_err
+
+        return _call()
+
+    # ------------------------------------------------------------------
+    # Image editing and multimodal analysis
+    # ------------------------------------------------------------------
+
+    def edit_image(self, src_img, prompt: str, refs=None) -> bytes:
+        """
+        Edit an existing image with optional reference context.
+
+        src_img: image bytes, file path, Path, PIL.Image, data URL, or content-part dict.
+        refs: optional list of extra context parts (text/images).
+        Returns raw PNG bytes.
+        """
+        contents = [self._to_image_part(src_img)]
+        for ref in refs or []:
+            contents.append(self._normalize_multimodal_part(ref, media="image"))
+        contents.append({"type": "text", "text": f"Edit the first image. {prompt}"})
+
+        @retry_on_errors(max_retries=3, backoff_factor=2)
+        def _call():
+            self.image_limiter.acquire()
+            payload = {
+                "model": self._model_name(self.image_model),
+                "modalities": ["image", "text"],
+                "messages": [{"role": "user", "content": contents}],
+                "config": {"temperature": 0.25, "seed": 42, "top_p": 0.8},
+            }
+            data = self._post_openrouter(payload, timeout=180)
+            try:
+                image_url = data["choices"][0]["message"]["images"][0]["image_url"]["url"]
+                return base64.b64decode(image_url.split(",", 1)[1])
+            except (KeyError, IndexError, ValueError) as parse_err:
+                raise RuntimeError(f"Unexpected edit-image response format: {parse_err}") from parse_err
+
+        return _call()
+
+    def analyze_image(self, image, prompt: str, refs=None, schema: dict = None) -> dict:
+        """
+        Analyze one or more images with optional references and prompt instructions.
+
+        image: single image item or list of multimodal items.
+        refs: optional list prepended before image(s).
+        schema: optional JSON schema for structured output.
+        """
+        contents: list[dict] = []
+        for ref in refs or []:
+            contents.append(self._normalize_multimodal_part(ref, media="image"))
+
+        if isinstance(image, list):
+            for item in image:
+                contents.append(self._normalize_multimodal_part(item, media="image"))
+        else:
+            contents.append(self._normalize_multimodal_part(image, media="image"))
+
+        if prompt:
+            contents.append({"type": "text", "text": prompt})
+
+        @retry_on_errors(max_retries=3, backoff_factor=2)
+        def _call():
+            self.text_limiter.acquire()
+            payload: dict[str, Any] = {
+                "model": self._model_name(self.text_model),
+                "messages": [{"role": "user", "content": contents}],
+                "temperature": 0.2,
+                "max_tokens": 32000,
+            }
+            if schema:
+                payload["response_format"] = {
+                    "type": "json_schema",
+                    "json_schema": {
+                        "name": "image_analysis",
+                        "schema": schema,
+                        "strict": False,
+                    },
+                }
+            data = self._post_openrouter(payload, timeout=180)
+            text = self._extract_text(data)
+            if schema:
+                return json.loads(text)
+            try:
+                return json.loads(text)
+            except Exception:
+                return {"text": text}
+
+        return _call()
+
+    def analyze_video(self, video, prompt: str, refs=None, schema: dict = None) -> dict:
+        """
+        Analyze a video clip with optional references via OpenRouter multimodal chat.
+
+        video: video bytes/path/data-url/content-part dict, or list of multimodal items.
+        refs: optional list of context items (text/images/videos).
+        """
+        contents: list[dict] = []
+        for ref in refs or []:
+            if isinstance(ref, dict):
+                contents.append(ref)
+            elif isinstance(ref, str):
+                p = Path(ref)
+                if p.exists():
+                    mime = mimetypes.guess_type(str(p))[0] or ""
+                    media = "video" if mime.startswith("video/") else "image"
+                    contents.append(self._normalize_multimodal_part(p, media=media))
+                else:
+                    contents.append({"type": "text", "text": ref})
+            else:
+                contents.append(self._normalize_multimodal_part(ref, media="image"))
+
+        if isinstance(video, list):
+            for item in video:
+                if isinstance(item, dict):
+                    contents.append(item)
+                elif isinstance(item, str):
+                    p = Path(item)
+                    if p.exists():
+                        mime = mimetypes.guess_type(str(p))[0] or ""
+                        media = "video" if mime.startswith("video/") else "image"
+                        contents.append(self._normalize_multimodal_part(p, media=media))
+                    else:
+                        contents.append({"type": "text", "text": item})
+                else:
+                    contents.append(self._to_video_part(item))
+        else:
+            contents.append(self._to_video_part(video))
+
+        if prompt:
+            contents.append({"type": "text", "text": prompt})
+
+        @retry_on_errors(max_retries=3, backoff_factor=2)
+        def _call():
+            self.text_limiter.acquire()
+            payload: dict[str, Any] = {
+                "model": self._model_name(self.text_model),
+                "messages": [{"role": "user", "content": contents}],
+                "temperature": 0.2,
+                "max_tokens": 32000,
+            }
+            if schema:
+                payload["response_format"] = {
+                    "type": "json_schema",
+                    "json_schema": {
+                        "name": "video_analysis",
+                        "schema": schema,
+                        "strict": False,
+                    },
+                }
+            data = self._post_openrouter(payload, timeout=240)
+            text = self._extract_text(data)
+            try:
+                return json.loads(text)
+            except Exception:
+                return {"text": text}
+
+        return _call()
