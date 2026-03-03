@@ -70,7 +70,7 @@ tts:  ## Generate audio: TYPE=speech TEXT="..." OUTPUT=out.wav  or  TYPE=sfx TEX
 	@if [ "$(TYPE)" = "sfx" ]; then \
 	  python cli.py tts sfx "$(TEXT)" $(DURATION) $(OUTPUT); \
 	else \
-	  python cli.py tts speech "$(TEXT)" $(OUTPUT); \
+	  python cli.py --llm $(LLM) tts speech "$(TEXT)" $(OUTPUT); \
 	fi
 
 dub:  ## Smart-dub VIDEO → OUTPUT mp3 (optionally guided by CONTEXT file)

@@ -34,13 +34,24 @@ You are a lead editor for a sci-fi movie. Analyze this AI video clip against the
 - VISUAL END:          {visual_end}
 - MOTION:              {motion_prompt}
 - LIGHTING/CAMERA:     {lights_and_camera}
-- SOUND/DIALOGUE (SFX):{dialogue}
+- SOUND/DIALOGUE:      {dialogue}
+- SOUND DESIGN:        {sound_design}
+- TRANSITION TO NEXT:  {transition_to_next}
 
 ### YOUR GOALS:
 1. Synchronize 'start_time' with the core action (impact, flash, or movement).
 2. Ensure the lighting changes described are captured.
 3. Cut the video BEFORE the AI begins to 'hallucinate' (limbs melting, background warping).
 4. If the video is a static image or misses the main object, set 'is_usable' to false.
+5. For transition_to_next=match_cut: set end_time so the final frame best matches the
+   shape or motion described in the next panel's visual_start. Note the match point in edit_notes.
+6. For transition_to_next=jump_cut: trim aggressively — keep only the peak action moment.
+   Prefer a shorter, punchier cut even if it loses context.
+7. For transition_to_next=smash_cut: end on the sharpest contrast frame (silence→noise or
+   stillness→chaos). Note the contrast in edit_notes.
+8. For transition_to_next=j_cut: set end_time to include the final 1–2s where the next
+   scene's audio should begin bleeding in. Note the j_cut point in edit_notes.
+9. Respect sound_design cues when choosing start_time/end_time — align cuts to sonic events.
 
 Provide technical edit notes in 'edit_notes'.
 """
@@ -54,6 +65,8 @@ def analyze_clip(llm: BaseLLM, video_path: Path, panel: dict) -> dict | None:
         motion_prompt=panel.get("motion_prompt", ""),
         lights_and_camera=panel.get("lights_and_camera", ""),
         dialogue=panel.get("dialogue", ""),
+        sound_design=panel.get("sound_design", ""),
+        transition_to_next=panel.get("transition_to_next", "hard_cut"),
     )
 
     try:

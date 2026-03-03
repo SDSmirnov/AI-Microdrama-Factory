@@ -92,3 +92,7 @@ class BaseLLM(ABC):
 
     def analyze_video(self, video, prompt: str, refs=None, schema: dict = None) -> dict:
         raise NotImplementedError(f"{self.__class__.__name__} does not support analyze_video")
+
+    def make_speech(self, text: str, voice: str, output_path: "Path", tone: str = "neutral") -> bool:
+        """Generate speech audio to output_path. Returns True on success."""
+        raise NotImplementedError(f"{self.__class__.__name__} does not support make_speech")

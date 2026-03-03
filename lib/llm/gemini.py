@@ -31,12 +31,14 @@ class GeminiLLM(BaseLLM):
         text_model: str = "gemini-2.5-flash",
         image_model: str = "gemini-3-pro-image-preview",
         video_model: str = "veo-3.1-fast-generate-preview",
+        tts_model: str = "gemini-2.5-flash-preview-tts",
         rpm: int = 30,
     ):
         self.api_key = api_key
         self.text_model = text_model
         self.image_model = image_model
         self.video_model = video_model
+        self.tts_model = tts_model
         self.limiter = RateLimiter(rpm)
 
         from google import genai
@@ -272,6 +274,60 @@ class GeminiLLM(BaseLLM):
         except Exception as e:
             logger.error(f"❌ Gemini analyze_video error: {e}")
             return {}
+
+    # ------------------------------------------------------------------
+    # TTS (speech generation)
+    # ------------------------------------------------------------------
+
+    def make_speech(self, text: str, voice: str, output_path: "Path", tone: str = "neutral") -> bool:
+        """
+        Generate speech via Gemini TTS and write to output_path.
+
+        text:  plain text to synthesize.
+        voice: Gemini built-in voice name (e.g. "Rasalgethi", "Zephyr").
+        tone:  emotion/delivery instruction passed as a prompt preamble.
+        Returns True on success.
+        """
+        import wave
+        from pathlib import Path as _Path
+        from google.genai import types
+
+        speech_config = types.SpeechConfig(
+            voice_config=types.VoiceConfig(
+                prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=voice)
+            )
+        )
+        prompt = (
+            f"Read the following line naturally in Russian or English (detect language).\n\n"
+            f"EMOTION/TONE: {tone}\n\nTEXT TO READ:\n{text}\n\n"
+            f"INSTRUCTION: Apply the emotion, but do not read these instructions aloud."
+        )
+        try:
+            response = self.client.models.generate_content(
+                model=self.tts_model,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    response_modalities=["AUDIO"],
+                    speech_config=speech_config,
+                ),
+            )
+            for part in response.candidates[0].content.parts:
+                if part.inline_data:
+                    data = part.inline_data.data
+                    mime = part.inline_data.mime_type
+                    if "audio/L16" in mime or "pcm" in mime:
+                        with wave.open(str(output_path), "wb") as wav:
+                            wav.setnchannels(1)
+                            wav.setsampwidth(2)
+                            wav.setframerate(24000)
+                            wav.writeframes(data)
+                    else:
+                        _Path(output_path).write_bytes(data)
+                    return True
+            return False
+        except Exception as e:
+            logger.error(f"❌ Gemini TTS error: {e}")
+            return False
 
     # ------------------------------------------------------------------
     # Video generation (Veo)

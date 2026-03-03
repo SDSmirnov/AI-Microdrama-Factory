@@ -1,24 +1,18 @@
 """
 lib/audio/tts.py — Speech and SFX generation.
 
-Speech: Gemini TTS  (GOOGLE_API_KEY)
+Speech: via BaseLLM.make_speech (default: GeminiLLM with Gemini TTS)
 SFX:    ElevenLabs  (ELEVEN_API_KEY)
 """
 
 import os
-import wave
 from pathlib import Path
-
-from google import genai
-from google.genai import types
 
 try:
     from elevenlabs.client import ElevenLabs
     HAS_ELEVEN = True
 except ImportError:
     HAS_ELEVEN = False
-
-GEMINI_MODEL_TTS = "gemini-2.5-flash-preview-tts"
 
 # Voice name → Gemini built-in voice
 VOICE_MAP: dict[str, str] = {
@@ -43,11 +37,35 @@ VOICE_MAP: dict[str, str] = {
 }
 
 
-def _gemini_client(api_key: str | None = None) -> genai.Client:
+# Voice name → OpenAI voice (for use with OpenRouterLLM / openai/gpt-audio)
+OPENROUTER_VOICE_MAP: dict[str, str] = {
+    "narrator":       "onyx",
+    "narrator_drama": "fable",
+    "narrator_soft":  "shimmer",
+    "male_hero":      "echo",
+    "male_deep":      "onyx",
+    "male_calm":      "alloy",
+    "male_villain":   "ash",
+    "male_old":       "sage",
+    "male_casual":    "echo",
+    "male":           "echo",
+    "female_hero":    "nova",
+    "female_strict":  "coral",
+    "female_soft":    "shimmer",
+    "female_mature":  "ballad",
+    "female_mystic":  "verse",
+    "female":         "nova",
+    "child":          "nova",
+    "robot":          "alloy",
+}
+
+
+def _default_llm(api_key: str | None = None):
+    from lib.llm.gemini import GeminiLLM
     key = api_key or os.getenv("GOOGLE_API_KEY") or os.getenv("IMG_AI_API_KEY")
     if not key:
         raise RuntimeError("GOOGLE_API_KEY not set")
-    return genai.Client(api_key=key)
+    return GeminiLLM(api_key=key)
 
 
 def _eleven_client(api_key: str | None = None):
@@ -90,49 +108,20 @@ def generate_speech(
     tone: str,
     output_path: Path,
     api_key: str | None = None,
+    llm=None,
+    voice_map: dict | None = None,
 ) -> bool:
-    """Generate speech via Gemini TTS. Returns True on success."""
-    client = _gemini_client(api_key)
-    gemini_voice = VOICE_MAP.get(voice_key, VOICE_MAP["narrator"])
+    """Generate speech via BaseLLM.make_speech. Returns True on success.
 
-    speech_config = types.SpeechConfig(
-        voice_config=types.VoiceConfig(
-            prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=gemini_voice)
-        )
-    )
+    voice_map: override the default VOICE_MAP (e.g. pass OPENROUTER_VOICE_MAP
+               when using OpenRouterLLM).  If None, VOICE_MAP is used.
+    """
+    if llm is None:
+        llm = _default_llm(api_key)
 
-    prompt = (
-        f"Read the following line naturally in Russian or English (detect language).\n\n"
-        f"EMOTION/TONE: {tone}\n\nTEXT TO READ:\n{text}\n\n"
-        f"INSTRUCTION: Apply the emotion, but do not read these instructions aloud."
-    )
-
-    try:
-        response = client.models.generate_content(
-            model=GEMINI_MODEL_TTS,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                response_modalities=["AUDIO"],
-                speech_config=speech_config,
-            ),
-        )
-        for part in response.candidates[0].content.parts:
-            if part.inline_data:
-                data = part.inline_data.data
-                mime = part.inline_data.mime_type
-                if "audio/L16" in mime or "pcm" in mime:
-                    with wave.open(str(output_path), "wb") as wav:
-                        wav.setnchannels(1)
-                        wav.setsampwidth(2)
-                        wav.setframerate(24000)
-                        wav.writeframes(data)
-                else:
-                    output_path.write_bytes(data)
-                return True
-        return False
-    except Exception as e:
-        print(f"Gemini TTS error: {e}")
-        return False
+    vmap = voice_map if voice_map is not None else VOICE_MAP
+    voice = vmap.get(voice_key, next(iter(vmap.values())))
+    return llm.make_speech(text, voice, output_path, tone=tone)
 
 
 def generate_sfx(

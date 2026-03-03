@@ -351,15 +351,19 @@ def cmd_imgedit(args):
 
 
 def cmd_tts(args):
-    """Generate speech (Gemini TTS) or SFX (ElevenLabs)."""
+    """Generate speech or SFX (ElevenLabs)."""
     from pathlib import Path
-    from lib.audio.tts import parse_speech_input, generate_speech, generate_sfx
+    from lib.core.project import Project
+    from lib.audio.tts import parse_speech_input, generate_speech, generate_sfx, OPENROUTER_VOICE_MAP
 
     output = Path(args.output)
     if args.tts_command == "speech":
         voice, tone, text = parse_speech_input(args.text)
         logger.info(f"Generating speech: [{voice}] [{tone}] {text[:60]}...")
-        ok = generate_speech(text, voice, tone, output)
+        project = Project()
+        llm = _make_llm(args.llm, project)
+        vmap = OPENROUTER_VOICE_MAP if args.llm == "openrouter" else None
+        ok = generate_speech(text, voice, tone, output, llm=llm, voice_map=vmap)
     else:  # sfx
         logger.info(f"Generating SFX: {args.prompt} ({args.duration}s)...")
         ok = generate_sfx(args.prompt, args.duration, output)

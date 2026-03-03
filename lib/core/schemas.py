@@ -66,12 +66,15 @@ SCENE_SCHEMA = {
                                 "emotional_beat": {"type": "string", "description": "Dominant emotion of this panel (single word): tension, revelation, grief, desire, defiance, dread, relief, rage, longing, shock, shame, triumph"},
                                 "hook_type": {"type": "string", "description": "Role of this panel in episode dramaturgy: cold_open | escalation | confrontation | twist | cliffhanger | none"},
                                 "text_safe_composition": {"type": "boolean", "description": "True when key subjects (faces, hands, action) are composed in the middle 65% of frame height, leaving top 15% and bottom 20% clear for subtitle overlays."},
+                                "panel_type": {"type": "string", "description": "narrative | atmosphere_insert. Use atmosphere_insert for 1–2 element minimalist WOW shots (fire, water, fog, shadow, silhouette) inserted as emotional anchors or rhythm breaks between narrative panels. No character refs needed for atmosphere_insert panels."},
+                                "transition_to_next": {"type": "string", "description": "Edit cut technique to the next panel: match_cut (cut on matching shape/motion — visual_end of this panel mirrors visual_start of next), jump_cut (jarring deliberate cut for pace — allows duration 2–3s), smash_cut (sudden silence-to-action or reverse), j_cut (next panel audio begins audibly in the final 1–2s of this panel — note in sound_design), hard_cut (standard clean cut, default)."},
+                                "sound_design": {"type": "string", "description": "Sonic atmosphere cue for this panel, independent of dialogue/voiceover. Required for every panel. E.g.: 'silence', 'ambient hum', 'pin-drop silence building to heartbeat at 5s', 'bass drop on cut', 'amplified footstep at 2s', 'J-cut: rain ambient from next scene starts at 5s', 'glass crack at 4s then silence'."},
                                 "caption": {"type": "string"},
                                 "duration": {"type": "integer"},
                                 "references": {"type": "array", "items": {"type": "string"}},
                                 "location_references": {"type": "array", "items": {"type": "string"}, "description": "Location/environment references visible in this panel (rooms, buildings, outdoor settings). Used for panel-by-panel rendering to maintain location consistency."},
                             },
-                            "required": ["panel_index", "visual_start", "visual_end", "motion_prompt", "is_reversed", "motion_prompt_reversed", "lights_and_camera", "dialogue", "voiceover", "emotional_beat", "hook_type", "text_safe_composition", "caption", "duration", "references", "location_references"]
+                            "required": ["panel_index", "visual_start", "visual_end", "motion_prompt", "is_reversed", "motion_prompt_reversed", "lights_and_camera", "dialogue", "voiceover", "emotional_beat", "hook_type", "text_safe_composition", "panel_type", "transition_to_next", "sound_design", "caption", "duration", "references", "location_references"]
                         }
                     }
                 },

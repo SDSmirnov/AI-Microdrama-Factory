@@ -124,10 +124,50 @@ Set text_safe_composition: true when this is achieved.
 MOTION PROMPTS for vertical format:
 - Prefer vertical camera movements: tilt up/down, vertical dolly, snap zoom into eyes
 - Match motion intensity to emotional_beat (dread = slow creep, shock = snap cut energy, rage = handheld shake)
+- For shock/revelation panels (confrontation, twist): specify a fast zoom-in on the face in lights_and_camera and motion_prompt — "camera snap-zooms into subject's eyes over 0.5s" (Scorsese zoom technique)
+- For static-camera + dynamic-subject contrast (emphasises isolation or action): note "camera locked on tripod, subject moves through frame" in lights_and_camera
 - Duration ~6s per panel; motion should resolve visually but not narratively
+
+TILT REVEAL — vertical-format signature technique:
+Use tilt in motion_prompt to reveal information progressively top-to-bottom or bottom-to-top.
+This exploits the 9:16 frame: start on feet/hands, tilt up to reveal face; or start on face, tilt down to reveal weapon/object.
+Mandatory for at least one confrontation or twist panel per scene. State tilt direction, speed (slow/fast), and what is concealed at the start.
+Example: "camera starts on hands gripping a phone, slow tilt upward over 4s, arrives at subject's face — expression reveals they have read something devastating."
+
+MICRO-EXPRESSION CLUSTER — rapid emotional escalation technique:
+Plan 2–3 consecutive ECU panels (panels 3–5 escalation zone) at duration 1–2s each with transition_to_next=jump_cut between them.
+Each shows the same face in a different emotion: calm → surprise → fear, or doubt → recognition → dread.
+In motion_prompt, describe only the face: micro-muscle shifts, eye movement, lip compression. No camera movement — locked ECU on eyes.
+The rapid succession of emotions in jump_cut rhythm creates maximum tension with minimal action.
+
+BOKEH / SELECTIVE FOCUS — attention direction technique:
+In escalation and twist panels, compose with shallow DOF to isolate a single foreground object (a ring, a phone screen, a scar, a hand).
+Specify in lights_and_camera: "shallow DOF, [object] sharp in foreground, subject/background as bokeh at [distance]."
+This directs the viewer's attention to a prop that carries subtext — without dialogue, the framing tells them what matters.
 
 DIALOGUE: ≤8 words, delivered in CU on speaker's face. Populate both `dialogue` and sync `voiceover` for inner counterpoint.
 VOICEOVER: inner monologue revealing what the image cannot show. Russian language.
+
+SOUND DESIGN (sound_design) — required for EVERY panel:
+- Capture the sonic atmosphere of this exact panel moment, separate from dialogue/voiceover.
+- Plan sonic contrast deliberately: sustained silence broken by a sharp sound is more powerful than continuous noise.
+- MANDATORY: at least one panel per scene must have sound_design="silence" as deliberate setup for the next panel's sonic event. Pair with transition_to_next=smash_cut on the following panel.
+- For j_cut transitions: describe the next scene's audio that bleeds in ("J-cut: rain from next scene starts at 5s mark").
+- Examples: "silence", "low-frequency hum builds", "amplified footstep at 2s, then silence", "heartbeat rises to bass drop on cut", "glass crack at 4s, then pin-drop silence", "distant thunder, growing".
+
+TRANSITION TO NEXT PANEL (transition_to_next):
+- match_cut: plan visual_end of this panel to share a geometric shape or motion vector with visual_start of the next. In motion_prompt, explicitly name the match: "visual_end matches next panel via [circular shape / upward sweep / falling diagonal / vertical line]."
+- jump_cut: intentional jarring cut — reduce duration to 2–3s. Use in escalation bursts and micro-expression clusters for beat-synced pace.
+- smash_cut: maximum contrast — silence cuts to noise, stillness cuts to chaos, or vice versa. Capture contrast in sound_design.
+- j_cut: next panel's audio begins audibly 1–2s before the visual cut. Describe the audio in sound_design.
+- hard_cut: standard clean cut (default).
+
+PANEL TYPE (panel_type):
+- narrative: standard story panel (default for all 9 panels).
+- atmosphere_insert: a single minimalist WOW shot used as emotional anchor or rhythm break. Two subtypes:
+  * ENVIRONMENTAL: 1–2 macro-scale elements (wave, flame, fog bank, storm wall, silhouette on horizon). Grand scale, 2–3 color palette, "minimalism: [element], [light], hyper-realistic." No character refs.
+  * TEXTURE/DETAIL: extreme macro close-up of a physical surface — scarred skin, condensation on glass, cracked concrete, a wedding ring, fabric fibers. Shows what the story is made of. Shallow DOF, single element, fill frame.
+  Used once per episode at the emotional peak or pre-cliffhanger. Duration 3–4s. Transition into/out with smash_cut or match_cut.
 
 **IMPORTANT: EACH SCENE MUST HAVE EXACTLY 9 PANELS following the structure above.**
     """
@@ -154,6 +194,11 @@ We film great viral vertical microdramas.
 **The 3-Second Law:** Episode opens in medias res — the most visually arresting moment, zero explanation.
 The viewer asks "what is happening?" THAT question keeps them watching.
 
+**Cold Open = Visual Question Mark:** The cold_open is NOT just an arresting image — it is an unanswered question.
+Show CONSEQUENCE before CAUSE: the reaction before the stimulus, the wound before the weapon, the running before the threat.
+The viewer must be asking "what happened?" or "what is about to happen?" — that unresolved tension is the hook.
+Never open on exposition, establishing shot, or character introduction. Open on a fragment that demands completion.
+
 **Micro-Act Structure (per episode, 9 panels):**
 - Panels 1–2: HOOK + CONTEXT. Drop into chaos, then orient.
 - Panels 3–5: ESCALATION. Pressure compounds. Each panel adds a new obstacle or revelation.
@@ -161,9 +206,28 @@ The viewer asks "what is happening?" THAT question keeps them watching.
 - Panel 8: TWIST / REVERSAL. One piece of information changes everything.
 - Panel 9: CLIFFHANGER. Freeze on maximum tension. Cut. Never resolve.
 
+**Shot Scale Rhythm:** Prevent monotony by alternating scale across panels.
+After 2–3 consecutive ECU/CU panels, insert one MS or WIDE to re-establish spatial context before the next escalation.
+Note the intended shot scale (ECU / CU / MS / WIDE) for each panel position in screenplay_instructions.
+
 **Dialogue Contract:** Max 8 words per line. People interrupt. People go silent. Silence is dialogue.
 **Voiceover Contract:** Inner monologue or sparse narrator. Synced to visual. Reveals subtext (fear, memory, desire) — never describes what we see.
-**Sound Design:** Include sonic cues in screenplay_instructions ("heartbeat rises", "pin-drop silence", "bass drop on cut"). These drive motion prompt pacing downstream.
+
+**Sonic Arc — plan the episode's sound journey in screenplay_instructions:**
+Map explicitly where silence lives, where the sonic hit lands, and where the crescendo peaks. Example structure:
+"Panels 1–3: low ambient hum, tension. Panel 4: sudden silence. Panel 5: sharp crack on cut. Panels 6–7: music crescendo. Panel 8: drop to silence. Panel 9: single heartbeat, then cut."
+Silence is more powerful than noise. One sonic hit after sustained silence is worth ten continuous sound events.
+
+**Visual Motif — seed and pay off across episodes:**
+In episode 1, establish at least one recurring visual element: a specific object, gesture, framing, or color.
+Record it in visual_continuity_rules as "MOTIF: [description]" and call it back at the climax episode — same framing, transformed meaning.
+Example: a character grips a glass in episode 1 (nervous energy) → the same grip in episode 3 (controlled rage).
+
+**Cliffhanger = Rewatch Hook, not Summary:**
+The final panel must not resolve or summarise — it must leave one visible element unexplained with two possible interpretations.
+The viewer rewinds because the image contains information they missed, not because they were told it was tense.
+Example: a face in extreme close-up showing an emotion that contradicts what just happened. The contradiction is the hook.
+
 **Continuity of Tension:** Each episode ends mid-breath. The cliffhanger is not a summary — it is a question mark with a face.
 
 ## GOLDEN RULES OF TEXT
@@ -186,12 +250,15 @@ LAUNCH INSTRUCTION: deliver text that makes the cinematographer itch to grab a c
 1. Quote raw narrative text verbatim for the context, do not shorten.
 2. Screenplay instructions will be used to generate cinematic prerolls for AI-driven animation. Be very direct and verbose.
 3. Each episode should cover from 30 to 50 seconds of real-time action.
-5. Add continuity rules for episodes, e.g. if in episode 3 hero puts on spacesuit, it should be noted in next episodes (4, 5, etc) until he takes it off.
-6. Episodes will be split for animation independently, so should have enough context.
-7. Cover the full story from beginning to end. Use exactly 3 episodes of 30–50 seconds, so that the final cut version will fit 2 minute Shorts format.
-8. Episode 1 panel 1 MUST be a cold_open — in medias res, maximum visual impact, no exposition.
-9. Mark hook_type for the cold_open panel, emotional peak panel, and cliffhanger panel in screenplay_instructions.
-10. Every episode MUST end on a cliffhanger or revelation — never on resolution.
+4. Add continuity rules for episodes, e.g. if in episode 3 hero puts on spacesuit, it should be noted in next episodes (4, 5, etc) until he takes it off.
+5. Episodes will be split for animation independently, so should have enough context.
+6. Cover the full story from beginning to end. Use exactly 3 episodes of 30–50 seconds, so that the final cut version will fit 2 minute Shorts format.
+7. Episode 1 panel 1 MUST be a cold_open — consequence before cause, visual question mark, no exposition.
+8. Mark hook_type for the cold_open panel, emotional peak panel, and cliffhanger panel in screenplay_instructions.
+9. Every episode MUST end on a cliffhanger or revelation — never on resolution.
+10. In screenplay_instructions, include the episode sonic arc: name exactly where silence lives, where the sonic hit lands, and what the crescendo moment is.
+11. In visual_continuity_rules, tag any visual motif established in this episode with "MOTIF:" prefix so downstream episodes can call it back deliberately.
+12. Note intended shot scale (ECU / CU / MS / WIDE) for each panel position in screenplay_instructions to enforce scale rhythm.
 
 {setting_context}
 
@@ -321,6 +388,9 @@ def process_single_scene(
         panel.setdefault('emotional_beat', '')
         panel.setdefault('hook_type', 'none')
         panel.setdefault('text_safe_composition', True)
+        panel.setdefault('panel_type', 'narrative')
+        panel.setdefault('transition_to_next', 'hard_cut')
+        panel.setdefault('sound_design', 'silence')
         panel.setdefault('location_references', [])
 
     scene = apply_reversal_pass(scene, prompts, config, llm)

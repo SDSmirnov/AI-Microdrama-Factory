@@ -603,7 +603,7 @@ Faces and close-ups are the primary dramatic instrument — this is vertical mic
 Shallow depth of field. Subjects sharp, backgrounds contextual only.
 """
 
-    prompt += f"\nIMPORTANT: Generate SINGLE {resolution} {aspect_ratio} image with panels in grid layout.\n"
+    prompt += f"\nIMPORTANT: Generate SINGLE {resolution} {aspect_ratio} image with 9 panels in 3x3 grid layout.\n"
 
     for p in scene['panels']:
         prompt += f"\nPanel {p['panel_index']}:"

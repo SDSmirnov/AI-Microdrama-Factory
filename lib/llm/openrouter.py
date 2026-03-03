@@ -36,6 +36,7 @@ class OpenRouterLLM(BaseLLM):
         api_key: str,
         text_model: str,
         image_model: str,
+        tts_model: str = "openai/gpt-4o-audio-preview",
         text_rpm: int = 20,
         image_rpm: int = 10,
         system_prompt: str = "",
@@ -43,6 +44,7 @@ class OpenRouterLLM(BaseLLM):
         self.api_key = api_key
         self.text_model = text_model
         self.image_model = image_model
+        self.tts_model = tts_model
         self.system_prompt = system_prompt
         self.text_limiter = RateLimiter(text_rpm)
         self.image_limiter = RateLimiter(image_rpm)
@@ -203,7 +205,8 @@ class OpenRouterLLM(BaseLLM):
                     "aspect_ratio": aspect_ratio,
                     "image_size": image_size,
                 },
-                "config": {"temperature": 0.45, 'seed': 37, 'top_p': 0.6}
+                # "config": {"temperature": 0.45, 'seed': 37, 'top_p': 0.6}
+                "temperature": 0.35, 'seed': 21, 'top_p': 0.8
             }
             data = self._post_openrouter(payload, timeout=180)
             try:
@@ -299,6 +302,96 @@ class OpenRouterLLM(BaseLLM):
                 return {"text": text}
 
         return _call()
+
+    # ------------------------------------------------------------------
+    # TTS via openai/gpt-audio (SSE streaming)
+    # ------------------------------------------------------------------
+
+    # Voices supported by openai/gpt-audio
+    _OPENAI_VOICES = frozenset({
+        "alloy", "ash", "ballad", "coral", "echo",
+        "fable", "onyx", "nova", "sage", "shimmer", "verse",
+    })
+
+    def make_speech(self, text: str, voice: str, output_path: "Path", tone: str = "neutral") -> bool:
+        """
+        Generate TTS via OpenRouter (openai/gpt-audio) and write audio to output_path.
+
+        text:  plain text to synthesize (gpt-audio reads it literally; tone is ignored).
+        voice: OpenAI voice name (alloy, ash, ballad, coral, echo, fable,
+               onyx, nova, sage, shimmer, verse). Falls back to "alloy" if unknown.
+        Returns True on success.
+        """
+        import base64
+        import wave
+        from pathlib import Path as _Path
+
+        if voice not in self._OPENAI_VOICES:
+            voice = "alloy"
+
+        tone_clause = f" with a {tone} tone" if tone and tone != "neutral" else ""
+        prompt = (
+            f"Read the following text aloud exactly as written{tone_clause}, "
+            f"without adding any commentary:\n\n{text}"
+        )
+
+        # OpenRouter requires stream=True for audio; streaming requires pcm16 format.
+        payload = {
+            "model": self.tts_model,
+            "modalities": ["text", "audio"],
+            "audio": {"voice": voice, "format": "pcm16"},
+            "messages": [{"role": "user", "content": prompt}],
+            "stream": True,
+        }
+
+        try:
+            resp = requests.post(
+                OPENROUTER_URL,
+                json=payload,
+                headers=self._headers(),
+                stream=True,
+                timeout=120,
+            )
+            resp.raise_for_status()
+
+            audio_chunks: list[str] = []
+            for raw_line in resp.iter_lines():
+                if not raw_line:
+                    continue
+                line = raw_line if isinstance(raw_line, bytes) else raw_line.encode()
+                if not line.startswith(b"data: "):
+                    continue
+                data = line[6:]
+                if data == b"[DONE]":
+                    break
+                try:
+                    chunk = json.loads(data)
+                    delta = chunk["choices"][0].get("delta", {})
+                    audio_b64 = (delta.get("audio") or {}).get("data")
+                    if audio_b64:
+                        audio_chunks.append(audio_b64)
+                except (KeyError, IndexError, json.JSONDecodeError):
+                    continue
+
+            if not audio_chunks:
+                logger.error("❌ OpenRouter TTS: no audio data in response")
+                return False
+
+            pcm_bytes = base64.b64decode("".join(audio_chunks))
+            out = _Path(output_path)
+            if out.suffix.lower() == ".wav":
+                with wave.open(str(out), "wb") as wav:
+                    wav.setnchannels(1)
+                    wav.setsampwidth(2)
+                    wav.setframerate(24000)
+                    wav.writeframes(pcm_bytes)
+            else:
+                out.write_bytes(pcm_bytes)
+            return True
+
+        except Exception as e:
+            logger.error(f"❌ OpenRouter TTS error: {e}")
+            return False
 
     def analyze_video(self, video, prompt: str, refs=None, schema: dict = None) -> dict:
         """
