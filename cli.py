@@ -11,6 +11,7 @@ Usage:
     python cli.py consistency
     python cli.py storyboard [SCENE|all] [--custom-prompts]
     python cli.py qa [--scene N [--panel N ...]] [--threshold N]
+    python cli.py apply-qa [--scene N] [--frame start|end|static|both]
     python cli.py refinement SCENE PANEL [--frame start|end|both]
     python cli.py animation PROVIDER SCENE PANEL [--frame start|end]
 
@@ -309,6 +310,46 @@ def cmd_qa(args):
         sys.exit(1)
 
 
+def cmd_apply_qa(args):
+    """Refine all panels flagged needs_refinement=true in quality_report.json."""
+    project, prompts, config = load_project(use_custom=args.custom_prompts)
+    llm = _make_vision_llm(args.llm, project)
+
+    report_path = Path("cinematic_render/quality_report.json")
+    if not report_path.exists():
+        logger.error("❌ quality_report.json not found. Run 'qa' first.")
+        sys.exit(1)
+
+    report = json.loads(report_path.read_text(encoding='utf-8'))
+    panels = [p for p in report.get('panels', []) if p.get('needs_refinement')]
+
+    if args.scene is not None:
+        panels = [p for p in panels if p['scene_id'] == args.scene]
+
+    if not panels:
+        logger.info("✅ No panels need refinement.")
+        return
+
+    logger.info(f"🔧 {len(panels)} panel(s) flagged for refinement.")
+
+    metadata = load_metadata()
+    quality_prompts = load_quality_report()
+
+    frames = ['start', 'end'] if args.frame == 'both' else [args.frame]
+
+    success = 0
+    total = 0
+    for panel_info in panels:
+        scene_id = panel_info['scene_id']
+        panel_id = panel_info['panel_id']
+        for frame_type in frames:
+            total += 1
+            if refine_panel(scene_id, panel_id, frame_type, metadata, prompts, config, llm, quality_prompts):
+                success += 1
+
+    logger.info(f"\n✅ {success}/{total} frame(s) refined.")
+
+
 def cmd_refinement(args):
     """Refine specific panel(s) by reference."""
     project, prompts, config = load_project(use_custom=args.custom_prompts)
@@ -538,6 +579,13 @@ def main():
     p.add_argument('--panel', type=int, nargs='+', help='Panel ID(s) (requires single --scene)')
     p.add_argument('--threshold', type=int, default=5, help='Fidelity threshold (default: 5)')
 
+    # apply-qa
+    p = sub.add_parser('apply-qa', help='Refine all needs_refinement panels from quality_report.json')
+    p.add_argument('--scene', type=int, default=None, help='Filter by scene ID')
+    p.add_argument('--frame', choices=['start', 'end', 'static', 'both'], default='both',
+                   help='Frame type to refine (default: both)')
+    p.add_argument('--custom-prompts', action='store_true')
+
     # refinement
     p = sub.add_parser('refinement', help='Refine a specific panel')
     p.add_argument('scene_id', type=int)
@@ -610,6 +658,7 @@ def main():
         'consistency': cmd_consistency,
         'storyboard': cmd_storyboard,
         'qa': cmd_qa,
+        'apply-qa': cmd_apply_qa,
         'refinement': cmd_refinement,
         'animation': cmd_animation,
         'autocut': cmd_autocut,

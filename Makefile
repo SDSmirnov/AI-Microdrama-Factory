@@ -22,7 +22,7 @@ IMAGE       ?=
 EDIT        ?=
 REFS        ?=
 
-.PHONY: help init workdirs styles casting refs screenplay scenes consistency storyboard qa refinement animation \
+.PHONY: help init workdirs styles casting refs screenplay scenes consistency storyboard qa apply-qa refinement animation \
         autocut imgedit tts dub duck
 
 help:  ## Show this help
@@ -57,6 +57,9 @@ storyboard:  ## Render scene grid images or individual panels
 
 qa:  ## Run grid quality gate for SCENE (pass SCENE=N to filter; omit for all)
 	python cli.py --llm $(LLM) qa $(if $(filter-out all,$(SCENE)),--scene $(SCENE),)
+
+apply-qa:  ## Refine all needs_refinement panels from quality_report.json (SCENE=N to filter)
+	python cli.py --llm $(LLM) apply-qa $(if $(filter-out all,$(SCENE)),--scene $(SCENE),) $(CUSTOM)
 
 refinement:  ## Refine panel PANEL in scene SCENE (both must be integers, e.g. SCENE=1 PANEL=3)
 	python cli.py --llm $(LLM) refinement $(SCENE) $(PANEL)
