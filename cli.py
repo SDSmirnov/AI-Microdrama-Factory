@@ -151,7 +151,7 @@ def cmd_screenplay(args):
     """Run full screenplay + scene keyframe pipeline."""
     from lib.core.project import load_project
     from lib.studio.screenwriter import analyze_scenes_master, SYSTEM_PROMPT
-    from lib.studio.artist import auto_cast_characters, load_character_refs, export_image_prompt
+    from lib.studio.artist import load_character_refs, export_image_prompt
 
     project, prompts, config = load_project(use_custom=args.custom_prompts)
     llm = _make_llm(args.llm, project, system_prompt=SYSTEM_PROMPT)
@@ -384,7 +384,6 @@ def cmd_imgedit(args):
 
 def cmd_tts(args):
     """Generate speech or SFX (ElevenLabs)."""
-    from pathlib import Path
     from lib.core.project import Project
     from lib.audio.tts import parse_speech_input, generate_speech, generate_sfx, OPENROUTER_VOICE_MAP
 

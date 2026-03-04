@@ -322,9 +322,7 @@ class OpenRouterLLM(BaseLLM):
                onyx, nova, sage, shimmer, verse). Falls back to "alloy" if unknown.
         Returns True on success.
         """
-        import base64
         import wave
-        from pathlib import Path as _Path
 
         if voice not in self._OPENAI_VOICES:
             voice = "alloy"
@@ -378,7 +376,7 @@ class OpenRouterLLM(BaseLLM):
                 return False
 
             pcm_bytes = base64.b64decode("".join(audio_chunks))
-            out = _Path(output_path)
+            out = Path(output_path)
             if out.suffix.lower() == ".wav":
                 with wave.open(str(out), "wb") as wav:
                     wav.setnchannels(1)

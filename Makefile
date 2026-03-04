@@ -13,6 +13,7 @@ OUT_DIR     ?= cinematic_render/cut
 VIDEO       ?=
 DUBBED      ?=
 OUTPUT      ?= output.mp3
+IMG_OUTPUT  ?= output.png
 CONTEXT     ?=
 TYPE        ?= speech
 TEXT        ?=
@@ -21,7 +22,7 @@ IMAGE       ?=
 EDIT        ?=
 REFS        ?=
 
-.PHONY: help init styles casting refs screenplay scenes consistency storyboard qa refinement animation \
+.PHONY: help init workdirs styles casting refs screenplay scenes consistency storyboard qa refinement animation \
         autocut imgedit tts dub duck
 
 help:  ## Show this help
@@ -29,6 +30,9 @@ help:  ## Show this help
 
 init:  ## Validate env and create directories
 	python cli.py init
+
+workdirs:  ## Create video working directories
+	mkdir -p video/scenes video/music video/sound video/clips
 
 styles:  ## Generate custom_prompts/ for STYLE preset
 	python cli.py --llm $(LLM) styles $(NOVEL) --style $(STYLE)
@@ -46,16 +50,16 @@ scenes:  ## Generate keyframes for episode SCENE (or all)
 	python cli.py --llm $(LLM) scenes $(SCENE) $(CUSTOM)
 
 consistency:  ## Run continuity enforcer to sync references
-	python cli.py consistency
+	python cli.py --llm $(LLM) consistency
 
 storyboard:  ## Render scene grid images or individual panels
 	python cli.py --llm $(LLM) storyboard $(SCENE) $(PANEL) $(CUSTOM)
 
-qa:  ## Run grid quality gate for SCENE
-	python cli.py qa --scene $(SCENE)
+qa:  ## Run grid quality gate for SCENE (pass SCENE=N to filter; omit for all)
+	python cli.py --llm $(LLM) qa $(if $(filter-out all,$(SCENE)),--scene $(SCENE),)
 
-refinement:  ## Refine panel PANEL in scene SCENE
-	python cli.py refinement $(SCENE) $(PANEL)
+refinement:  ## Refine panel PANEL in scene SCENE (both must be integers, e.g. SCENE=1 PANEL=3)
+	python cli.py --llm $(LLM) refinement $(SCENE) $(PANEL)
 
 animation:  ## Generate video clips using PROVIDER (veo|grok)
 	python cli.py animation $(PROVIDER) $(SCENE) $(PANEL)
@@ -63,8 +67,8 @@ animation:  ## Generate video clips using PROVIDER (veo|grok)
 autocut:  ## AI-trim clips in CLIPS_DIR using JSON metadata → OUT_DIR
 	python cli.py autocut --json $(JSON) --clips-dir $(CLIPS_DIR) --out-dir $(OUT_DIR)
 
-imgedit:  ## Edit IMAGE with EDIT instruction (+ optional REFS); save to OUTPUT
-	python cli.py imgedit $(OUTPUT) "$(EDIT)" $(IMAGE) $(REFS)
+imgedit:  ## Edit IMAGE with EDIT instruction (+ optional REFS); save to IMG_OUTPUT
+	python cli.py --llm $(LLM) imgedit $(IMG_OUTPUT) "$(EDIT)" $(IMAGE) $(REFS)
 
 tts:  ## Generate audio: TYPE=speech TEXT="..." OUTPUT=out.wav  or  TYPE=sfx TEXT="..." DURATION=3
 	@if [ "$(TYPE)" = "sfx" ]; then \

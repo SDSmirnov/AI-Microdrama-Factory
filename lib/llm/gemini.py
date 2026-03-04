@@ -289,7 +289,6 @@ class GeminiLLM(BaseLLM):
         Returns True on success.
         """
         import wave
-        from pathlib import Path as _Path
         from google.genai import types
 
         speech_config = types.SpeechConfig(
@@ -322,7 +321,7 @@ class GeminiLLM(BaseLLM):
                             wav.setframerate(24000)
                             wav.writeframes(data)
                     else:
-                        _Path(output_path).write_bytes(data)
+                        Path(output_path).write_bytes(data)
                     return True
             return False
         except Exception as e:
