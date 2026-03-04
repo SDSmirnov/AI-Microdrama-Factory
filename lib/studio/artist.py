@@ -35,9 +35,7 @@ def _safe_name(name: str) -> str:
 
 def _png_to_data_url(path: str) -> str:
     """Read a PNG and return a base64 data URL."""
-    with open(path, "rb") as f:
-        b64 = base64.b64encode(f.read()).decode("utf-8")
-    return f"data:image/png;base64,{b64}"
+    return "data:image/png;base64," + base64.b64encode(Path(path).read_bytes()).decode("utf-8")
 
 
 # ---------------------------------------------------------------------------
@@ -219,8 +217,8 @@ def render_character_refs(prompts: dict, config: dict, llm: BaseLLM, project: Pr
         return
 
     logger.info(f"  📋 {len(to_render)} references to render.")
-    with ThreadPoolExecutor(max_workers=1) as executor:
-        executor.map(lambda c: _render_single_ref(c, config, project, llm), to_render)
+    for c in to_render:
+        _render_single_ref(c, config, project, llm)
 
 
 # ---------------------------------------------------------------------------
@@ -294,7 +292,7 @@ def _render_single_grid(scene: dict, scene_id: int, prompts: dict, config: dict,
             png_path = project.character_images[name]
             info = ""
             try:
-                meta = json.loads(open(png_path.replace('.png', '.json')).read())
+                meta = json.loads(Path(png_path).with_suffix('.json').read_text(encoding='utf-8'))
                 info = meta.get('video_visual_desc', '')
             except Exception:
                 pass
@@ -459,7 +457,7 @@ def _build_ref_contents(panel: dict, project: Project) -> list:
         png_path = project.character_images[name]
         info = ""
         try:
-            meta = json.loads(open(png_path.replace('.png', '.json')).read())
+            meta = json.loads(Path(png_path).with_suffix('.json').read_text(encoding='utf-8'))
             info = meta.get('video_visual_desc', '')
         except Exception:
             pass

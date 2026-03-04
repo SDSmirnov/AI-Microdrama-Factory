@@ -211,8 +211,6 @@ No captions or text overlays!
     refs.append("\n# ORIGINAL COMPOSITION REFERENCE\nPreserve this exact composition, lighting, and layout:\n")
     refs.append(original_img)
 
-    aspect_ratio = config.get('image_generation', {}).get('aspect_ratio', '9:16')
-
     try:
         img_bytes = llm.make_image(
             refinement_prompt,
@@ -240,5 +238,5 @@ No captions or text overlays!
             return False
 
     except Exception as e:
-        logger.error(f"❌ Generation error: {e}", e)
+        logger.error(f"❌ Generation error: {e}", exc_info=True)
         return False

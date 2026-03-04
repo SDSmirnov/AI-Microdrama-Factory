@@ -101,7 +101,9 @@ def ffmpeg_cut(input_path: Path, output_path: Path, start: float, end: float) ->
         "-c:a", "aac", "-b:a", "192k",
         str(output_path),
     ]
-    subprocess.run(cmd, capture_output=True)
+    result = subprocess.run(cmd, capture_output=True)
+    if result.returncode != 0:
+        logger.error(f"ffmpeg failed ({result.returncode}): {result.stderr.decode()[:300]}")
 
 
 def run_autocut(

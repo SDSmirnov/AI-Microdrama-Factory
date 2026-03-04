@@ -213,7 +213,7 @@ class OpenRouterLLM(BaseLLM):
                 image_url = data["choices"][0]["message"]["images"][0]["image_url"]["url"]
                 return base64.b64decode(image_url.split(",", 1)[1])
             except (KeyError, IndexError, ValueError) as parse_err:
-                print(data)
+                logger.debug("Unexpected image response: %s", data)
                 raise RuntimeError(f"Unexpected image response format: {parse_err}") from parse_err
 
         return _call()

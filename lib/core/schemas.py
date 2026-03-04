@@ -1,14 +1,5 @@
 """
 All JSON schemas used across the pipeline, consolidated in one place.
-
-Sources:
-  SCREENPLAY_SCHEMA   — 01_cinematic_preroll.py:187
-  SCENE_SCHEMA        — 01_cinematic_preroll.py:214
-  CHARACTER_SCHEMA    — 01_cinematic_preroll.py:257
-  REVERSAL_SCHEMA     — 01_cinematic_preroll.py:272
-  PANEL_QA_SCHEMA     — 05_grid_quality_gate.py:102
-  UPDATED_REF_SCHEMA  — 06_continuity_enforcer.py:100
-  SCENE_REWRITE_SCHEMA — 06_continuity_enforcer.py:109
 """
 
 SCREENPLAY_SCHEMA = {

@@ -192,8 +192,6 @@ For {preset['name']}:
 
 Return ONLY the filled markdown content, no explanations.
 """
-    style_md = llm.make_json(style_prompt, None)
-    # For plain text outputs, use a text-only schema trick
     style_md_text = _generate_text(llm, style_prompt)
     (CUSTOM_DIR / "style.md").write_text(style_md_text, encoding='utf-8')
 

@@ -361,18 +361,11 @@ class GeminiLLM(BaseLLM):
                 else:
                     source.image = start_image
 
-            if start_image:
-                operation = self.client.models.generate_videos(
-                    model=self.video_model,
-                    source=source,
-                    config=veo_config,
-                )
-            else:
-                operation = self.client.models.generate_videos(
-                    model=self.video_model,
-                    source=source,
-                    config=veo_config,
-                )
+            operation = self.client.models.generate_videos(
+                model=self.video_model,
+                source=source,
+                config=veo_config,
+            )
 
             poll_interval = 10
             while not operation.done:

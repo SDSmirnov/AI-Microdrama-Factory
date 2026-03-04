@@ -309,7 +309,6 @@ def apply_reversal_pass(scene: dict, prompts: dict, config: dict, llm: BaseLLM) 
 
     setting_context = prompts.get('setting', '')
     panels_context = json.dumps(reversed_panels, ensure_ascii=False, indent=2)
-
     prompt = f"""
 You are a Master Cinematographer writing motion prompts for AI video generation.
 
@@ -337,8 +336,6 @@ Rules:
 PANELS TO PROCESS:
 {panels_context}
 """
-
-    refine_limiter_rpm = 25
 
     @retry_on_errors(max_retries=3, backoff_factor=2)
     def _call_api():

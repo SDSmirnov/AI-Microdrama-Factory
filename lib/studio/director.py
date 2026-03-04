@@ -143,6 +143,17 @@ def enrich_and_regenerate_reference(
                 refs.append(f"## Visual Style reference for {ref_data['style_reference']}")
                 refs.append(Image.open(style_path))
 
+        try:
+            img_bytes = llm.make_image(ref_prompt, refs=refs, aspect_ratio='9:16', image_size='1K')
+            if img_bytes:
+                png_path.write_bytes(img_bytes)
+                logger.info(f"    ✅ PNG saved: {png_path}")
+            else:
+                logger.error(f"    ❌ Empty image response for {ref_name}")
+        except Exception as e:
+            logger.error(f"    ❌ Failed to render {ref_name}: {e}")
+
+
 def align_scene_prompts(scene: Dict, all_refs_data: Dict, llm: BaseLLM) -> Dict:
     """Rewrite panel visual_start/visual_end to match approved references."""
     logger.info(f"🎬 Aligning Scene {scene['scene_id']}...")
