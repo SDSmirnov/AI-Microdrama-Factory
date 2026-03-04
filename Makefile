@@ -90,3 +90,8 @@ dub:  ## Smart-dub VIDEO → OUTPUT mp3 (optionally guided by CONTEXT file)
 
 duck:  ## Duck original audio in VIDEO wherever DUBBED track speaks → OUTPUT mp3
 	python cli.py duck $(VIDEO) $(DUBBED) $(OUTPUT)
+
+webserver:  ## Start static web server on :5005 and open Chrome at web/index.html
+	@echo "Starting server at http://localhost:5005/web/index.html"
+	@(sleep 1 && google-chrome --new-tab "http://localhost:5005/web/index.html" 2>/dev/null &) &
+	python3 -m http.server 5005 --directory .

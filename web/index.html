@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Microdrama Factory</title>
+  <link rel="stylesheet" href="index.css">
+</head>
+<body>
+  <header>
+    <h1>AI Microdrama Factory</h1>
+    <nav id="tabs">
+      <button class="tab-btn active" data-tab="story">Story Text</button>
+      <button class="tab-btn" data-tab="prompts">Custom Prompts</button>
+      <button class="tab-btn" data-tab="screenplay">Screenplay</button>
+      <button class="tab-btn" data-tab="casting">Casting</button>
+      <button class="tab-btn" data-tab="scenes">Scenes</button>
+      <button class="tab-btn" data-tab="qa">QA</button>
+      <button class="tab-btn" data-tab="refinements">Refinements</button>
+    </nav>
+  </header>
+
+  <main>
+    <!-- Story Text -->
+    <section id="tab-story" class="tab-pane active">
+      <div class="section-header">
+        <h2>Story Text</h2>
+        <select id="story-file-select"><option value="">Select file…</option></select>
+      </div>
+      <div id="story-content" class="text-content placeholder">No story file selected.</div>
+    </section>
+
+    <!-- Custom Prompts -->
+    <section id="tab-prompts" class="tab-pane">
+      <div class="section-header">
+        <h2>Custom Prompts</h2>
+        <div class="toggle-group">
+          <button class="toggle-btn active" data-dir="custom_prompts">custom_prompts/</button>
+          <button class="toggle-btn" data-dir="prompts">prompts/</button>
+        </div>
+      </div>
+      <div id="prompts-tabs" class="sub-tabs"></div>
+      <div id="prompts-content" class="text-content placeholder">Loading…</div>
+    </section>
+
+    <!-- Screenplay -->
+    <section id="tab-screenplay" class="tab-pane">
+      <h2>Screenplay</h2>
+      <div id="screenplay-meta" class="meta-block"></div>
+      <div id="screenplay-episodes" class="episode-list"></div>
+    </section>
+
+    <!-- Casting -->
+    <section id="tab-casting" class="tab-pane">
+      <h2>Casting <span class="badge" id="casting-count"></span></h2>
+      <div class="filter-row">
+        <input type="text" id="casting-search" placeholder="Filter by name or type…">
+        <select id="casting-type-filter"><option value="">All types</option></select>
+      </div>
+      <div id="casting-grid" class="ref-grid"></div>
+    </section>
+
+    <!-- Scenes -->
+    <section id="tab-scenes" class="tab-pane">
+      <div class="section-header">
+        <h2>Scenes</h2>
+        <select id="scene-select"><option value="">Select scene…</option></select>
+      </div>
+      <div id="scenes-content"></div>
+    </section>
+
+    <!-- QA -->
+    <section id="tab-qa" class="tab-pane">
+      <h2>QA Report</h2>
+      <div id="qa-summary" class="meta-block"></div>
+      <div id="qa-content"></div>
+    </section>
+
+    <!-- Refinements -->
+    <section id="tab-refinements" class="tab-pane">
+      <h2>Refinements</h2>
+      <div id="refinements-content" class="placeholder">Loading…</div>
+    </section>
+  </main>
+
+  <div id="lightbox" class="lightbox hidden">
+    <div class="lightbox-backdrop"></div>
+    <img class="lightbox-img" src="" alt="">
+    <button class="lightbox-close">✕</button>
+  </div>
+
+  <script src="index.js"></script>
+</body>
+</html>
