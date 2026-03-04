@@ -5,7 +5,9 @@ Port of 06_continuity_enforcer.py using a BaseLLM backend.
 """
 import json
 import logging
+import shutil
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime
 from pathlib import Path
 from typing import Dict, List
 
@@ -42,6 +44,25 @@ CASTING_RULES = """
   - MIDDLE: View inside from the entrance, wide shot
   - BOTTOM: View inside to the entrance, wide shot
 """
+
+
+def _backup_refs(ref_dir: Path, extra_files: list = None) -> Path:
+    """Copy all ref JSON + PNG files (and any extra_files) into ref_dir/backup-YYYYMMDDHHmm/."""
+    timestamp = datetime.now().strftime("%Y%m%d%H%M")
+    backup_dir = ref_dir / f"backup-{timestamp}"
+    backup_dir.mkdir(parents=True, exist_ok=True)
+    count = 0
+    for pattern in ("*.json", "*.png"):
+        for f in ref_dir.glob(pattern):
+            shutil.copy2(f, backup_dir / f.name)
+            count += 1
+    for f in (extra_files or []):
+        f = Path(f)
+        if f.exists():
+            shutil.copy2(f, backup_dir / f.name)
+            count += 1
+    logger.info(f"📦 Backed up {count} files → {backup_dir}")
+    return backup_dir
 
 
 def collect_reference_usage(metadata: Dict) -> Dict[str, List[str]]:
@@ -193,6 +214,9 @@ def run_continuity_pass(
     logger.info("=== STEP 1: REFERENCE USAGE ANALYSIS ===")
     ref_usage = collect_reference_usage(metadata)
 
+    logger.info("=== STEP 1b: BACKING UP REFERENCES + METADATA ===")
+    _backup_refs(ref_dir, extra_files=[metadata_path])
+
     logger.info("=== STEP 2: ENRICHING REFERENCES ===")
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         for ref_name, usages in ref_usage.items():
@@ -210,7 +234,8 @@ def run_continuity_pass(
         ))
 
     metadata['scenes'] = aligned_scenes
-    out_path = OUTPUT_DIR / "animation_metadata_consistent.json"
+    # Overwrite animation_metadata.json in-place — it IS the single source of truth
+    out_path = metadata_path
     out_path.write_text(json.dumps(metadata, ensure_ascii=False, indent=2), encoding='utf-8')
-    logger.info(f"✅ Done. Consistent metadata saved: {out_path}")
+    logger.info(f"✅ Done. Metadata updated in-place: {out_path}")
     return out_path

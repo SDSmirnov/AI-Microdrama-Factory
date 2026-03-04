@@ -7,8 +7,12 @@ Steps:
 4. Check if `custom_prompts/setting.md` exists — use it; otherwise use `prompts/setting.md`. Read it.
 5. Check if `custom_prompts/config.json` exists — use it; otherwise use `prompts/config.json`. Read it for `panels_per_scene` and `animation.enabled`.
 6. List all `.png` files in `ref_thriller/` — these are the available character/location references.
-7. Generate scene keyframes following all instructions below.
+7. Generate scene keyframes following all instructions below. Set `episode_id` = $ARGUMENTS in every scene object.
 8. Write output to `cinematic_render/animation_episode_scenes_{episode_id:03d}.json` (zero-padded to 3 digits).
+9. **Update `cinematic_render/animation_metadata.json` (single source of truth):**
+   - If the file exists, read it. Remove all scenes where `episode_id` equals $ARGUMENTS. Find the `scene_id` of the last remaining scene (or 0 if none). Assign sequential `scene_id` values to the new scenes starting from that value + 1. Insert the new scenes, keeping all others, sorted by `scene_id`. Preserve the existing `config` key if present, otherwise set it from the config loaded in step 5.
+   - If the file does not exist, create it as `{"scenes": [...new scenes with scene_id starting at 1...], "config": <config from step 5>}`.
+   - Write the result back to `cinematic_render/animation_metadata.json`.
 
 ---
 
@@ -87,6 +91,7 @@ Expected clip length in seconds: 6–8.
   "scenes": [
     {
       "scene_id": 1,
+      "episode_id": 1,
       "location": "INT. LOCATION — TIME OF DAY",
       "pre_action_description": "Setup/context before the first panel action begins",
       "panels": [

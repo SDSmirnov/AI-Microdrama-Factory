@@ -380,6 +380,7 @@ def process_single_scene(
     all_scenes: list,
 ):
     scene['scene_id'] = scene_id
+    scene['episode_id'] = episode_counter
     for idx, panel in enumerate(scene.get('panels', []), 1):
         panel['panel_index'] = idx
         panel.setdefault('is_reversed', False)

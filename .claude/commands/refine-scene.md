@@ -10,6 +10,9 @@ Steps:
 7. For each name in any panel's `references` array, try to read `ref_thriller/{name_lowercased_underscored}.json` and extract `video_visual_desc`
 8. Refine every scene following all instructions below.
 9. Write the result to the same path with `_refined` inserted before `.json` (e.g., `animation_episode_scenes_003_refined.json`)
+10. **Update `cinematic_render/animation_metadata.json` (single source of truth):**
+    - Read `animation_metadata.json`. For each refined scene, find the matching entry by `scene_id` and replace it. If a scene has no matching `scene_id` in metadata (was added manually), append it.
+    - Write the updated metadata back to `animation_metadata.json`.
 
 ---
 

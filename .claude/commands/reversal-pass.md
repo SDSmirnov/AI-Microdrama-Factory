@@ -11,6 +11,9 @@ Steps:
    - Swap `visual_start` ↔ `visual_end`
    - Replace `motion_prompt` with the generated `motion_prompt_reversed`
 7. Write the updated JSON back to the same file path (overwrite).
+8. **Update `cinematic_render/animation_metadata.json` (single source of truth):**
+   - Read `animation_metadata.json`. For each updated scene, find the matching entry by `scene_id` and update only the affected panels (replace the full panel object for any panel that had `is_reversed: true`).
+   - Write the updated metadata back to `animation_metadata.json`.
 
 ---
 

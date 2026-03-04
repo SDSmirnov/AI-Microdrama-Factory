@@ -169,6 +169,9 @@ def cmd_screenplay(args):
         logger.error("❌ Failed to generate screenplay.")
         sys.exit(1)
 
+    # Embed config so downstream commands (qa, storyboard, etc.) have a single source of truth
+    data.setdefault('config', config)
+
     meta_path = project.output_dir / "animation_metadata.json"
     meta_path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding='utf-8')
 
@@ -219,6 +222,35 @@ def cmd_scenes(args):
 
     logger.info(f"\n✅ Done. {len(all_scenes)} scene(s) processed.")
 
+    if not all_scenes:
+        return
+
+    # Upsert processed scenes into animation_metadata.json (single source of truth)
+    meta_path = project.output_dir / "animation_metadata.json"
+    if meta_path.exists():
+        try:
+            metadata = json.loads(meta_path.read_text(encoding='utf-8'))
+        except Exception:
+            metadata = {}
+    else:
+        metadata = {}
+
+    new_ep_ids = {s.get('episode_id') for s in all_scenes if s.get('episode_id')}
+    kept = [s for s in metadata.get('scenes', []) if s.get('episode_id') not in new_ep_ids]
+
+    # Assign scene_ids: new scenes follow the kept scenes sequentially
+    merged = sorted(kept, key=lambda s: s.get('scene_id', 0))
+    next_id = (merged[-1]['scene_id'] + 1) if merged else 1
+    for scene in all_scenes:
+        scene['scene_id'] = next_id
+        next_id += 1
+        merged.append(scene)
+
+    metadata['scenes'] = merged
+    metadata.setdefault('config', config)
+    meta_path.write_text(json.dumps(metadata, ensure_ascii=False, indent=2), encoding='utf-8')
+    logger.info(f"✅ animation_metadata.json updated: {len(merged)} total scene(s)")
+
 
 def cmd_consistency(args):
     """Run continuity enforcer to sync references and scene prompts."""
@@ -228,7 +260,7 @@ def cmd_consistency(args):
     project = Project()
     llm = _make_vision_llm(args.llm, project)
     out = run_continuity_pass(llm, ref_dir=project.ref_dir, max_workers=project.max_workers)
-    logger.info(f"✅ Consistent metadata saved: {out}")
+    logger.info(f"✅ animation_metadata.json updated in-place: {out}")
 
 
 def cmd_storyboard(args):

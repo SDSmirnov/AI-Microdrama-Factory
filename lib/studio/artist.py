@@ -328,16 +328,23 @@ def _render_single_grid(scene: dict, scene_id: int, prompts: dict, config: dict,
         slice_combined(path_combined, scene_id, config, project)
 
 
-def render_scene_grids(
-    prompts: dict,
-    config: dict,
-    llm: BaseLLM,
-    project: Project,
-    scene_filter: Optional[int] = None,
-):
-    """Render scene grid images from cinematic_render/*_refined.json files."""
-    logger.info("\n🎬 RENDER GRIDS: Generating scene grid images...")
+def _load_scenes(project: Project) -> list:
+    """
+    Load scenes from animation_metadata.json (single source of truth).
+    Falls back to per-episode *_refined.json files if metadata doesn't exist yet.
+    """
+    meta_path = project.output_dir / "animation_metadata.json"
+    if meta_path.exists():
+        try:
+            data = json.loads(meta_path.read_text(encoding='utf-8'))
+            scenes = data.get('scenes', [])
+            logger.info(f"  📋 Loaded {len(scenes)} scene(s) from animation_metadata.json")
+            return scenes
+        except Exception as e:
+            logger.warning(f"  ⚠️  Could not read animation_metadata.json: {e}")
 
+    # Fallback: collect from per-episode refined files
+    logger.warning("  ⚠️  animation_metadata.json not found, falling back to per-episode refined JSONs")
     scenes = []
     for json_path in sorted(project.output_dir.glob("animation_episode_scenes_*_refined.json")):
         try:
@@ -345,9 +352,22 @@ def render_scene_grids(
             scenes.extend(data.get('scenes', []))
         except Exception as e:
             logger.warning(f"  ⚠️  Could not read {json_path}: {e}")
+    return scenes
 
+
+def render_scene_grids(
+    prompts: dict,
+    config: dict,
+    llm: BaseLLM,
+    project: Project,
+    scene_filter: Optional[int] = None,
+):
+    """Render scene grid images from animation_metadata.json (single source of truth)."""
+    logger.info("\n🎬 RENDER GRIDS: Generating scene grid images...")
+
+    scenes = _load_scenes(project)
     if not scenes:
-        logger.warning("  ⚠️  No refined scene JSONs found in cinematic_render/")
+        logger.warning("  ⚠️  No scenes found in animation_metadata.json or per-episode refined JSONs")
         return
 
     if scene_filter is not None:
@@ -498,19 +518,12 @@ def render_panels(
     scene_filter: Optional[int] = None,
     panel_filter: Optional[int] = None,
 ):
-    """Render individual panel images from *_refined.json files."""
+    """Render individual panel images from animation_metadata.json (single source of truth)."""
     logger.info("\n🎬 PANEL RENDER: Generating individual panel images...")
 
-    scenes = []
-    for json_path in sorted(project.output_dir.glob("animation_episode_scenes_*_refined.json")):
-        try:
-            data = json.loads(json_path.read_text(encoding='utf-8'))
-            scenes.extend(data.get('scenes', []))
-        except Exception as e:
-            logger.warning(f"  ⚠️  Could not read {json_path}: {e}")
-
+    scenes = _load_scenes(project)
     if not scenes:
-        logger.warning("  ⚠️  No refined scene JSONs found in cinematic_render/")
+        logger.warning("  ⚠️  No scenes found in animation_metadata.json or per-episode refined JSONs")
         return
 
     aspect_ratio = config['image_generation'].get('aspect_ratio', '9:16')
