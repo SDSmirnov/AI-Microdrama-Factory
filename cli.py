@@ -20,6 +20,7 @@ Usage:
     python cli.py imgedit output.png "make the sky purple" source.png [ref.png ...]
     python cli.py tts speech "Female [tone sad]: Hello world" out.wav
     python cli.py tts sfx "Loud explosion" 3 expl.mp3
+    python cli.py voiceover [--out-dir cinematic_render/voiceover] [--output voiceover.sh]
     python cli.py dub video.mp4 output.mp3 [context.txt]
     python cli.py duck video.mp4 dubbed.mp3 output.mp3
 """
@@ -441,6 +442,58 @@ def cmd_dub(args):
     logger.info(f"\n✅ Dubbing done: {args.output}")
 
 
+def cmd_voiceover(args):
+    """Generate voiceover.sh — a shell script with one tts call per panel voiceover."""
+    import re
+    import shlex
+    import stat
+
+    project = Project()
+    meta_path = project.output_dir / "animation_metadata.json"
+    if not meta_path.exists():
+        logger.error("❌ animation_metadata.json not found. Run 'screenplay' first.")
+        sys.exit(1)
+
+    metadata = json.loads(meta_path.read_text(encoding='utf-8'))
+    out_dir = args.out_dir
+
+    lines = [
+        "#!/usr/bin/env bash",
+        "set -euo pipefail",
+        f"mkdir -p {shlex.quote(out_dir)}",
+        "",
+    ]
+    count = 0
+
+    for scene in metadata.get('scenes', []):
+        scene_id = scene['scene_id']
+        for panel in scene.get('panels', []):
+            panel_idx = panel.get('panel_index', 0)
+            vo_text = (panel.get('voiceover') or '').strip()
+            if not vo_text:
+                continue
+
+            # Strip "Male/Female Voiceover:" prefix for filename slug
+            slug = re.sub(r'^[A-Za-z ]+voiceover\s*:\s*', '', vo_text, flags=re.IGNORECASE)
+            slug = re.sub(r'^[A-Za-z]+\s*:\s*', '', slug)
+            slug = slug[:40]
+            slug = re.sub(r'\W+', '-', slug, flags=re.UNICODE).strip('-').lower()
+            if not slug:
+                slug = "vo"
+
+            out_file = f"{out_dir}/scene_{scene_id:03d}_{panel_idx:02d}_{slug}.wav"
+            lines.append(
+                f"python cli.py --llm \"${{LLM:-openrouter}}\" tts speech {shlex.quote(vo_text)} {shlex.quote(out_file)}"
+            )
+            count += 1
+
+    lines.append("")
+    script_path = Path(args.output)
+    script_path.write_text("\n".join(lines), encoding='utf-8')
+    script_path.chmod(script_path.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+    logger.info(f"✅ {script_path} written: {count} voiceover(s)")
+
+
 def cmd_duck(args):
     """Auto-duck original audio during dubbed speech segments."""
     run_ducking(
@@ -634,6 +687,13 @@ def main():
     p.add_argument('--plan-cache', default='dubbing_plan.json', help='Dubbing plan cache file')
     p.add_argument('--transcription-cache', default='transcription_cache.json', help='Whisper cache file')
 
+    # voiceover
+    p = sub.add_parser('voiceover', help='Generate voiceover.sh script from animation_metadata.json')
+    p.add_argument('--out-dir', default='cinematic_render/voiceover',
+                   help='Output directory for generated .wav files (default: cinematic_render/voiceover)')
+    p.add_argument('--output', default='voiceover.sh',
+                   help='Path for the generated shell script (default: voiceover.sh)')
+
     # duck
     p = sub.add_parser('duck', help='Auto-duck original audio during dubbed speech')
     p.add_argument('video', help='Input MP4 with original audio')
@@ -664,6 +724,7 @@ def main():
         'autocut': cmd_autocut,
         'imgedit': cmd_imgedit,
         'tts': cmd_tts,
+        'voiceover': cmd_voiceover,
         'dub': cmd_dub,
         'duck': cmd_duck,
     }

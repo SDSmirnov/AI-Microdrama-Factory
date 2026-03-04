@@ -1,5 +1,5 @@
-NOVEL     ?= s01e03.txt
-STYLE     ?= vertical_microdrama
+NOVEL          ?= s01e03.txt
+STYLE          ?= vertical_microdrama
 SCENE     ?= all
 PANEL     ?= all
 PROVIDER  ?= veo
@@ -20,10 +20,12 @@ TEXT        ?=
 DURATION    ?= 3
 IMAGE       ?=
 EDIT        ?=
-REFS        ?=
+REFS           ?=
+VOICEOVER_DIR  ?= cinematic_render/voiceover
+VOICEOVER_SH   ?= voiceover.sh
 
 .PHONY: help init workdirs styles casting refs screenplay scenes consistency storyboard qa apply-qa refinement animation \
-        autocut imgedit tts dub duck
+        autocut imgedit tts voiceover dub duck
 
 help:  ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-16s %s\n", $$1, $$2}'
@@ -79,6 +81,9 @@ tts:  ## Generate audio: TYPE=speech TEXT="..." OUTPUT=out.wav  or  TYPE=sfx TEX
 	else \
 	  python cli.py --llm $(LLM) tts speech "$(TEXT)" $(OUTPUT); \
 	fi
+
+voiceover:  ## Generate VOICEOVER_SH script with tts calls for all panel voiceovers
+	python cli.py voiceover --out-dir $(VOICEOVER_DIR) --output $(VOICEOVER_SH)
 
 dub:  ## Smart-dub VIDEO → OUTPUT mp3 (optionally guided by CONTEXT file)
 	python cli.py dub $(VIDEO) $(OUTPUT) $(CONTEXT)
