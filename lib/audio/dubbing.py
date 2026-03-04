@@ -3,8 +3,8 @@ lib/audio/dubbing.py — Smart AI dubbing pipeline.
 
 Steps:
   1. Transcribe original video with Whisper (cached)
-  2. Translate + emotion-annotate segments with Gemini
-  3. Generate TTS per segment with Gemini TTS (cached)
+  2. Translate + emotion-annotate segments with BaseLLM.make_json
+  3. Generate TTS per segment with BaseLLM.make_speech (cached)
   4. Assemble with overlap-resolution into a final audio track
 """
 
@@ -12,12 +12,13 @@ import hashlib
 import json
 import os
 import time
-import wave
 from pathlib import Path
 
-from google import genai
-from google.genai import types
 from pydub import AudioSegment
+
+from lib.llm.base import BaseLLM
+from lib.llm.gemini import GeminiLLM
+from lib.audio.tts import VOICE_MAP, generate_speech
 
 try:
     from moviepy.editor import VideoFileClip
@@ -29,37 +30,20 @@ try:
 except ImportError:
     WhisperModel = None
 
-TRANSLATION_MODEL = "gemini-2.5-pro"
-TTS_MODEL = "gemini-2.5-flash-preview-tts"
-
 TARGET_WPM = 130          # Russian speech rate
 SPEED_TOLERANCE = 1.35    # max speedup factor
 MIN_GAP_MS = 50           # min gap between dub segments
-
-VOICE_MAP: dict[str, str] = {
-    "narrator":       "Rasalgethi",
-    "narrator_drama": "Fenrir",
-    "narrator_soft":  "Vindemiatrix",
-    "male_hero":      "Orus",
-    "male_deep":      "Puck",
-    "male_calm":      "Umbriel",
-    "male":           "Puck",
-    "female_hero":    "Zephyr",
-    "female_strict":  "Kore",
-    "female_soft":    "Achernar",
-    "female":         "Zephyr",
-}
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _gemini_client(api_key: str | None = None) -> genai.Client:
+def _default_llm(api_key: str | None = None) -> BaseLLM:
     key = api_key or os.getenv("GOOGLE_API_KEY") or os.getenv("IMG_AI_API_KEY")
     if not key:
         raise RuntimeError("GOOGLE_API_KEY not set")
-    return genai.Client(api_key=key)
+    return GeminiLLM(api_key=key, text_model="gemini-2.5-pro")
 
 
 def _file_hash(filepath: str) -> str:
@@ -138,10 +122,12 @@ def transcribe_video(
 def analyze_and_translate(
     segments: list[dict],
     context: str = "",
+    llm: BaseLLM | None = None,
     api_key: str | None = None,
 ) -> list[dict]:
     """Translate segments to Russian, add tone/voice_type/speaker_id."""
-    client = _gemini_client(api_key)
+    if llm is None:
+        llm = _default_llm(api_key)
 
     input_data = [
         {
@@ -169,19 +155,14 @@ DO NOT use Markdown.
 
 DATA: {json.dumps(input_data, ensure_ascii=False)}"""
 
-    response = client.models.generate_content(
-        model=TRANSLATION_MODEL,
-        contents=prompt,
-        config=types.GenerateContentConfig(response_mime_type="application/json"),
-    )
-
     try:
-        trans_map = {item["id"]: item for item in json.loads(response.text)}
-    except (json.JSONDecodeError, KeyError):
-        print("Warning: failed to parse Gemini translation response")
+        result = llm.make_json(prompt)
+        trans_map = {item["id"]: item for item in result}
+    except Exception:
+        print("Warning: failed to parse translation response")
         return segments
 
-    result = []
+    enriched = []
     for i, seg in enumerate(segments):
         item = trans_map.get(i, {})
         seg = seg.copy()
@@ -193,8 +174,8 @@ DATA: {json.dumps(input_data, ensure_ascii=False)}"""
             voice_type=item.get("voice_type", "narrator"),
             speaker_id=item.get("speaker_id"),
         )
-        result.append(seg)
-    return result
+        enriched.append(seg)
+    return enriched
 
 
 # ---------------------------------------------------------------------------
@@ -206,48 +187,15 @@ def generate_audio_segment(
     voice_key: str,
     tone: str,
     output_path: Path,
+    llm: BaseLLM | None = None,
     api_key: str | None = None,
 ) -> bool:
     """Generate one dubbed audio segment. Uses file-cache if output_path exists."""
     if output_path.exists():
         return True
-
-    client = _gemini_client(api_key)
-    gemini_voice = VOICE_MAP.get(voice_key, "Rasalgethi")
-
-    speech_config = types.SpeechConfig(
-        voice_config=types.VoiceConfig(
-            prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=gemini_voice)
-        )
-    )
-    prompt = (
-        f"Read the following text in Russian.\n"
-        f"EMOTION/TONE: {tone}\nTEXT: {text}\n"
-        f"Apply the emotion naturally; do not read instructions aloud."
-    )
-
-    try:
-        time.sleep(5)  # rate limiting
-        response = client.models.generate_content(
-            model=TTS_MODEL,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                response_modalities=["AUDIO"],
-                speech_config=speech_config,
-            ),
-        )
-        for part in response.candidates[0].content.parts:
-            if part.inline_data:
-                with wave.open(str(output_path), "wb") as wav:
-                    wav.setnchannels(1)
-                    wav.setsampwidth(2)
-                    wav.setframerate(24000)
-                    wav.writeframes(part.inline_data.data)
-                return True
-        return False
-    except Exception as e:
-        print(f"  TTS error for '{text[:30]}...': {e}")
-        return False
+    if llm is None:
+        llm = _default_llm(api_key)
+    return generate_speech(text, voice_key, tone, output_path, llm=llm)
 
 
 # ---------------------------------------------------------------------------
@@ -287,9 +235,13 @@ def assemble_audio(
     segments: list[dict],
     total_duration: float,
     segments_dir: Path,
+    llm: BaseLLM | None = None,
     api_key: str | None = None,
 ) -> AudioSegment:
     """Generate TTS for each segment and overlay onto a silent track."""
+    if llm is None:
+        llm = _default_llm(api_key)
+
     segments = _resolve_overlaps(segments)
     track = AudioSegment.silent(duration=int(total_duration * 1000))
     segments_dir.mkdir(exist_ok=True)
@@ -301,7 +253,7 @@ def assemble_audio(
 
         out_file = segments_dir / f"seg_{i}_{seg['voice_type']}.wav"
         print(f"  [{i}] [{seg['voice_type']}] [{seg['tone']}] {text[:50]}...")
-        ok = generate_audio_segment(text, seg["voice_type"], seg["tone"], out_file, api_key)
+        ok = generate_audio_segment(text, seg["voice_type"], seg["tone"], out_file, llm=llm)
         if not ok:
             continue
 
@@ -333,9 +285,13 @@ def run_dubbing(
     transcription_cache: str = "transcription_cache.json",
     temp_wav: str = "temp_source.wav",
     segments_dir: str = "temp_segments",
+    llm: BaseLLM | None = None,
     api_key: str | None = None,
 ) -> None:
     """End-to-end dubbing: transcribe → translate → TTS → assemble → export."""
+    if llm is None:
+        llm = _default_llm(api_key)
+
     context = Path(context_path).read_text(encoding="utf-8") if context_path else ""
 
     print("Step 1: Transcribing...")
@@ -347,12 +303,12 @@ def run_dubbing(
         rich_segments = json.loads(plan_file.read_text(encoding="utf-8"))
     else:
         print("Step 2: Translating + analyzing emotions...")
-        rich_segments = analyze_and_translate(segments, context, api_key)
+        rich_segments = analyze_and_translate(segments, context, llm=llm)
         plan_file.write_text(json.dumps(rich_segments, ensure_ascii=False, indent=2), encoding="utf-8")
         print(f"  Plan saved → {plan_cache}")
 
     print("Step 3-4: Generating TTS + assembling...")
-    final_audio = assemble_audio(rich_segments, duration, Path(segments_dir), api_key)
+    final_audio = assemble_audio(rich_segments, duration, Path(segments_dir), llm=llm)
 
     final_audio.export(output_path, format="mp3")
     print(f"\nDone: {output_path}")
