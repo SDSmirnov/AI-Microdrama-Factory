@@ -4,7 +4,7 @@ Steps:
 1. Read the novel file at `$ARGUMENTS`
 2. Check if `custom_prompts/casting.md` exists — use it; otherwise use `prompts/casting.md`. Read it.
 3. Check if `custom_prompts/setting.md` exists — use it; otherwise use `prompts/setting.md`. Read it.
-4. List all `.png` files in `ref_thriller/` — these are already-generated references; only describe NEW ones.
+4. List all `.json` files in `ref_thriller/` and read each one to get existing references (name + logline_subject_info). Only generate NEW ones not already covered.
 5. Generate character/location/object descriptions following all instructions below.
 6. For each new reference, write its metadata to `ref_thriller/{safe_name}.json` where `safe_name` is the name lowercased with spaces replaced by underscores (e.g., `ref_thriller/ruslan_vikonov.json`).
 7. Output the ready-to-use image generation prompt for each new reference.
@@ -26,9 +26,14 @@ Think as a Master Cinematographer analyzing what will physically appear on scree
 - **Object**: Props with meaningful screen presence (weapons, devices, documents)
 - **Interface**: Screens, dashboards, UI elements
 
+## DEDUPLICATION RULES
+
+Match by IDENTITY, not by name. If a character/place in the text is the same entity as an existing reference (same role, same location, same object) — SKIP IT, even if the name differs slightly. Only add a NEW entry if it is genuinely a different entity. If unsure, prefer reusing an existing reference over creating a new one.
+
 ## DESCRIPTION RULES
 
 - `name`: Clean identifier — letters, digits, hyphens only. No quotes, punctuation, or parentheses.
+- `logline_subject_info`: One sentence — who/what this is in the story (role, relationship, function). Must be unique enough to distinguish from similarly-named entities. Used for deduplication across runs.
 - `visual_desc`: 100+ words. Precise enough for AI image generation with zero hallucination. Include: facial structure, eye shape/color, hair style/color, skin tone, build/height, clothing with textures and colors, distinctive features, age.
 - `video_visual_desc`: 30–50 words. Shorter version for use inside scene panel prompts.
 - `style_reference`: Name of an existing reference image to use as visual style base, or same `name` if entirely new.
@@ -67,6 +72,7 @@ For each new reference, output a ready-to-copy image generation prompt:
 [
   {
     "name": "reference-name",
+    "logline_subject_info": "One-sentence role/identity in the story",
     "visual_desc": "Verbose 100+ word description for image generation",
     "type": "Character|Location|Object|Room|Vehicle|Interface",
     "video_visual_desc": "Concise 30-50 word description for use in scene prompts",

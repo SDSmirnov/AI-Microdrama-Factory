@@ -64,6 +64,14 @@ Your task: analyze each scene and enhance every visual description, motion promp
 - Verify `text_safe_composition` is `true` for any panel with dialogue or voiceover
 - Do not change these unless they are clearly wrong
 
+### panel_type / transition_to_next / sound_design
+- Verify `panel_type` is `narrative` or `atmosphere_insert`. Confirm atmosphere_insert panels have no character `references` and use minimalist visual language.
+- Verify `transition_to_next` is set correctly: `match_cut` must name the matching visual element in `motion_prompt`; `jump_cut` panels should have duration 2–3s; `j_cut` panels must describe the bleeding audio in `sound_design`.
+- Verify `sound_design` is present for every panel. At least one panel per scene must have `sound_design="silence"` paired with `transition_to_next=smash_cut` on the following panel. If missing or generic, write a specific sonic cue.
+
+### location_references
+- Verify `location_references` lists any room, building, or outdoor location refs (from `ref_thriller/`) visible in this panel. Add any missing location refs. Leave empty if truly no location reference applies.
+
 ### Reference Alignment
 - For each character in `references`, ensure visual descriptions match their `video_visual_desc` exactly
 - Do not invent new physical traits not established in reference JSONs

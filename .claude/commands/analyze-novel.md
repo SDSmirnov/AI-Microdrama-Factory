@@ -27,6 +27,7 @@ After outputting the JSON, recommend the best visual style preset for this novel
 
 | Preset | Best for |
 |--------|----------|
+| `vertical_microdrama` | Default portrait format for TikTok/Reels/Shorts (9:16) |
 | `realistic_movie` | Contemporary/historical drama, thriller, romance |
 | `anime` | Fantasy, LitRPG, action with stylized aesthetics |
 | `comic_book` | Superhero, action, adventure |
