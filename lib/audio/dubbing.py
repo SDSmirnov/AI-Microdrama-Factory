@@ -19,8 +19,15 @@ from google import genai
 from google.genai import types
 from pydub import AudioSegment
 
-# Resolved lazily so moviepy import doesn't fail at module load
-_moviepy_VideoFileClip = None
+try:
+    from moviepy.editor import VideoFileClip
+except ImportError:
+    VideoFileClip = None
+
+try:
+    from faster_whisper import WhisperModel
+except ImportError:
+    WhisperModel = None
 
 TRANSLATION_MODEL = "gemini-2.5-pro"
 TTS_MODEL = "gemini-2.5-flash-preview-tts"
@@ -74,10 +81,8 @@ def transcribe_video(
     temp_wav: str = "temp_source.wav",
 ) -> tuple[list[dict], float]:
     """Return (segments, total_duration_sec). Caches result in cache_path."""
-    global _moviepy_VideoFileClip
-    if _moviepy_VideoFileClip is None:
-        from moviepy.editor import VideoFileClip
-        _moviepy_VideoFileClip = VideoFileClip
+    if VideoFileClip is None:
+        raise RuntimeError("moviepy not installed; run: pip install moviepy")
 
     video_hash = _file_hash(video_path)
 
@@ -91,14 +96,15 @@ def transcribe_video(
             pass
 
     print("  Extracting audio from video...")
-    clip = _moviepy_VideoFileClip(video_path)
+    clip = VideoFileClip(video_path)
     total_duration = clip.duration
     if not os.path.exists(temp_wav):
         clip.audio.write_audiofile(temp_wav, logger=None)
     clip.close()
 
     print("  Running Whisper transcription...")
-    from faster_whisper import WhisperModel
+    if WhisperModel is None:
+        raise RuntimeError("faster-whisper not installed; run: pip install faster-whisper")
     model = WhisperModel("medium", device="cpu", compute_type="int8")
     segments_raw, _ = model.transcribe(
         temp_wav,

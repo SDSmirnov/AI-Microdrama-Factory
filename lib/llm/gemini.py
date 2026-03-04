@@ -6,9 +6,16 @@ panel refinement, and Veo animation.
 """
 import json
 import logging
+import time
+import wave
 from io import BytesIO
 from pathlib import Path
 from typing import Any
+
+from google import genai
+from google.api_core import exceptions as gapi_exceptions
+from google.genai import types
+from PIL import Image as PILImage
 
 from lib.llm.base import BaseLLM, RateLimiter
 
@@ -41,7 +48,6 @@ class GeminiLLM(BaseLLM):
         self.tts_model = tts_model
         self.limiter = RateLimiter(rpm)
 
-        from google import genai
         self.client = genai.Client(api_key=api_key)
 
     # ------------------------------------------------------------------
@@ -87,13 +93,10 @@ class GeminiLLM(BaseLLM):
         refs: mixed list of PIL.Image objects and str text blocks.
         Returns raw PNG bytes.
         """
-        from PIL import Image as _PILImage
-        from google.genai import types
-
         def _to_part(item):
             if isinstance(item, str):
                 return types.Part.from_text(text=item)
-            if isinstance(item, _PILImage.Image):
+            if isinstance(item, PILImage.Image):
                 buf = BytesIO()
                 item.save(buf, format='PNG')
                 return types.Part.from_bytes(data=buf.getvalue(), mime_type='image/png')
@@ -133,11 +136,9 @@ class GeminiLLM(BaseLLM):
         refs: optional list of paths/PIL images/text blocks.
         Returns raw PNG bytes.
         """
-        from PIL import Image
-
         def _as_content(item):
             if isinstance(item, (str, Path)):
-                return Image.open(item)
+                return PILImage.open(item)
             return item
 
         target = _as_content(src_img)
@@ -176,8 +177,6 @@ class GeminiLLM(BaseLLM):
         refs:   optional list of content items prepended before image
         schema: optional JSON schema for structured output
         """
-        from google.genai import types
-
         def _to_part(item):
             # Wrap raw strings as text Parts so the SDK doesn't try to open them as files
             if isinstance(item, str):
@@ -224,8 +223,6 @@ class GeminiLLM(BaseLLM):
         refs: optional content items prepended before video.
         schema: optional JSON schema for structured output.
         """
-        from google.genai import types
-
         def _as_video_part(item):
             if isinstance(item, (str, Path)):
                 p = Path(item)
@@ -288,9 +285,6 @@ class GeminiLLM(BaseLLM):
         tone:  emotion/delivery instruction passed as a prompt preamble.
         Returns True on success.
         """
-        import wave
-        from google.genai import types
-
         speech_config = types.SpeechConfig(
             voice_config=types.VoiceConfig(
                 prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=voice)
@@ -340,10 +334,6 @@ class GeminiLLM(BaseLLM):
         config: dict or types.GenerateVideosConfig
         Returns raw MP4 bytes.
         """
-        import time
-        from google.api_core import exceptions as gapi_exceptions
-        from google.genai import types
-
         veo_config = config or {
             'duration_seconds': 4,
             'aspect_ratio': "16:9",

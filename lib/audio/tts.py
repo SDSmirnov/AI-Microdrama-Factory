@@ -8,7 +8,10 @@ SFX:    ElevenLabs  (ELEVEN_API_KEY)
 import os
 from pathlib import Path
 
+from lib.llm.gemini import GeminiLLM
+
 try:
+    from elevenlabs import save as eleven_save
     from elevenlabs.client import ElevenLabs
     HAS_ELEVEN = True
 except ImportError:
@@ -61,7 +64,6 @@ OPENROUTER_VOICE_MAP: dict[str, str] = {
 
 
 def _default_llm(api_key: str | None = None):
-    from lib.llm.gemini import GeminiLLM
     key = api_key or os.getenv("GOOGLE_API_KEY") or os.getenv("IMG_AI_API_KEY")
     if not key:
         raise RuntimeError("GOOGLE_API_KEY not set")
@@ -132,13 +134,12 @@ def generate_sfx(
 ) -> bool:
     """Generate SFX via ElevenLabs. Returns True on success."""
     try:
-        from elevenlabs import save
         client = _eleven_client(api_key)
         result = client.text_to_sound_effects.convert(
             text=prompt,
             duration_seconds=min(duration, 22.0),
         )
-        save(result, str(output_path))
+        eleven_save(result, str(output_path))
         return True
     except Exception as e:
         print(f"ElevenLabs SFX error: {e}")

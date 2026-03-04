@@ -10,6 +10,9 @@ from io import BytesIO
 from pathlib import Path
 from typing import Optional
 
+from google import genai
+from google.api_core import exceptions as gapi_exceptions
+from google.genai import types
 from PIL import Image
 
 from lib.animation.base import BaseAnimator
@@ -31,7 +34,6 @@ class VeoAnimator(BaseAnimator):
         ref_dir: Path = Path("ref_thriller"),
         gemini_text_model: str = "gemini-2.5-pro",
     ):
-        from google import genai
         self.client = genai.Client(api_key=api_key)
         self.model = model
         self.resolution = resolution
@@ -98,9 +100,6 @@ Response format, JSON:
         index: int,
         out_dir: Path,
     ) -> Optional[Path]:
-        from google.api_core import exceptions as gapi_exceptions
-        from google.genai import types
-
         clip_id = start_path.stem.replace('_start', '').replace('_static', '')
         out_path = out_dir / f"clip_{clip_id}.mp4"
 

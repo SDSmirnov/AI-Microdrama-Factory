@@ -29,6 +29,36 @@ import os
 import sys
 from pathlib import Path
 
+from lib.animation.grok import GrokAnimator
+from lib.animation.veo import VeoAnimator
+from lib.audio.dubbing import run_dubbing
+from lib.audio.ducking import run_ducking
+from lib.audio.tts import OPENROUTER_VOICE_MAP, generate_sfx, generate_speech, parse_speech_input
+from lib.core.project import Project, load_project
+from lib.llm.gemini import GeminiLLM
+from lib.llm.grok import GrokLLM
+from lib.llm.openrouter import OpenRouterLLM
+from lib.studio.artist import (
+    auto_cast_characters,
+    export_image_prompt,
+    load_character_refs,
+    render_character_refs,
+    render_panels,
+    render_scene_grids,
+)
+from lib.studio.critic import print_summary, run_quality_gate
+from lib.studio.cutter import run_autocut
+from lib.studio.director import run_continuity_pass
+from lib.studio.editor import load_metadata, load_quality_report, refine_panel
+from lib.studio.retoucher import edit_image as retoucher_edit_image
+from lib.studio.screenwriter import (
+    SYSTEM_PROMPT,
+    analyze_scenes_for_episode,
+    analyze_scenes_master,
+    process_single_scene,
+)
+from lib.studio.stylist import analyze_novel, generate_custom_prompts
+
 logging.basicConfig(
     level=os.getenv('AI_LOG_LEVEL', 'INFO'),
     format='%(levelname)s: %(message)s'
@@ -43,7 +73,6 @@ logger = logging.getLogger(__name__)
 def _make_llm(llm_type: str, project, system_prompt: str = ""):
     """Build an LLM backend from --llm flag."""
     if llm_type == "gemini":
-        from lib.llm.gemini import GeminiLLM
         if not project.gemini_api_key:
             logger.error("❌ IMG_AI_API_KEY or GOOGLE_API_KEY not set")
             sys.exit(1)
@@ -53,10 +82,8 @@ def _make_llm(llm_type: str, project, system_prompt: str = ""):
             image_model=project.image_model,
         )
     elif llm_type == "grok":
-        from lib.llm.grok import GrokLLM
         return GrokLLM(api_key=project.openrouter_api_key)
     else:  # openrouter (default)
-        from lib.llm.openrouter import OpenRouterLLM
         if not project.openrouter_api_key:
             logger.error("❌ OPENROUTER_API_KEY not set")
             sys.exit(1)
@@ -82,7 +109,6 @@ def _make_vision_llm(llm_type: str, project, system_prompt: str = ""):
 
 def cmd_init(args):
     """Validate env and ensure output directories exist."""
-    from lib.core.project import Project
     project = Project()
     project.ensure_dirs()
     errors = project.validate_env()
@@ -98,10 +124,6 @@ def cmd_init(args):
 
 def cmd_styles(args):
     """Analyze novel and generate custom_prompts/ for the chosen style."""
-    from lib.core.project import load_project
-    from lib.studio.stylist import analyze_novel, generate_custom_prompts
-    from lib.studio.screenwriter import SYSTEM_PROMPT
-
     project, prompts, config = load_project(use_custom=False)
     llm = _make_llm(args.llm, project, system_prompt=SYSTEM_PROMPT)
 
@@ -122,10 +144,6 @@ def cmd_styles(args):
 
 def cmd_casting(args):
     """Identify characters/locations and save reference JSONs."""
-    from lib.core.project import load_project
-    from lib.studio.artist import auto_cast_characters
-    from lib.studio.screenwriter import SYSTEM_PROMPT
-
     project, prompts, config = load_project(use_custom=args.custom_prompts)
     llm = _make_llm(args.llm, project, system_prompt=SYSTEM_PROMPT)
 
@@ -136,10 +154,6 @@ def cmd_casting(args):
 
 def cmd_refs(args):
     """Render missing character reference portraits from existing JSONs."""
-    from lib.core.project import load_project
-    from lib.studio.artist import render_character_refs
-    from lib.studio.screenwriter import SYSTEM_PROMPT
-
     project, prompts, config = load_project(use_custom=args.custom_prompts)
     llm = _make_llm(args.llm, project, system_prompt=SYSTEM_PROMPT)
 
@@ -149,10 +163,6 @@ def cmd_refs(args):
 
 def cmd_screenplay(args):
     """Run full screenplay + scene keyframe pipeline."""
-    from lib.core.project import load_project
-    from lib.studio.screenwriter import analyze_scenes_master, SYSTEM_PROMPT
-    from lib.studio.artist import load_character_refs, export_image_prompt
-
     project, prompts, config = load_project(use_custom=args.custom_prompts)
     llm = _make_llm(args.llm, project, system_prompt=SYSTEM_PROMPT)
     load_character_refs(project)
@@ -183,12 +193,6 @@ def cmd_screenplay(args):
 
 def cmd_scenes(args):
     """Generate keyframes for a specific episode (or all)."""
-    from lib.core.project import load_project
-    from lib.studio.screenwriter import (
-        analyze_scenes_for_episode, process_single_scene, SYSTEM_PROMPT
-    )
-    from lib.studio.artist import load_character_refs
-
     project, prompts, config = load_project(use_custom=args.custom_prompts)
     llm = _make_llm(args.llm, project, system_prompt=SYSTEM_PROMPT)
     load_character_refs(project)
@@ -254,9 +258,6 @@ def cmd_scenes(args):
 
 def cmd_consistency(args):
     """Run continuity enforcer to sync references and scene prompts."""
-    from lib.core.project import Project
-    from lib.studio.director import run_continuity_pass
-
     project = Project()
     llm = _make_vision_llm(args.llm, project)
     out = run_continuity_pass(llm, ref_dir=project.ref_dir, max_workers=project.max_workers)
@@ -265,10 +266,6 @@ def cmd_consistency(args):
 
 def cmd_storyboard(args):
     """Render scene grid images or individual panels."""
-    from lib.core.project import load_project
-    from lib.studio.artist import load_character_refs, render_scene_grids, render_panels
-    from lib.studio.screenwriter import SYSTEM_PROMPT
-
     project, prompts, config = load_project(use_custom=args.custom_prompts)
     llm = _make_llm(args.llm, project)
     load_character_refs(project)
@@ -291,9 +288,6 @@ def cmd_storyboard(args):
 
 def cmd_qa(args):
     """Run grid quality gate."""
-    from lib.core.project import Project
-    from lib.studio.critic import run_quality_gate, print_summary
-
     project = Project()
     llm = _make_vision_llm(args.llm, project)
 
@@ -317,11 +311,6 @@ def cmd_qa(args):
 
 def cmd_refinement(args):
     """Refine specific panel(s) by reference."""
-    from lib.core.project import load_project
-    from lib.studio.editor import (
-        load_metadata, load_quality_report, refine_panel
-    )
-
     project, prompts, config = load_project(use_custom=args.custom_prompts)
     llm = _make_vision_llm(args.llm, project)
 
@@ -343,9 +332,6 @@ def cmd_refinement(args):
 
 def cmd_autocut(args):
     """AI-analyze and trim animation clips against panel metadata."""
-    from lib.core.project import load_project
-    from lib.studio.cutter import run_autocut
-
     project, _, _ = load_project(use_custom=False)
     if args.model:
         project.text_model = args.model
@@ -362,13 +348,10 @@ def cmd_autocut(args):
 
 def cmd_imgedit(args):
     """Edit an image using selected LLM backend + optional reference images."""
-    from lib.core.project import load_project
-    from lib.studio.retoucher import edit_image
-
     project, _, _ = load_project(use_custom=False)
     llm = _make_llm(args.llm, project)
     try:
-        edit_image(
+        retoucher_edit_image(
             output_path=args.output,
             instruction=args.instruction,
             source_images=args.images,
@@ -384,9 +367,6 @@ def cmd_imgedit(args):
 
 def cmd_tts(args):
     """Generate speech or SFX (ElevenLabs)."""
-    from lib.core.project import Project
-    from lib.audio.tts import parse_speech_input, generate_speech, generate_sfx, OPENROUTER_VOICE_MAP
-
     output = Path(args.output)
     if args.tts_command == "speech":
         voice, tone, text = parse_speech_input(args.text)
@@ -408,9 +388,6 @@ def cmd_tts(args):
 
 def cmd_dub(args):
     """Smart dubbing pipeline: transcribe → translate → TTS → assemble."""
-    from lib.core.project import Project
-    from lib.audio.dubbing import run_dubbing
-
     project = Project()
     run_dubbing(
         video_path=args.video,
@@ -425,8 +402,6 @@ def cmd_dub(args):
 
 def cmd_duck(args):
     """Auto-duck original audio during dubbed speech segments."""
-    from lib.audio.ducking import run_ducking
-
     run_ducking(
         video_path=args.video,
         dubbed_path=args.dubbed,
@@ -443,10 +418,6 @@ def cmd_duck(args):
 
 def cmd_animation(args):
     """Generate video clips from panel images."""
-    from lib.core.project import Project
-    from lib.animation.veo import VeoAnimator
-    from lib.animation.grok import GrokAnimator
-
     project = Project()
     panels_dir = project.panels_dir
     out_dir = project.output_dir / "clips"

@@ -11,6 +11,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List
 
+from PIL import Image
+
 from lib.core.schemas import UPDATED_REF_SCHEMA, SCENE_REWRITE_SCHEMA
 from lib.llm.base import BaseLLM
 
@@ -139,7 +141,6 @@ def enrich_and_regenerate_reference(
             style_safe = ref_data['style_reference'].replace("/", "-").replace(" ", "_").lower()
             style_path = ref_dir / f"{style_safe}.png"
             if style_path.exists():
-                from PIL import Image
                 refs.append(f"## Visual Style reference for {ref_data['style_reference']}")
                 refs.append(Image.open(style_path))
 

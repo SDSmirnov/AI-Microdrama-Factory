@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Optional
 
 import requests
+import xai_sdk
 
 from lib.animation.base import BaseAnimator
 
@@ -54,7 +55,6 @@ def _load_image_as_data_url(path: Path) -> str:
 
 async def _generate_batch(client, tasks: list[dict]) -> list[dict]:
     """Run a batch of video generation tasks concurrently."""
-    import xai_sdk
     coros = [
         client.video.generate(
             prompt=task['prompt'],
@@ -120,7 +120,6 @@ class GrokAnimator(BaseAnimator):
         }
 
         async def _run():
-            import xai_sdk
             client = xai_sdk.AsyncClient(api_key=self.api_key)
             pairs = await _generate_batch(client, [task])
             return pairs
@@ -188,7 +187,6 @@ class GrokAnimator(BaseAnimator):
         logger.info(f"🎬 Animating {len(tasks)} panel(s) in batches of {self.batch_size}...")
 
         async def _run_all():
-            import xai_sdk
             client = xai_sdk.AsyncClient(api_key=self.api_key)
             n = 0
             while n < len(tasks):

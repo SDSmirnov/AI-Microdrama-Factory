@@ -8,6 +8,7 @@ import base64
 import json
 import logging
 import mimetypes
+import wave
 from io import BytesIO
 from pathlib import Path
 from typing import Any
@@ -322,8 +323,6 @@ class OpenRouterLLM(BaseLLM):
                onyx, nova, sage, shimmer, verse). Falls back to "alloy" if unknown.
         Returns True on success.
         """
-        import wave
-
         if voice not in self._OPENAI_VOICES:
             voice = "alloy"
 
