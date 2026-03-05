@@ -12,6 +12,7 @@ Usage:
     python cli.py storyboard [SCENE|all] [--custom-prompts]
     python cli.py qa [--scene N [--panel N ...]] [--threshold N]
     python cli.py apply-qa [--scene N] [--frame start|end|static|both]
+    python cli.py accept-qa
     python cli.py refinement SCENE PANEL [--frame start|end|both]
     python cli.py animation PROVIDER SCENE PANEL [--frame start|end]
 
@@ -510,6 +511,73 @@ def cmd_duck(args):
     logger.info(f"\n✅ Ducking done: {args.output}")
 
 
+def cmd_accept_qa(args):
+    """Accept refined panels: backup originals, promote refined PNGs into panels/."""
+    import datetime
+    import shutil
+
+    project = Project()
+    refined_dir = project.refined_dir
+    panels_dir = project.panels_dir
+
+    refined_pngs = sorted(refined_dir.glob("*_refined.png"))
+    # Exclude files inside backup subdirectories
+    refined_pngs = [p for p in refined_pngs if p.parent == refined_dir]
+
+    if not refined_pngs:
+        logger.info("✅ No refined panels found in refined/. Nothing to accept.")
+        return
+
+    date_str = datetime.date.today().strftime("%Y%m%d")
+    backup_dir = refined_dir / f"backup-{date_str}"
+    # Handle same-day collisions
+    if backup_dir.exists():
+        suffix = 1
+        while (refined_dir / f"backup-{date_str}-{suffix}").exists():
+            suffix += 1
+        backup_dir = refined_dir / f"backup-{date_str}-{suffix}"
+    backup_dir.mkdir(parents=True)
+    logger.info(f"📁 Backup dir: {backup_dir}")
+
+    accepted = 0
+    skipped = 0
+    for refined_png in refined_pngs:
+        # e.g. 001_02_start_refined.png → 001_02_start.png
+        stem = refined_png.stem  # "001_02_start_refined"
+        if not stem.endswith("_refined"):
+            logger.warning(f"⚠️  Unexpected filename pattern, skipping: {refined_png.name}")
+            skipped += 1
+            continue
+
+        original_stem = stem[: -len("_refined")]  # "001_02_start"
+        original_name = original_stem + ".png"
+        original_path = panels_dir / original_name
+
+        # 1. Backup original panel (before overwriting)
+        if original_path.exists():
+            shutil.copy2(original_path, backup_dir / original_name)
+            logger.info(f"  💾 Backed up original: {original_name}")
+        else:
+            logger.warning(f"  ⚠️  Original panel not found: {original_path}")
+
+        # 2. Promote refined PNG into panels/ (overwrite original)
+        panels_dir.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(refined_png, original_path)
+        logger.info(f"  ✅ Promoted: {refined_png.name} → panels/{original_name}")
+
+        # 3. Move refined PNG (and its JSON sidecar) to backup
+        shutil.move(str(refined_png), backup_dir / refined_png.name)
+        json_sidecar = refined_png.with_suffix(".json")
+        if json_sidecar.exists():
+            shutil.move(str(json_sidecar), backup_dir / json_sidecar.name)
+
+        accepted += 1
+
+    logger.info(f"\n✅ Accepted {accepted} refined panel(s). Backup: {backup_dir}")
+    if skipped:
+        logger.info(f"   ⚠️  Skipped {skipped} unexpected file(s).")
+
+
 def cmd_animation(args):
     """Generate video clips from panel images."""
     project = Project()
@@ -639,6 +707,9 @@ def main():
                    help='Frame type to refine (default: both)')
     p.add_argument('--custom-prompts', action='store_true')
 
+    # accept-qa
+    sub.add_parser('accept-qa', help='Promote refined panels into panels/, backup originals')
+
     # refinement
     p = sub.add_parser('refinement', help='Refine a specific panel')
     p.add_argument('scene_id', type=int)
@@ -719,6 +790,7 @@ def main():
         'storyboard': cmd_storyboard,
         'qa': cmd_qa,
         'apply-qa': cmd_apply_qa,
+        'accept-qa': cmd_accept_qa,
         'refinement': cmd_refinement,
         'animation': cmd_animation,
         'autocut': cmd_autocut,
@@ -728,7 +800,21 @@ def main():
         'dub': cmd_dub,
         'duck': cmd_duck,
     }
-    dispatch[args.command](args)
+
+    import datetime
+    import shlex
+
+    def _log_command(event: str):
+        ts = datetime.datetime.now().isoformat(timespec='seconds')
+        argv = shlex.join(sys.argv[1:])
+        with open('project.log', 'a', encoding='utf-8') as f:
+            f.write(f"[{ts}] [{event}] {argv}\n")
+
+    _log_command('start')
+    try:
+        dispatch[args.command](args)
+    finally:
+        _log_command('ended')
 
 
 if __name__ == '__main__':

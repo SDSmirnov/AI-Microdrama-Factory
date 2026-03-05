@@ -24,7 +24,7 @@ REFS           ?=
 VOICEOVER_DIR  ?= cinematic_render/voiceover
 VOICEOVER_SH   ?= voiceover.sh
 
-.PHONY: help init workdirs styles casting refs screenplay scenes consistency storyboard qa apply-qa refinement animation \
+.PHONY: help init workdirs styles casting refs screenplay scenes consistency storyboard qa apply-qa accept-qa refinement animation \
         autocut imgedit tts voiceover dub duck
 
 help:  ## Show this help
@@ -62,6 +62,9 @@ qa:  ## Run grid quality gate for SCENE (pass SCENE=N to filter; omit for all)
 
 apply-qa:  ## Refine all needs_refinement panels from quality_report.json (SCENE=N to filter)
 	python cli.py --llm $(LLM) apply-qa $(if $(filter-out all,$(SCENE)),--scene $(SCENE),) $(CUSTOM)
+
+accept-qa:  ## Promote refined/ panels into panels/, backup originals to refined/backup-YYYYMMDD
+	python cli.py accept-qa
 
 refinement:  ## Refine panel PANEL in scene SCENE (both must be integers, e.g. SCENE=1 PANEL=3)
 	python cli.py --llm $(LLM) refinement $(SCENE) $(PANEL)

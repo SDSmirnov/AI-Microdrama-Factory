@@ -337,6 +337,19 @@ def run_quality_gate(
     all_results.sort(key=lambda r: (r["scene_id"], r["panel_id"]))
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
+    # Upsert: preserve results for scenes/panels not touched by this run
+    if output_path.exists() and (scene_ids or panel_ids):
+        try:
+            existing = json.loads(output_path.read_text(encoding="utf-8"))
+            kept = existing.get("panels", [])
+        except Exception:
+            kept = []
+
+        # Build lookup of newly scanned (scene_id, panel_id) keys
+        scanned_keys = {(r["scene_id"], r["panel_id"]) for r in all_results}
+        kept = [p for p in kept if (p["scene_id"], p["panel_id"]) not in scanned_keys]
+        all_results = sorted(kept + all_results, key=lambda r: (r["scene_id"], r["panel_id"]))
+
     report = {
         "threshold": threshold,
         "total_panels": len(all_results),
