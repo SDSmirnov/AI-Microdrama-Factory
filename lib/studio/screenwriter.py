@@ -81,7 +81,18 @@ def base_scene_prompt(prompts: dict, config: dict, character_info: dict = None) 
     panels_per_scene = config['format']['panels_per_scene']
     is_animation = config['animation']['enabled']
 
-    known_refs = list((character_info or {}).keys())
+    char_refs_block = ""
+    if character_info:
+        lines = []
+        for name, info in character_info.items():
+            desc = info.get('video_visual_desc') or info.get('visual_desc', '')
+            if desc:
+                lines.append(f"- {name}: {desc}")
+            else:
+                lines.append(f"- {name}")
+        char_refs_block = "CHARACTER/LOCATION REFERENCES (use these exact descriptions for visual consistency):\n" + "\n".join(lines)
+    else:
+        char_refs_block = "Available Characters/Locations/Objects for panel references: []"
 
     prompt = f"""
 {scenery_template}
@@ -89,7 +100,7 @@ def base_scene_prompt(prompts: dict, config: dict, character_info: dict = None) 
 {setting_context}
 
 CONTEXT:
-Available Characters/Locations/Objects for panel references: {known_refs}
+{char_refs_block}
 Panels per scene: {panels_per_scene}
 Animation mode: {is_animation}
 
@@ -307,7 +318,7 @@ def analyze_scenes_for_episode(
 # ---------------------------------------------------------------------------
 # Refinement pass
 # ---------------------------------------------------------------------------
-def refine_scenes_for_episode(scene: dict, prompts: dict, config: dict, llm: BaseLLM) -> dict:
+def refine_scenes_for_episode(scene: dict, prompts: dict, config: dict, llm: BaseLLM, character_info: dict = None) -> dict:
     """
     Refinement pass before reversal:
     1. Makes every panel self-contained — all character/location details inline.
@@ -318,7 +329,7 @@ def refine_scenes_for_episode(scene: dict, prompts: dict, config: dict, llm: Bas
     scene_id = scene.get('scene_id', '?')
     logger.info(f"    ✏️  Refinement pass: scene {scene_id}")
 
-    base_prompt = base_scene_prompt(prompts, config)
+    base_prompt = base_scene_prompt(prompts, config, character_info)
     scene_text = json.dumps(scene, ensure_ascii=False, indent=2)
 
     prompt = f"""
@@ -463,6 +474,7 @@ def process_single_scene(
     llm: BaseLLM,
     all_scenes: list,
     output_dir: Path = None,
+    character_info: dict = None,
 ):
     output_dir = output_dir or DEFAULT_OUTPUT_DIR
     scene['scene_id'] = scene_id
@@ -480,7 +492,7 @@ def process_single_scene(
         panel.setdefault('sound_design', 'silence')
         panel.setdefault('location_references', [])
 
-    scene = refine_scenes_for_episode(scene, prompts, config, llm)
+    scene = refine_scenes_for_episode(scene, prompts, config, llm, character_info)
     scene = apply_reversal_pass(scene, prompts, config, llm)
     all_scenes.append(scene)
 
@@ -624,7 +636,7 @@ def analyze_scenes_master(
 
         for scene in data.get('scenes', []):
             scene_counter += 1
-            batch_refinement.append((episode_counter, scene_counter, scene, prompts, config, llm, all_scenes, output_dir))
+            batch_refinement.append((episode_counter, scene_counter, scene, prompts, config, llm, all_scenes, output_dir, character_info))
 
     failed_scenes = []
     _sc_lock = Lock()

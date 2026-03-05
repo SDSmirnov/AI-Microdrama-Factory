@@ -241,7 +241,7 @@ def cmd_scenes(args):
         for scene in data.get('scenes', []):
             scene_counter += 1
             process_single_scene(ep_counter, scene_counter, scene, prompts, config, llm, all_scenes,
-                             output_dir=project.output_dir)
+                             output_dir=project.output_dir, character_info=project.character_info)
 
     logger.info(f"\n✅ Done. {len(all_scenes)} scene(s) processed.")
 
