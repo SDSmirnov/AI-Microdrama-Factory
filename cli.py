@@ -46,6 +46,7 @@ from lib.audio.dubbing import run_dubbing
 from lib.audio.ducking import run_ducking
 from lib.audio.tts import OPENROUTER_VOICE_MAP, generate_sfx, generate_speech, parse_speech_input
 from lib.core.project import Project, load_project
+from lib.core.utils import grid_dims
 from lib.llm.gemini import GeminiLLM
 from lib.llm.grok import GrokLLM
 from lib.llm.openrouter import OpenRouterLLM
@@ -60,12 +61,14 @@ from lib.studio.artist import (
 from lib.studio.critic import print_summary, run_quality_gate
 from lib.studio.cutter import run_autocut
 from lib.studio.director import run_continuity_pass
-from lib.studio.editor import load_metadata, load_quality_report, refine_panel
+from lib.core.utils import load_metadata
+from lib.studio.editor import load_quality_report, refine_panel
 from lib.studio.retoucher import edit_image as retoucher_edit_image
 from lib.studio.screenwriter import (
     SYSTEM_PROMPT,
     analyze_scenes_for_episode,
     analyze_scenes_master,
+    merge_scenes,
     process_single_scene,
 )
 from lib.studio.stylist import analyze_novel, generate_custom_prompts
@@ -93,7 +96,10 @@ def _make_llm(llm_type: str, project, system_prompt: str = ""):
             image_model=project.image_model,
         )
     elif llm_type == "grok":
-        return GrokLLM(api_key=project.openrouter_api_key)
+        if not project.grok_api_key:
+            logger.error("❌ XAI_API_KEY not set")
+            sys.exit(1)
+        return GrokLLM(api_key=project.grok_api_key)
     else:  # openrouter (default)
         if not project.openrouter_api_key:
             logger.error("❌ OPENROUTER_API_KEY not set")
@@ -122,7 +128,7 @@ def cmd_init(args):
     """Validate env and ensure output directories exist."""
     project = Project()
     project.ensure_dirs()
-    errors = project.validate_env()
+    errors = project.validate_env(llm_type=args.llm)
     if errors:
         for e in errors:
             logger.error(f"  ❌ {e}")
@@ -184,6 +190,7 @@ def cmd_screenplay(args):
         text, prompts, config, llm,
         max_workers=project.max_workers,
         character_info=project.character_info,
+        output_dir=project.output_dir,
     )
 
     if not data or 'scenes' not in data:
@@ -233,7 +240,8 @@ def cmd_scenes(args):
     for ep_counter, data in sorted(all_episodes, key=lambda x: x[0]):
         for scene in data.get('scenes', []):
             scene_counter += 1
-            process_single_scene(ep_counter, scene_counter, scene, prompts, config, llm, all_scenes)
+            process_single_scene(ep_counter, scene_counter, scene, prompts, config, llm, all_scenes,
+                             output_dir=project.output_dir)
 
     logger.info(f"\n✅ Done. {len(all_scenes)} scene(s) processed.")
 
@@ -251,27 +259,18 @@ def cmd_scenes(args):
         metadata = {}
 
     new_ep_ids = {s.get('episode_id') for s in all_scenes if s.get('episode_id')}
-    kept = [s for s in metadata.get('scenes', []) if s.get('episode_id') not in new_ep_ids]
-
-    # Assign scene_ids: new scenes follow the kept scenes sequentially
-    merged = sorted(kept, key=lambda s: s.get('scene_id', 0))
-    next_id = (merged[-1]['scene_id'] + 1) if merged else 1
-    for scene in all_scenes:
-        scene['scene_id'] = next_id
-        next_id += 1
-        merged.append(scene)
-
-    metadata['scenes'] = merged
+    metadata['scenes'] = merge_scenes(metadata, all_scenes, new_ep_ids, project.panels_dir)
     metadata.setdefault('config', config)
     meta_path.write_text(json.dumps(metadata, ensure_ascii=False, indent=2), encoding='utf-8')
-    logger.info(f"✅ animation_metadata.json updated: {len(merged)} total scene(s)")
+    logger.info(f"✅ animation_metadata.json updated: {len(metadata['scenes'])} total scene(s)")
 
 
 def cmd_consistency(args):
     """Run continuity enforcer to sync references and scene prompts."""
     project = Project()
+    project.ensure_dirs()
     llm = _make_vision_llm(args.llm, project)
-    out = run_continuity_pass(llm, ref_dir=project.ref_dir, max_workers=project.max_workers)
+    out = run_continuity_pass(llm, ref_dir=project.ref_dir, max_workers=project.max_workers, output_dir=project.output_dir)
     logger.info(f"✅ animation_metadata.json updated in-place: {out}")
 
 
@@ -313,6 +312,7 @@ def cmd_qa(args):
         panel_ids=panel_ids,
         threshold=threshold,
         max_workers=project.max_workers,
+        output_dir=project.output_dir,
     )
     print_summary(report, threshold)
 
@@ -325,7 +325,7 @@ def cmd_apply_qa(args):
     project, prompts, config = load_project(use_custom=args.custom_prompts)
     llm = _make_vision_llm(args.llm, project)
 
-    report_path = Path("cinematic_render/quality_report.json")
+    report_path = project.output_dir / "quality_report.json"
     if not report_path.exists():
         logger.error("❌ quality_report.json not found. Run 'qa' first.")
         sys.exit(1)
@@ -342,8 +342,8 @@ def cmd_apply_qa(args):
 
     logger.info(f"🔧 {len(panels)} panel(s) flagged for refinement.")
 
-    metadata = load_metadata()
-    quality_prompts = load_quality_report()
+    metadata = load_metadata(project.output_dir / "animation_metadata.json")
+    quality_prompts = load_quality_report(project.output_dir / "quality_report.json")
 
     frames = ['start', 'end'] if args.frame == 'both' else [args.frame]
 
@@ -354,7 +354,7 @@ def cmd_apply_qa(args):
         panel_id = panel_info['panel_id']
         for frame_type in frames:
             total += 1
-            if refine_panel(scene_id, panel_id, frame_type, metadata, prompts, config, llm, quality_prompts):
+            if refine_panel(scene_id, panel_id, frame_type, metadata, prompts, config, llm, quality_prompts, project=project):
                 success += 1
 
     logger.info(f"\n✅ {success}/{total} frame(s) refined.")
@@ -365,8 +365,8 @@ def cmd_refinement(args):
     project, prompts, config = load_project(use_custom=args.custom_prompts)
     llm = _make_vision_llm(args.llm, project)
 
-    metadata = load_metadata()
-    quality_prompts = load_quality_report()
+    metadata = load_metadata(project.output_dir / "animation_metadata.json")
+    quality_prompts = load_quality_report(project.output_dir / "quality_report.json")
 
     frames = ['start', 'end'] if args.frame == 'both' else [args.frame]
 
@@ -374,7 +374,7 @@ def cmd_refinement(args):
     for frame_type in frames:
         if refine_panel(
             args.scene_id, args.panel_id, frame_type,
-            metadata, prompts, config, llm, quality_prompts
+            metadata, prompts, config, llm, quality_prompts, project=project
         ):
             success += 1
 
@@ -481,8 +481,8 @@ def cmd_voiceover(args):
             # Strip "Male/Female Voiceover:" prefix for filename slug
             slug = re.sub(r'^[A-Za-z ]+voiceover\s*:\s*', '', vo_text, flags=re.IGNORECASE)
             slug = re.sub(r'^[A-Za-z]+\s*:\s*', '', slug)
-            slug = slug[:40]
             slug = re.sub(r'\W+', '-', slug, flags=re.UNICODE).strip('-').lower()
+            slug = slug[:40]
             if not slug:
                 slug = "vo"
 
@@ -593,15 +593,7 @@ def cmd_rebuild_storyboard(args):
     metadata = json.loads(meta_path.read_text(encoding='utf-8'))
     config = metadata.get('config', {})
     panels_per_scene = config.get('format', {}).get('panels_per_scene', 9)
-
-    if panels_per_scene == 9:
-        cols, rows = 3, 3
-    elif panels_per_scene == 6:
-        cols, rows = 3, 2
-    elif panels_per_scene == 4:
-        cols, rows = 2, 2
-    else:
-        cols, rows = 3, (panels_per_scene + 2) // 3
+    cols, rows = grid_dims(panels_per_scene)
 
     scene_filter = None
     if hasattr(args, 'scene') and args.scene and args.scene != 'all':
@@ -710,10 +702,9 @@ def cmd_animation(args):
                 key = f"{sid:03d}_{panel['panel_index']:02d}"
                 lookup[key] = panel
 
-        start_files = sorted(panels_dir.glob("*_static.png"))
-        if not start_files:
-            start_files = sorted(panels_dir.glob("*_start.png"))
-        if not start_files:
+        static_files = sorted(panels_dir.glob("*_static.png"))
+        start_files = sorted(panels_dir.glob("*_start.png"))
+        if not static_files and not start_files:
             logger.error(f"No panel images found in {panels_dir}")
             sys.exit(1)
 
@@ -721,15 +712,26 @@ def cmd_animation(args):
         if hasattr(args, 'scene') and args.scene and args.scene != 'all':
             scene_filter = f"{int(args.scene):03d}"
 
-        for i, start_path in enumerate(start_files):
-            parts = start_path.stem.split("_")
-            if scene_filter and parts[0] != scene_filter:
-                continue
-            key = "_".join(parts[:2])
-            panel_meta = lookup.get(key, {})
-            end_path = panels_dir / start_path.name.replace('_start', '_end')
-            animator.animate(start_path, end_path if end_path.exists() else None,
-                             panel_meta, i, out_dir)
+        # Prefer _static panels (single-frame render), fall back to _start/_end pairs
+        if static_files:
+            for i, start_path in enumerate(static_files):
+                parts = start_path.stem.split("_")
+                if scene_filter and parts[0] != scene_filter:
+                    continue
+                key = "_".join(parts[:2])
+                panel_meta = lookup.get(key, {})
+                # _static has no separate end frame
+                animator.animate(start_path, None, panel_meta, i, out_dir)
+        else:
+            for i, start_path in enumerate(start_files):
+                parts = start_path.stem.split("_")
+                if scene_filter and parts[0] != scene_filter:
+                    continue
+                key = "_".join(parts[:2])
+                panel_meta = lookup.get(key, {})
+                end_path = panels_dir / start_path.name.replace('_start', '_end')
+                animator.animate(start_path, end_path if end_path.exists() else None,
+                                 panel_meta, i, out_dir)
 
     elif args.provider == "grok":
         grok_api_key = os.getenv('XAI_API_KEY', '')
@@ -919,6 +921,9 @@ def main():
     _log_command('start')
     try:
         dispatch[args.command](args)
+    except FileNotFoundError as e:
+        logger.error(f"❌ {e}")
+        sys.exit(1)
     finally:
         _log_command('ended')
 

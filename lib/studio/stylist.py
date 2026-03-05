@@ -291,6 +291,7 @@ Return filled markdown.
             "type": preset['format'],
             "panels_per_scene": preset['panels_per_scene']
         },
+        "episodes_count": 3,
         "image_generation": {
             "aspect_ratio": preset['aspect_ratio'],
             "resolution": preset['resolution'],

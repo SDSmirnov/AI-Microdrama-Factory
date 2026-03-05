@@ -30,10 +30,13 @@ class RateLimiter:
 
             if self.tokens < 1:
                 wait_time = (1 - self.tokens) * (60.0 / self.rpm)
-                time.sleep(wait_time)
                 self.tokens = 0
             else:
+                wait_time = 0
                 self.tokens -= 1
+
+        if wait_time > 0:
+            time.sleep(wait_time)
 
 
 def retry_on_errors(max_retries=3, backoff_factor=2):
@@ -50,7 +53,8 @@ def retry_on_errors(max_retries=3, backoff_factor=2):
                     retryable = (
                         '429' in error_str or '500' in error_str or '503' in error_str or
                         'Too Many Requests' in error_str or 'Rate limit' in error_str or
-                        'Internal Server Error' in error_str or 'Service Unavailable' in error_str
+                        'Internal Server Error' in error_str or 'Service Unavailable' in error_str or
+                        'timed out' in error_str.lower() or 'connection' in error_str.lower()
                     )
                     if retryable:
                         retries += 1
@@ -62,7 +66,6 @@ def retry_on_errors(max_retries=3, backoff_factor=2):
                         time.sleep(wait_time)
                     else:
                         raise
-            return None
         return wrapper
     return decorator
 

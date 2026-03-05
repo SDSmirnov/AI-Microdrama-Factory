@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from lib.core.prompts import load_prompts
+from lib.core.utils import DEFAULT_OUTPUT_DIR, DEFAULT_REF_DIR
 
 logger = logging.getLogger(__name__)
 
@@ -15,8 +16,8 @@ logger = logging.getLogger(__name__)
 @dataclass
 class Project:
     # Directories
-    output_dir: Path = field(default_factory=lambda: Path("cinematic_render"))
-    ref_dir: Path = field(default_factory=lambda: Path("ref_thriller"))
+    output_dir: Path = field(default_factory=lambda: DEFAULT_OUTPUT_DIR)
+    ref_dir: Path = field(default_factory=lambda: DEFAULT_REF_DIR)
     panels_dir: Path = field(default_factory=lambda: Path("cinematic_render/panels"))
     refined_dir: Path = field(default_factory=lambda: Path("cinematic_render/refined"))
     image_prompts_dir: Path = field(default_factory=lambda: Path("cinematic_render/image_prompts"))
@@ -30,6 +31,7 @@ class Project:
     # API keys
     openrouter_api_key: str = field(default_factory=lambda: os.getenv('OPENROUTER_API_KEY', ''))
     gemini_api_key: str = field(default_factory=lambda: os.getenv('IMG_AI_API_KEY', '') or os.getenv('GOOGLE_API_KEY', ''))
+    grok_api_key: str = field(default_factory=lambda: os.getenv('XAI_API_KEY', ''))
 
     # In-memory caches (populated by artist.load_character_refs())
     character_images: dict = field(default_factory=dict)  # name → png path
@@ -55,11 +57,18 @@ class Project:
                   self.refined_dir, self.image_prompts_dir]:
             d.mkdir(parents=True, exist_ok=True)
 
-    def validate_env(self) -> list[str]:
-        """Return list of validation errors."""
+    def validate_env(self, llm_type: str = None) -> list[str]:
+        """Return list of validation errors for the selected backend."""
         errors = []
-        if not self.openrouter_api_key:
-            errors.append("OPENROUTER_API_KEY is not set")
+        if llm_type is None or llm_type == 'openrouter':
+            if not self.openrouter_api_key:
+                errors.append("OPENROUTER_API_KEY is not set (required for --llm openrouter)")
+        if llm_type is None or llm_type == 'gemini':
+            if not self.gemini_api_key:
+                errors.append("IMG_AI_API_KEY / GOOGLE_API_KEY is not set (required for --llm gemini, Veo animation, TTS, dubbing)")
+        if llm_type == 'grok':
+            if not self.grok_api_key:
+                errors.append("XAI_API_KEY is not set (required for --llm grok)")
         return errors
 
 

@@ -5,7 +5,6 @@ Port of 05_grid_quality_gate.py using a vision-capable BaseLLM backend.
 """
 import json
 import logging
-import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -13,13 +12,10 @@ from typing import Any, Dict, List, Optional
 from PIL import Image
 
 from lib.core.schemas import PANEL_QA_SCHEMA
+from lib.core.utils import DEFAULT_OUTPUT_DIR, grid_dims, load_metadata, panel_boxes
 from lib.llm.base import BaseLLM
 
 logger = logging.getLogger(__name__)
-
-OUTPUT_DIR = Path("cinematic_render")
-META_FILE = OUTPUT_DIR / "animation_metadata.json"
-REPORT_FILE = OUTPUT_DIR / "quality_report.json"
 
 MAX_REFS_PER_PANEL = 6
 
@@ -27,12 +23,6 @@ MAX_REFS_PER_PANEL = 6
 # ---------------------------------------------------------------------------
 # Data loading
 # ---------------------------------------------------------------------------
-
-def load_metadata(meta_path: Path = META_FILE) -> Dict:
-    if not meta_path.exists():
-        logger.error(f"❌ Metadata not found: {meta_path}")
-        sys.exit(1)
-    return json.loads(meta_path.read_text(encoding="utf-8"))
 
 
 def load_ref_catalog(ref_dir: Path) -> Dict[str, Dict]:
@@ -86,26 +76,8 @@ def find_ref(name: str, catalog: Dict[str, Dict]) -> Optional[Dict]:
 def slice_grid(grid_path: Path, panels_count: int) -> List[Image.Image]:
     img = Image.open(grid_path)
     w, h = img.size
-
-    if panels_count == 9:
-        cols, rows = 3, 3
-    elif panels_count == 6:
-        cols, rows = 3, 2
-    elif panels_count == 4:
-        cols, rows = 2, 2
-    else:
-        cols = 3
-        rows = (panels_count + 2) // 3
-
-    pw, ph = w // cols, h // rows
-    panels = []
-    for r in range(rows):
-        for c in range(cols):
-            if len(panels) >= panels_count:
-                break
-            box = (c * pw, r * ph, (c + 1) * pw, (r + 1) * ph)
-            panels.append(img.crop(box))
-    return panels
+    cols, rows = grid_dims(panels_count)
+    return [img.crop(box) for box in panel_boxes(w, h, cols, rows, panels_count)]
 
 
 # ---------------------------------------------------------------------------
@@ -192,17 +164,16 @@ Expected characters/objects: {', '.join(ref_names) if ref_names else 'None speci
 
 """
 
-    contents: List[Any] = []
+    image_contents: List[Any] = []
     if ref_images_content:
-        contents.append("# CHARACTER/OBJECT REFERENCE IMAGES\n")
-        contents.extend(ref_images_content)
-    contents.append(f"\n# PANEL {panel_id} TO ANALYZE\n")
-    contents.append(panel_img)
-    contents.append(prompt)
+        image_contents.append("# CHARACTER/OBJECT REFERENCE IMAGES\n")
+        image_contents.extend(ref_images_content)
+    image_contents.append(f"\n# PANEL {panel_id} TO ANALYZE\n")
+    image_contents.append(panel_img)
 
     try:
         result = llm.analyze_image(
-            image=contents[:-1],  # everything except prompt
+            image=image_contents,
             prompt=prompt,
             schema=PANEL_QA_SCHEMA,
         )
@@ -237,9 +208,10 @@ def process_scene(
     panels_per_scene: int,
     threshold: int,
     panel_filter: Optional[List[int]] = None,
+    output_dir: Path = DEFAULT_OUTPUT_DIR,
 ) -> List[Dict]:
     scene_id = scene["scene_id"]
-    grid_path = OUTPUT_DIR / f"scene_{scene_id:03d}_grid_combined.png"
+    grid_path = output_dir / f"scene_{scene_id:03d}_grid_combined.png"
     if not grid_path.exists():
         logger.warning(f"⏭️  Grid not found: {grid_path}")
         return []
@@ -291,10 +263,13 @@ def run_quality_gate(
     scene_ids: Optional[List[int]] = None,
     panel_ids: Optional[List[int]] = None,
     threshold: int = 5,
-    max_workers: int = 20,
-    output_path: Path = REPORT_FILE,
+    max_workers: int = 10,
+    output_dir: Path = DEFAULT_OUTPUT_DIR,
+    output_path: Path = None,
 ) -> Dict:
-    metadata = load_metadata()
+    if output_path is None:
+        output_path = output_dir / "quality_report.json"
+    metadata = load_metadata(output_dir / "animation_metadata.json")  # from lib.core.utils
     ref_catalog = load_ref_catalog(ref_dir)
 
     config = metadata.get("config", {})
@@ -318,7 +293,7 @@ def run_quality_gate(
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             futures = {
                 executor.submit(process_scene, llm, scene, ref_catalog, grid_format,
-                                panels_per_scene, threshold, None): scene["scene_id"]
+                                panels_per_scene, threshold, None, output_dir): scene["scene_id"]
                 for scene in scenes
             }
             for future in as_completed(futures):
@@ -331,7 +306,7 @@ def run_quality_gate(
         for scene in scenes:
             all_results.extend(
                 process_scene(llm, scene, ref_catalog, grid_format, panels_per_scene,
-                               threshold, panel_ids)
+                               threshold, panel_ids, output_dir)
             )
 
     all_results.sort(key=lambda r: (r["scene_id"], r["panel_id"]))

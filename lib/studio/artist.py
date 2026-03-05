@@ -1,11 +1,10 @@
 """
 Artist — character reference management and image rendering.
 
-Consolidates _safe_name, _png_to_data_url, load_character_refs, generate_single_reference,
+Consolidates safe_name, load_character_refs, generate_single_reference,
 auto_cast_characters, render_character_refs, render_scene_grids, render_panels,
 slice_combined, export_image_prompt from old numbered scripts.
 """
-import base64
 import json
 import logging
 from concurrent.futures import ThreadPoolExecutor
@@ -16,26 +15,15 @@ from PIL import Image
 
 from lib.core.schemas import CHARACTER_SCHEMA
 from lib.core.project import Project
+from lib.core.utils import grid_dims, panel_boxes, safe_name
 from lib.llm.base import BaseLLM
 
 logger = logging.getLogger(__name__)
-
-OUTPUT_DIR = Path("cinematic_render")
-REF_DIR = Path("ref_thriller")
-IMAGE_PROMPTS_DIR = OUTPUT_DIR / "image_prompts"
 
 
 # ---------------------------------------------------------------------------
 # Helpers — single definitions replacing 4-script duplication
 # ---------------------------------------------------------------------------
-
-def _safe_name(name: str) -> str:
-    return name.replace("/", "-").replace("'", " ").replace('"', '').replace(" ", "_").lower()
-
-
-def _png_to_data_url(path: str) -> str:
-    """Read a PNG and return a base64 data URL."""
-    return "data:image/png;base64," + base64.b64encode(Path(path).read_bytes()).decode("utf-8")
 
 
 # ---------------------------------------------------------------------------
@@ -70,8 +58,8 @@ def load_character_refs(project: Project):
 def generate_single_reference(char: dict, setting_context: str, config: dict, project: Project):
     """Save character reference JSON. Image rendering is done separately by render_character_refs."""
     name = char['name']
-    safe_name = _safe_name(name)
-    json_path = project.ref_dir / f"{safe_name}.json"
+    fname = safe_name(name)
+    json_path = project.ref_dir / f"{fname}.json"
     json_path.write_text(json.dumps(char, indent=2), encoding='utf-8')
     project.character_info[name] = char
     logger.info(f"  ✅ Saved reference JSON: {name}")
@@ -150,10 +138,10 @@ Text:
     ctx = f"{casting_prompt_template} {setting_context}"
     max_workers = project.max_workers
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        executor.map(
+        list(executor.map(
             lambda char: generate_single_reference(char, ctx, config, project),
             new_chars
-        )
+        ))
 
 
 # ---------------------------------------------------------------------------
@@ -162,7 +150,7 @@ Text:
 
 def _render_single_ref(char: dict, config: dict, project: Project, llm: BaseLLM):
     name = char['name']
-    sname = _safe_name(name)
+    sname = safe_name(name)
     png_path = project.ref_dir / f"{sname}.png"
 
     if png_path.exists():
@@ -174,10 +162,10 @@ def _render_single_ref(char: dict, config: dict, project: Project, llm: BaseLLM)
     refs = []
     style_ref = char.get('style_reference', '')
     if style_ref and style_ref != name:
-        ref_png = project.ref_dir / f"{_safe_name(style_ref)}.png"
+        ref_png = project.ref_dir / f"{safe_name(style_ref)}.png"
         if ref_png.exists():
-            refs.append({"type": "text", "text": f"## Visual Style reference for {style_ref}"})
-            refs.append({"type": "image_url", "image_url": {"url": _png_to_data_url(str(ref_png))}})
+            refs.append(f"## Visual Style reference for {style_ref}")
+            refs.append(Image.open(ref_png))
 
     ref_aspect = config.get('reference_characters', {}).get('ref_aspect_ratio', '3:4')
     prompt_text = (
@@ -207,7 +195,7 @@ def render_character_refs(prompts: dict, config: dict, llm: BaseLLM, project: Pr
         try:
             char = json.loads(json_path.read_text(encoding='utf-8'))
             name = char.get('name', '')
-            if name and not (project.ref_dir / f"{_safe_name(name)}.png").exists():
+            if name and not (project.ref_dir / f"{safe_name(name)}.png").exists():
                 to_render.append(char)
         except Exception as e:
             logger.warning(f"  ⚠️  Could not read {json_path}: {e}")
@@ -217,41 +205,45 @@ def render_character_refs(prompts: dict, config: dict, llm: BaseLLM, project: Pr
         return
 
     logger.info(f"  📋 {len(to_render)} references to render.")
+    failed = []
     for c in to_render:
+        before = len(project.character_images)
         _render_single_ref(c, config, project, llm)
+        if len(project.character_images) == before:
+            failed.append(c.get('name', '?'))
+
+    if failed:
+        logger.warning(f"  ⚠️  {len(failed)}/{len(to_render)} ref(s) failed to render: {failed}")
 
 
 # ---------------------------------------------------------------------------
 # Scene grid rendering
 # ---------------------------------------------------------------------------
 
+def _build_prompt_header(scene: dict, prompts: dict) -> str:
+    """Build the shared prompt header for scene image generation."""
+    return (
+        f"{prompts.get('style', '')}\n\n"
+        f"{prompts.get('imagery', '')}\n\n"
+        f"{prompts.get('setting', '')}\n\n"
+        f"Location: {scene['location']}\n"
+        f"Setup: {scene.get('pre_action_description', '')}\n"
+        "CONSISTENCY RULE: All instances of the same character across all panels must have IDENTICAL face, hair, clothing, body proportions.\n"
+        "NO CAPTIONS!\n"
+    )
+
+
 def _build_grid_prompt(scene: dict, prompts: dict, config: dict) -> str:
     """Build the text prompt for a scene grid image."""
-    style_prompt = prompts.get('style', '')
-    imagery_prompt = prompts.get('imagery', '')
-    setting_context = prompts.get('setting', '')
-
     aspect_ratio = config['image_generation']['aspect_ratio']
     resolution = config['image_generation']['image_size']
 
-    prompt = f"""{style_prompt}
-
-{imagery_prompt}
-
-{setting_context}
-
-Location: {scene['location']}
-Setup: {scene.get('pre_action_description', '')}
-CONSISTENCY RULE: All instances of the same character across all panels must have IDENTICAL face, hair, clothing, body proportions.
-NO CAPTIONS!
-"""
-
+    prompt = _build_prompt_header(scene, prompts)
     prompt += f"\nIMPORTANT: Generate SINGLE {resolution} {aspect_ratio} image with panels in grid layout.\n"
 
     for p in scene['panels']:
         prompt += f"\nPanel {p['panel_index']}:\n"
         prompt += f"  Visual: {p.get('visual_start', p.get('visual_end', ''))}\n"
-
         if 'lights_and_camera' in p:
             prompt += f"  Camera: {p['lights_and_camera']}\n"
 
@@ -279,15 +271,12 @@ def _render_single_grid(scene: dict, scene_id: int, prompts: dict, config: dict,
     refs = []
     ref_chars = [name for name in chars if name in project.character_images]
     if ref_chars:
-        refs.append({
-            "type": "text",
-            "text": (
-                "# Visual Reference Library\n"
-                "## IMPORTANT:\n"
-                "Always prioritize the visual design of characters/objects "
-                "from the provided images over your internal concepts."
-            )
-        })
+        refs.append(
+            "# Visual Reference Library\n"
+            "## IMPORTANT:\n"
+            "Always prioritize the visual design of characters/objects "
+            "from the provided images over your internal concepts."
+        )
         for name in ref_chars:
             png_path = project.character_images[name]
             info = ""
@@ -296,14 +285,8 @@ def _render_single_grid(scene: dict, scene_id: int, prompts: dict, config: dict,
                 info = meta.get('video_visual_desc', '')
             except Exception:
                 pass
-            refs.append({
-                "type": "text",
-                "text": f"## Visual Reference for: \"{name}\"\nUse it for appearances\n{info}\n"
-            })
-            refs.append({
-                "type": "image_url",
-                "image_url": {"url": _png_to_data_url(png_path)}
-            })
+            refs.append(f"## Visual Reference for: \"{name}\"\nUse it for appearances\n{info}\n")
+            refs.append(Image.open(png_path))
 
     prompt_text = _build_grid_prompt(scene, prompts, config)
     aspect_ratio = config['image_generation']['aspect_ratio']
@@ -444,15 +427,12 @@ def _build_ref_contents(panel: dict, project: Project) -> list:
     if not ref_chars:
         return []
 
-    contents = [{
-        "type": "text",
-        "text": (
-            "# Visual Reference Library\n"
-            "## IMPORTANT:\n"
-            "Always prioritize the visual design of characters/objects "
-            "from the provided images over your internal concepts."
-        )
-    }]
+    contents = [
+        "# Visual Reference Library\n"
+        "## IMPORTANT:\n"
+        "Always prioritize the visual design of characters/objects "
+        "from the provided images over your internal concepts."
+    ]
     for name in ref_chars:
         png_path = project.character_images[name]
         info = ""
@@ -461,14 +441,8 @@ def _build_ref_contents(panel: dict, project: Project) -> list:
             info = meta.get('video_visual_desc', '')
         except Exception:
             pass
-        contents.append({
-            "type": "text",
-            "text": f"## Visual Reference for: \"{name}\"\n{info}\n"
-        })
-        contents.append({
-            "type": "image_url",
-            "image_url": {"url": _png_to_data_url(png_path)}
-        })
+        contents.append(f"## Visual Reference for: \"{name}\"\n{info}\n")
+        contents.append(Image.open(png_path))
     return contents
 
 
@@ -562,26 +536,9 @@ def slice_combined(path_combined: Path, sid: int, config: dict, project: Project
     w, h = img.size
 
     panels_per_scene = config['format']['panels_per_scene']
-
-    if panels_per_scene == 9:
-        cols, rows = 3, 3
-    elif panels_per_scene == 6:
-        cols, rows = 3, 2
-    elif panels_per_scene == 4:
-        cols, rows = 2, 2
-    else:
-        cols, rows = 3, (panels_per_scene + 2) // 3
-
-    pw, ph = w // cols, h // rows
-    cx, cy = max(1, pw // 100), max(1, ph // 100)  # 1% inset to drop artifact borders
-    idx = 1
-    for r in range(rows):
-        for c in range(cols):
-            if idx > panels_per_scene:
-                break
-            box = (c*pw + cx, r*ph + cy, (c+1)*pw - cx, (r+1)*ph - cy)
-            img.crop(box).save(panels_dir / f"{sid:03d}_{idx:02d}_static.png")
-            idx += 1
+    cols, rows = grid_dims(panels_per_scene)
+    for idx, box in enumerate(panel_boxes(w, h, cols, rows, panels_per_scene), 1):
+        img.crop(box).save(panels_dir / f"{sid:03d}_{idx:02d}_static.png")
 
 
 # ---------------------------------------------------------------------------
@@ -590,31 +547,18 @@ def slice_combined(path_combined: Path, sid: int, config: dict, project: Project
 
 def _build_image_prompt(scene: dict, prompts: dict, config: dict) -> str:
     """Build the image generation prompt text for a scene."""
-    style_prompt = prompts.get('style', '')
-    imagery_prompt = prompts.get('imagery', '')
-    setting_context = prompts.get('setting', '')
-
     aspect_ratio = config['image_generation']['aspect_ratio']
     resolution = config['image_generation']['image_size']
 
-    prompt = f"""{style_prompt}
-
-{imagery_prompt}
-
-{setting_context}
-
-Location: {scene['location']}
-Setup: {scene.get('pre_action_description', '')}
-CONSISTENCY RULE: All instances of the same character across all panels must have IDENTICAL face, hair, clothing, body proportions.
-NO CAPTIONS!
-**CRITICAL FORMAT:** Single image containing 9 portrait panels (9:16 each) arranged in a 3×3 grid.
-Each cell is a VERTICAL frame designed for mobile viewing.
-SAFE ZONE per panel: compose key subjects (faces, hands, focal action) within the middle 65% of panel height.
-Top 15% and bottom 20% of each panel must remain visually uncluttered (background only — sky, wall, floor).
-Faces and close-ups are the primary dramatic instrument — this is vertical microdrama, not widescreen cinema.
-Shallow depth of field. Subjects sharp, backgrounds contextual only.
-"""
-
+    prompt = _build_prompt_header(scene, prompts)
+    prompt += (
+        "**CRITICAL FORMAT:** Single image containing 9 portrait panels (9:16 each) arranged in a 3×3 grid.\n"
+        "Each cell is a VERTICAL frame designed for mobile viewing.\n"
+        "SAFE ZONE per panel: compose key subjects (faces, hands, focal action) within the middle 65% of panel height.\n"
+        "Top 15% and bottom 20% of each panel must remain visually uncluttered (background only — sky, wall, floor).\n"
+        "Faces and close-ups are the primary dramatic instrument — this is vertical microdrama, not widescreen cinema.\n"
+        "Shallow depth of field. Subjects sharp, backgrounds contextual only.\n"
+    )
     prompt += f"\nIMPORTANT: Generate SINGLE {resolution} {aspect_ratio} image with 9 panels in 3x3 grid layout.\n"
 
     for p in scene['panels']:
@@ -625,7 +569,6 @@ Shallow depth of field. Subjects sharp, backgrounds contextual only.
             prompt += f" [{p['emotional_beat']}]"
         prompt += "\n"
         prompt += f"  Visual: {p.get('visual_start', p.get('visual_end', ''))}\n"
-
         if 'lights_and_camera' in p:
             prompt += f"  Camera: {p['lights_and_camera']}\n"
         if config['dialogue']['enabled'] and p.get('dialogue'):

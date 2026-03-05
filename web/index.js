@@ -4,6 +4,9 @@
 // BASE = '..' because the server serves the project root, and index.html is in web/
 const BASE = '..';
 
+// Appended to image URLs to bust browser cache when reloading from a different folder
+const CACHE_BUST = '?v=' + Date.now();
+
 const PATHS = {
   screenplay:    `${BASE}/cinematic_render/animation_episodes.json`,
   metadata:      `${BASE}/cinematic_render/animation_metadata.json`,
@@ -38,6 +41,19 @@ async function headExists(url) {
   } catch {
     return false;
   }
+}
+
+// Loads web/server-info.json written by `make webserver`.
+// Falls back to null if not present (HEAD-probe fallback paths handle that case).
+let _serverInfo = undefined;
+async function loadServerInfo() {
+  if (_serverInfo !== undefined) return _serverInfo;
+  try {
+    _serverInfo = await fetchJSON('server-info.json');
+  } catch {
+    _serverInfo = null;
+  }
+  return _serverInfo;
 }
 
 function scoreClass(v) {
@@ -119,6 +135,7 @@ function initTab(id, pane) {
     case 'casting':     initCasting().then(done, fail);     break;
     case 'scenes':      initScenes().then(done, fail);      break;
     case 'qa':          initQA().then(done, fail);          break;
+    case 'storyboards': initStoryboards().then(done, fail); break;
     case 'refinements': initRefinements().then(done, fail); break;
   }
 }
@@ -132,15 +149,20 @@ async function initStory() {
   let found = JSON.parse(sessionStorage.getItem(CACHE_KEY) || 'null');
 
   if (!found) {
-    const candidates = [];
-    for (let s = 1; s <= 2; s++)
-      for (let e = 1; e <= 15; e++)
-        candidates.push(`s0${s}e${String(e).padStart(2, '0')}.txt`);
+    const info = await loadServerInfo();
+    if (info?.novels) {
+      found = info.novels;
+    } else {
+      const candidates = [];
+      for (let s = 1; s <= 2; s++)
+        for (let e = 1; e <= 15; e++)
+          candidates.push(`s0${s}e${String(e).padStart(2, '0')}.txt`);
 
-    const results = await Promise.all(
-      candidates.map(f => headExists(`${BASE}/${f}`).then(ok => ok ? f : null))
-    );
-    found = results.filter(Boolean).sort();
+      const results = await Promise.all(
+        candidates.map(f => headExists(`${BASE}/${f}`).then(ok => ok ? f : null))
+      );
+      found = results.filter(Boolean).sort();
+    }
     sessionStorage.setItem(CACHE_KEY, JSON.stringify(found));
   }
 
@@ -342,7 +364,7 @@ function renderRefGrid(container, refs) {
   }
   refs.forEach(ref => {
     // Use actual filename from disk (tracks JSON name, avoids capitalisation mismatch)
-    const imgSrc  = `${PATHS.refDir}/${ref._filename || ref.name.toLowerCase().replace(/\s+/g, '-')}.png`;
+    const imgSrc  = `${PATHS.refDir}/${ref._filename || ref.name.toLowerCase().replace(/\s+/g, '-')}.png${CACHE_BUST}`;
     const typeCls = `type-${(ref.type || 'unknown').toLowerCase()}`;
     const card = el('div', 'ref-card');
     card.innerHTML = `
@@ -400,25 +422,37 @@ async function discoverSceneFiles() {
   if (cached) return JSON.parse(cached);
 
   const files = [];
+  const info = await loadServerInfo();
 
-  // Try merged metadata first
-  if (await headExists(PATHS.metadata))
-    files.push({ url: PATHS.metadata, label: 'animation_metadata.json (merged)' });
+  if (info) {
+    if (info.has_metadata)
+      files.push({ url: PATHS.metadata, label: 'animation_metadata.json (merged)' });
+    (info.scene_files || []).forEach(({ episode, has_refined, has_raw }) => {
+      const n = String(episode).padStart(3, '0');
+      const refined = `${PATHS.sceneGrid}/animation_episode_scenes_${n}_refined.json`;
+      const raw     = `${PATHS.sceneGrid}/animation_episode_scenes_${n}.json`;
+      if (has_refined) files.push({ url: refined, label: `Episode ${episode} (refined)` });
+      else if (has_raw) files.push({ url: raw, label: `Episode ${episode}` });
+    });
+  } else {
+    // Fallback: probe all episode files in parallel
+    if (await headExists(PATHS.metadata))
+      files.push({ url: PATHS.metadata, label: 'animation_metadata.json (merged)' });
 
-  // Probe all episode files in parallel
-  const checks = Array.from({ length: MAX_EPISODES }, (_, i) => {
-    const n = String(i + 1).padStart(3, '0');
-    const refined = `${PATHS.sceneGrid}/animation_episode_scenes_${n}_refined.json`;
-    const raw     = `${PATHS.sceneGrid}/animation_episode_scenes_${n}.json`;
-    return Promise.all([headExists(refined), headExists(raw)]).then(([hasRefined, hasRaw]) => ({
-      i: i + 1, n, refined, raw, hasRefined, hasRaw,
-    }));
-  });
-  const results = await Promise.all(checks);
-  results.forEach(({ i, n, refined, raw, hasRefined, hasRaw }) => {
-    if (hasRefined) files.push({ url: refined, label: `Episode ${i} (refined)` });
-    else if (hasRaw) files.push({ url: raw, label: `Episode ${i}` });
-  });
+    const checks = Array.from({ length: MAX_EPISODES }, (_, i) => {
+      const n = String(i + 1).padStart(3, '0');
+      const refined = `${PATHS.sceneGrid}/animation_episode_scenes_${n}_refined.json`;
+      const raw     = `${PATHS.sceneGrid}/animation_episode_scenes_${n}.json`;
+      return Promise.all([headExists(refined), headExists(raw)]).then(([hasRefined, hasRaw]) => ({
+        i: i + 1, n, refined, raw, hasRefined, hasRaw,
+      }));
+    });
+    const results = await Promise.all(checks);
+    results.forEach(({ i, n, refined, raw, hasRefined, hasRaw }) => {
+      if (hasRefined) files.push({ url: refined, label: `Episode ${i} (refined)` });
+      else if (hasRaw) files.push({ url: raw, label: `Episode ${i}` });
+    });
+  }
 
   sessionStorage.setItem(CACHE_KEY, JSON.stringify(files));
   return files;
@@ -435,7 +469,7 @@ function renderScenes(container, data, sourceUrl) {
   // Storyboard grid — only available for single-episode files
   const episodeNum = sourceUrl.match(/(\d{3})(?:_refined)?\.json$/)?.[1];
   if (episodeNum) {
-    const gridUrl = `${PATHS.sceneGrid}/scene_${episodeNum}_grid_combined.png`;
+    const gridUrl = `${PATHS.sceneGrid}/scene_${episodeNum}_grid_combined.png${CACHE_BUST}`;
     const wrap = el('div', 'storyboard-img-wrap');
     wrap.innerHTML = `<img src="${esc(gridUrl)}" alt="Storyboard ${episodeNum}"
       loading="lazy" onerror="this.parentElement.style.display='none'">`;
@@ -464,13 +498,13 @@ function renderScenes(container, data, sourceUrl) {
 function refUrl(name) {
   const found = castingAll.find(r => r.name === name);
   const filename = found?._filename ?? name.toLowerCase().replace(/\s+/g, '-');
-  return `${PATHS.refDir}/${filename}.png`;
+  return `${PATHS.refDir}/${filename}.png${CACHE_BUST}`;
 }
 
 function renderPanelCard(scene, panel) {
   const sceneId = String(scene.scene_id).padStart(3, '0');
   const panelId = String(panel.panel_index).padStart(2, '0');
-  const imgUrl  = `${PATHS.panels}/${sceneId}_${panelId}_static.png`;
+  const imgUrl  = `${PATHS.panels}/${sceneId}_${panelId}_static.png${CACHE_BUST}`;
   const hookCls = `hook-${(panel.hook_type || 'none').replace(/[^a-z_]/g, '_')}`;
 
   const allRefs = [...(panel.references || []), ...(panel.location_references || [])];
@@ -593,6 +627,59 @@ function qaScore(label, val) {
   return `<div class="qa-score"><span class="qa-score-label">${label}</span><span class="qa-score-val ${scoreClass(v)}">${v}</span></div>`;
 }
 
+// ── Storyboards ───────────────────────────────────────────────────────────────
+async function initStoryboards() {
+  const container = document.getElementById('storyboards-content');
+  container.textContent = 'Loading…';
+
+  const info = await loadServerInfo();
+  const storyboards = info?.storyboards;
+
+  if (!storyboards?.length) {
+    container.className = 'placeholder';
+    container.textContent = 'No storyboard images found. Run `make webserver` to refresh server-info.json.';
+    return;
+  }
+
+  container.className = 'sb-list';
+  container.innerHTML = '';
+
+  storyboards.forEach(({ scene, current, backups }) => {
+    const row    = el('div', 'sb-row');
+    const badge  = el('div', 'sb-scene-badge', String(scene).padStart(3, '0'));
+    const images = el('div', 'sb-images');
+
+    if (current) {
+      const url  = `${BASE}/${current}${CACHE_BUST}`;
+      const wrap = el('div', 'sb-current-wrap');
+      wrap.innerHTML = `<img src="${esc(url)}" alt="Scene ${scene}" loading="lazy"
+           onerror="this.parentElement.style.display='none'">`;
+      makeLightboxHandler(wrap, url);
+      images.appendChild(wrap);
+    }
+
+    if (backups?.length) {
+      const backupsEl = el('div', 'sb-backups');
+      backups.forEach(bpath => {
+        const url       = `${BASE}/${bpath}${CACHE_BUST}`;
+        const dateMatch = bpath.match(/backup-(\d{8}(?:-\d+)?)/);
+        const label     = dateMatch ? dateMatch[1] : 'backup';
+        const wrap      = el('div', 'sb-backup-item');
+        wrap.innerHTML  = `<img src="${esc(url)}" alt="${esc(label)}" loading="lazy"
+             onerror="this.parentElement.style.display='none'">
+           <div class="sb-backup-label">${esc(label)}</div>`;
+        makeLightboxHandler(wrap, url);
+        backupsEl.appendChild(wrap);
+      });
+      images.appendChild(backupsEl);
+    }
+
+    row.appendChild(badge);
+    row.appendChild(images);
+    container.appendChild(row);
+  });
+}
+
 // ── Refinements ───────────────────────────────────────────────────────────────
 async function initRefinements() {
   const container = document.getElementById('refinements-content');
@@ -639,16 +726,34 @@ async function collectRefinementPairs() {
   const cached = sessionStorage.getItem(CACHE_KEY);
   if (cached) return JSON.parse(cached);
 
-  const checks = Array.from({ length: MAX_EPISODES }, (_, i) => {
-    const n = String(i + 1).padStart(3, '0');
-    const refinedUrl = `${PATHS.sceneGrid}/animation_episode_scenes_${n}_refined.json`;
-    const rawUrl     = `${PATHS.sceneGrid}/animation_episode_scenes_${n}.json`;
-    return headExists(refinedUrl).then(ok => ok
-      ? { episodeNum: i + 1, label: `Episode ${i + 1}`, refinedUrl, rawUrl }
-      : null
-    );
-  });
-  const results = (await Promise.all(checks)).filter(Boolean);
+  const info = await loadServerInfo();
+  let results;
+
+  if (info) {
+    results = (info.scene_files || [])
+      .filter(f => f.has_refined)
+      .map(({ episode }) => {
+        const n = String(episode).padStart(3, '0');
+        return {
+          episodeNum: episode,
+          label: `Episode ${episode}`,
+          refinedUrl: `${PATHS.sceneGrid}/animation_episode_scenes_${n}_refined.json`,
+          rawUrl:     `${PATHS.sceneGrid}/animation_episode_scenes_${n}.json`,
+        };
+      });
+  } else {
+    const checks = Array.from({ length: MAX_EPISODES }, (_, i) => {
+      const n = String(i + 1).padStart(3, '0');
+      const refinedUrl = `${PATHS.sceneGrid}/animation_episode_scenes_${n}_refined.json`;
+      const rawUrl     = `${PATHS.sceneGrid}/animation_episode_scenes_${n}.json`;
+      return headExists(refinedUrl).then(ok => ok
+        ? { episodeNum: i + 1, label: `Episode ${i + 1}`, refinedUrl, rawUrl }
+        : null
+      );
+    });
+    results = (await Promise.all(checks)).filter(Boolean);
+  }
+
   sessionStorage.setItem(CACHE_KEY, JSON.stringify(results));
   return results;
 }

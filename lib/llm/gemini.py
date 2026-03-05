@@ -17,7 +17,7 @@ from google.api_core import exceptions as gapi_exceptions
 from google.genai import types
 from PIL import Image as PILImage
 
-from lib.llm.base import BaseLLM, RateLimiter
+from lib.llm.base import BaseLLM, RateLimiter, retry_on_errors
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +43,8 @@ class GeminiLLM(BaseLLM):
     ):
         self.api_key = api_key
         self.text_model = text_model
-        self.image_model = image_model
+        # Strip OpenRouter-style "google/" prefix — the native Gemini SDK doesn't use it
+        self.image_model = image_model.removeprefix("google/")
         self.video_model = video_model
         self.tts_model = tts_model
         self.limiter = RateLimiter(rpm)
@@ -54,27 +55,37 @@ class GeminiLLM(BaseLLM):
     # JSON generation
     # ------------------------------------------------------------------
 
-    def make_json(self, prompt: str, schema: dict = None) -> dict:
-        self.limiter.acquire()
+    def make_json(self, prompt: str, schema: dict = None, max_tokens: int = 32000) -> dict:
         config: dict[str, Any] = {
             "temperature": 0.2,
             "response_mime_type": "application/json",
-            "max_output_tokens": 32000,
+            "max_output_tokens": max_tokens,
             "safety_settings": SAFETY,
         }
         if schema:
             config["response_schema"] = schema
 
-        try:
-            resp = self.client.models.generate_content(
-                model=self.text_model,
-                contents=prompt,
-                config=config,
-            )
-            return json.loads(resp.text)
-        except Exception as e:
-            logger.error(f"❌ Gemini JSON error: {e}")
-            raise
+        @retry_on_errors(max_retries=3, backoff_factor=2)
+        def _call():
+            self.limiter.acquire()
+            try:
+                resp = self.client.models.generate_content(
+                    model=self.text_model,
+                    contents=prompt,
+                    config=config,
+                )
+                try:
+                    return json.loads(resp.text)
+                except json.JSONDecodeError as e:
+                    logger.error(f"❌ Gemini JSON parse error: {e}. Response: {resp.text[:500]}")
+                    raise
+            except json.JSONDecodeError:
+                raise
+            except Exception as e:
+                logger.error(f"❌ Gemini JSON error: {e}")
+                raise
+
+        return _call()
 
     # ------------------------------------------------------------------
     # Image generation
@@ -105,28 +116,32 @@ class GeminiLLM(BaseLLM):
         contents = [_to_part(item) for item in (refs or [])]
         contents.append(types.Part.from_text(text=prompt))
 
-        self.limiter.acquire()
-        try:
-            resp = self.client.models.generate_content(
-                model=self.image_model,
-                contents=contents,
-                config={
-                    'response_modalities': ['Image'],
-                    'image_config': {
-                        'aspect_ratio': aspect_ratio,
-                        'image_size': image_size,
-                    },
-                    'safety_settings': SAFETY,
-                }
-            )
-            if resp.parts and resp.parts[0].inline_data:
-                with BytesIO() as buf:
-                    resp.parts[0].as_image().save(buf, format="PNG")
-                    return buf.getvalue()
-            return b''
-        except Exception as e:
-            logger.error(f"❌ Gemini image error: {e}")
-            raise
+        @retry_on_errors(max_retries=3, backoff_factor=2)
+        def _call():
+            self.limiter.acquire()
+            try:
+                resp = self.client.models.generate_content(
+                    model=self.image_model,
+                    contents=contents,
+                    config={
+                        'response_modalities': ['Image'],
+                        'image_config': {
+                            'aspect_ratio': aspect_ratio,
+                            'image_size': image_size,
+                        },
+                        'safety_settings': SAFETY,
+                    }
+                )
+                if resp.parts and resp.parts[0].inline_data:
+                    with BytesIO() as buf:
+                        resp.parts[0].as_image().save(buf, format="PNG")
+                        return buf.getvalue()
+                raise RuntimeError("Empty image response from Gemini — no inline_data in response parts")
+            except Exception as e:
+                logger.error(f"❌ Gemini image error: {e}")
+                raise
+
+        return _call()
 
     def edit_image(self, src_img, prompt: str, refs=None) -> bytes:
         """
@@ -137,33 +152,37 @@ class GeminiLLM(BaseLLM):
         Returns raw PNG bytes.
         """
         def _as_content(item):
-            if isinstance(item, (str, Path)):
+            if isinstance(item, Path):
                 return PILImage.open(item)
-            return item
+            return item  # str treated as text, passed through to SDK
 
         target = _as_content(src_img)
         contents = [f"Edit the first image, apply the following changes: {prompt}", target]
         for ref in refs or []:
             contents.append(_as_content(ref))
 
-        self.limiter.acquire()
-        try:
-            resp = self.client.models.generate_content(
-                model=self.image_model,
-                contents=contents,
-                config={
-                    "response_modalities": ["Image"],
-                    "safety_settings": SAFETY,
-                },
-            )
-            if resp.parts and resp.parts[0].inline_data:
-                with BytesIO() as buf:
-                    resp.parts[0].as_image().save(buf, format="PNG")
-                    return buf.getvalue()
-            return b""
-        except Exception as e:
-            logger.error(f"❌ Gemini edit_image error: {e}")
-            raise
+        @retry_on_errors(max_retries=3, backoff_factor=2)
+        def _call():
+            self.limiter.acquire()
+            try:
+                resp = self.client.models.generate_content(
+                    model=self.image_model,
+                    contents=contents,
+                    config={
+                        "response_modalities": ["Image"],
+                        "safety_settings": SAFETY,
+                    },
+                )
+                if resp.parts and resp.parts[0].inline_data:
+                    with BytesIO() as buf:
+                        resp.parts[0].as_image().save(buf, format="PNG")
+                        return buf.getvalue()
+                raise RuntimeError("Empty edit_image response from Gemini — no inline_data in response parts")
+            except Exception as e:
+                logger.error(f"❌ Gemini edit_image error: {e}")
+                raise
+
+        return _call()
 
     # ------------------------------------------------------------------
     # Image analysis (for QA gate)
@@ -201,19 +220,23 @@ class GeminiLLM(BaseLLM):
             config["response_mime_type"] = "application/json"
             config["response_schema"] = schema
 
-        self.limiter.acquire()
-        try:
-            resp = self.client.models.generate_content(
-                model=self.text_model,
-                contents=contents,
-                config=config,
-            )
-            if schema:
-                return json.loads(resp.text)
-            return {"text": resp.text}
-        except Exception as e:
-            logger.error(f"❌ Gemini analyze_image error: {e}")
-            return {}
+        @retry_on_errors(max_retries=3, backoff_factor=2)
+        def _call():
+            self.limiter.acquire()
+            try:
+                resp = self.client.models.generate_content(
+                    model=self.text_model,
+                    contents=contents,
+                    config=config,
+                )
+                if schema:
+                    return json.loads(resp.text)
+                return {"text": resp.text}
+            except Exception as e:
+                logger.error(f"❌ Gemini analyze_image error: {e}")
+                raise
+
+        return _call()
 
     def analyze_video(self, video, prompt: str, refs=None, schema: dict = None) -> dict:
         """
@@ -247,7 +270,7 @@ class GeminiLLM(BaseLLM):
                 contents.append(_as_video_part(item))
         else:
             contents.append(_as_video_part(video))
-        contents.append(prompt)
+        contents.append(types.Part.from_text(text=prompt))
 
         config: dict[str, Any] = {
             "safety_settings": SAFETY,
@@ -258,19 +281,23 @@ class GeminiLLM(BaseLLM):
             config["response_mime_type"] = "application/json"
             config["response_schema"] = schema
 
-        self.limiter.acquire()
-        try:
-            resp = self.client.models.generate_content(
-                model=self.text_model,
-                contents=contents,
-                config=config,
-            )
-            if schema:
-                return json.loads(resp.text)
-            return {"text": resp.text}
-        except Exception as e:
-            logger.error(f"❌ Gemini analyze_video error: {e}")
-            return {}
+        @retry_on_errors(max_retries=3, backoff_factor=2)
+        def _call():
+            self.limiter.acquire()
+            try:
+                resp = self.client.models.generate_content(
+                    model=self.text_model,
+                    contents=contents,
+                    config=config,
+                )
+                if schema:
+                    return json.loads(resp.text)
+                return {"text": resp.text}
+            except Exception as e:
+                logger.error(f"❌ Gemini analyze_video error: {e}")
+                raise
+
+        return _call()
 
     # ------------------------------------------------------------------
     # TTS (speech generation)
@@ -339,6 +366,7 @@ class GeminiLLM(BaseLLM):
             'aspect_ratio': "16:9",
             'resolution': '720p',
         }
+        max_wait_seconds = 600  # 10-minute hard limit per clip
 
         try:
             source = types.GenerateVideosSource(prompt=prompt)
@@ -356,8 +384,15 @@ class GeminiLLM(BaseLLM):
                 config=veo_config,
             )
 
+            deadline = time.time() + max_wait_seconds
             poll_interval = 10
             while not operation.done:
+                if time.time() > deadline:
+                    logger.warning(
+                        f"⚠️  Veo job timed out after {max_wait_seconds}s. "
+                        f"The server-side job may still be running and consuming quota."
+                    )
+                    raise TimeoutError(f"Veo job did not complete within {max_wait_seconds}s")
                 time.sleep(poll_interval)
                 poll_interval = min(poll_interval * 2, 60)
                 operation = self.client.operations.get(operation)
@@ -366,14 +401,17 @@ class GeminiLLM(BaseLLM):
                 raise RuntimeError(f"Veo API error: {operation.error}")
 
             if not operation.response.generated_videos:
-                return b''
+                raise RuntimeError("Veo returned no generated videos in response")
 
             video = operation.response.generated_videos[0]
-            return self.client.files.download(file=video)
+            data = self.client.files.download(file=video)
+            if not data:
+                raise RuntimeError("Veo download returned empty data")
+            return data
 
         except gapi_exceptions.ResourceExhausted:
             logger.error("🛑 Veo quota exhausted (429). Stop and retry tomorrow.")
             raise
         except Exception as e:
             logger.error(f"❌ Veo error: {e}")
-            return b''
+            raise

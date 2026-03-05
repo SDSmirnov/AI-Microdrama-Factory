@@ -6,7 +6,7 @@ Port of 06_continuity_enforcer.py using a BaseLLM backend.
 import json
 import logging
 import shutil
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List
@@ -14,12 +14,10 @@ from typing import Dict, List
 from PIL import Image
 
 from lib.core.schemas import UPDATED_REF_SCHEMA, SCENE_REWRITE_SCHEMA
+from lib.core.utils import DEFAULT_OUTPUT_DIR, DEFAULT_REF_DIR, safe_name
 from lib.llm.base import BaseLLM
 
 logger = logging.getLogger(__name__)
-
-OUTPUT_DIR = Path("cinematic_render")
-REF_DIR = Path("ref_thriller")
 
 CASTING_RULES = """
 ## Reference Generation
@@ -88,18 +86,20 @@ def enrich_and_regenerate_reference(
     ref_name: str,
     usage_contexts: List[str],
     llm: BaseLLM,
-    ref_dir: Path = REF_DIR,
+    ref_dir: Path = DEFAULT_REF_DIR,
 ):
     """Enrich reference description and regenerate the portrait image."""
-    safe_name = ref_name.replace("/", "-").replace("'", " ").replace('"', '').replace(" ", "_").lower()
-    json_path = ref_dir / f"{safe_name}.json"
-    png_path = ref_dir / f"{safe_name}.png"
+    sname = safe_name(ref_name)
+    json_path = ref_dir / f"{sname}.json"
+    png_path = ref_dir / f"{sname}.png"
 
     if not json_path.exists():
         logger.warning(f"⚠️  JSON for {ref_name} not found, skipping.")
         return
 
     ref_data = json.loads(json_path.read_text(encoding='utf-8'))
+    if len(usage_contexts) > 20:
+        logger.info(f"  ℹ️  Truncating context for {ref_name}: {len(usage_contexts)} usages → 20")
     logger.info(f"🔍 Enriching: {ref_name} (used in {len(usage_contexts)} panels)")
 
     prompt = f"""
@@ -138,8 +138,7 @@ def enrich_and_regenerate_reference(
 
         refs = []
         if ref_data.get('style_reference') and ref_data['style_reference'] != ref_name:
-            style_safe = ref_data['style_reference'].replace("/", "-").replace(" ", "_").lower()
-            style_path = ref_dir / f"{style_safe}.png"
+            style_path = ref_dir / f"{safe_name(ref_data['style_reference'])}.png"
             if style_path.exists():
                 refs.append(f"## Visual Style reference for {ref_data['style_reference']}")
                 refs.append(Image.open(style_path))
@@ -168,9 +167,9 @@ def align_scene_prompts(scene: Dict, all_refs_data: Dict, llm: BaseLLM) -> Dict:
 
     ref_context = {}
     for ref in scene_refs:
-        safe_name = ref.replace("/", "-").replace(" ", "_").lower()
-        if safe_name in all_refs_data:
-            ref_context[ref] = all_refs_data[safe_name]['video_visual_desc']
+        ref_key = safe_name(ref)
+        if ref_key in all_refs_data:
+            ref_context[ref] = all_refs_data[ref_key]['video_visual_desc']
 
     prompt = f"""
     You are a Script Supervisor enforcing Visual Continuity.
@@ -206,8 +205,9 @@ def align_scene_prompts(scene: Dict, all_refs_data: Dict, llm: BaseLLM) -> Dict:
 
 def run_continuity_pass(
     llm: BaseLLM,
-    ref_dir: Path = REF_DIR,
+    ref_dir: Path = DEFAULT_REF_DIR,
     max_workers: int = 5,
+    output_dir: Path = DEFAULT_OUTPUT_DIR,
 ) -> Path:
     """
     Full continuity pipeline:
@@ -216,7 +216,7 @@ def run_continuity_pass(
     3. Align scene prompts to approved references
     4. Save animation_metadata_consistent.json
     """
-    metadata_path = OUTPUT_DIR / "animation_metadata.json"
+    metadata_path = output_dir / "animation_metadata.json"
     if not metadata_path.exists():
         logger.error("❌ animation_metadata.json not found. Run screenplay first.")
         raise FileNotFoundError(metadata_path)
@@ -230,20 +230,36 @@ def run_continuity_pass(
     _backup_refs(ref_dir, extra_files=[metadata_path])
 
     logger.info("=== STEP 2: ENRICHING REFERENCES ===")
+    error_count = 0
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        for ref_name, usages in ref_usage.items():
-            executor.submit(enrich_and_regenerate_reference, ref_name, usages, llm, ref_dir)
+        futures = {
+            executor.submit(enrich_and_regenerate_reference, ref_name, usages, llm, ref_dir): ref_name
+            for ref_name, usages in ref_usage.items()
+        }
+        for future in as_completed(futures):
+            ref_name = futures[future]
+            if exc := future.exception():
+                logger.error(f"❌ Enrichment failed for {ref_name}: {exc}")
+                error_count += 1
+    if error_count > 0:
+        logger.warning(f"⚠️  {error_count}/{len(ref_usage)} enrichment(s) failed. Proceeding with available data.")
 
     all_refs_data = {}
     for ref_file in ref_dir.glob("*.json"):
         all_refs_data[ref_file.stem] = json.loads(ref_file.read_text(encoding='utf-8'))
 
     logger.info("=== STEP 3: ALIGNING SCENE PROMPTS ===")
+    aligned_scenes = []
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        aligned_scenes = list(executor.map(
-            lambda s: align_scene_prompts(s, all_refs_data, llm),
-            metadata['scenes']
-        ))
+        futures = {executor.submit(align_scene_prompts, s, all_refs_data, llm): s for s in metadata['scenes']}
+        for future in as_completed(futures):
+            original_scene = futures[future]
+            try:
+                aligned_scenes.append(future.result())
+            except Exception as e:
+                logger.error(f"❌ Scene {original_scene.get('scene_id', '?')} alignment failed, keeping original: {e}")
+                aligned_scenes.append(original_scene)
+    aligned_scenes.sort(key=lambda s: s.get('scene_id', 0))
 
     metadata['scenes'] = aligned_scenes
     # Overwrite animation_metadata.json in-place — it IS the single source of truth

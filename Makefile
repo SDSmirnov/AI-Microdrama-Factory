@@ -20,6 +20,7 @@ TEXT        ?=
 DURATION    ?= 3
 IMAGE       ?=
 EDIT        ?=
+FRAME      ?= both
 REFS           ?=
 VOICEOVER_DIR  ?= cinematic_render/voiceover
 VOICEOVER_SH   ?= voiceover.sh
@@ -60,8 +61,8 @@ storyboard:  ## Render scene grid images or individual panels
 qa:  ## Run grid quality gate for SCENE (pass SCENE=N to filter; omit for all)
 	python cli.py --llm $(LLM) qa $(if $(filter-out all,$(SCENE)),--scene $(SCENE),)
 
-apply-qa:  ## Refine all needs_refinement panels from quality_report.json (SCENE=N to filter)
-	python cli.py --llm $(LLM) apply-qa $(if $(filter-out all,$(SCENE)),--scene $(SCENE),) $(CUSTOM)
+apply-qa:  ## Refine all needs_refinement panels from quality_report.json (SCENE=N FRAME=static|start|end|both)
+	python cli.py --llm $(LLM) apply-qa $(if $(filter-out all,$(SCENE)),--scene $(SCENE),) --frame $(FRAME) $(CUSTOM)
 
 accept-qa:  ## Promote refined/ panels into panels/, backup originals to refined/backup-YYYYMMDD
 	python cli.py accept-qa
@@ -69,8 +70,8 @@ accept-qa:  ## Promote refined/ panels into panels/, backup originals to refined
 rebuild-storyboard:  ## Rebuild scene grid images from current panels/ (backup originals)
 	python cli.py rebuild-storyboard $(SCENE)
 
-refinement:  ## Refine panel PANEL in scene SCENE (both must be integers, e.g. SCENE=1 PANEL=3)
-	python cli.py --llm $(LLM) refinement $(SCENE) $(PANEL)
+refinement:  ## Refine panel PANEL in scene SCENE (e.g. SCENE=1 PANEL=3 FRAME=static|start|end|both)
+	python cli.py --llm $(LLM) refinement $(SCENE) $(PANEL) --frame $(FRAME) $(CUSTOM)
 
 animation:  ## Generate video clips using PROVIDER (veo|grok)
 	python cli.py animation $(PROVIDER) $(SCENE) $(PANEL)
@@ -98,6 +99,7 @@ duck:  ## Duck original audio in VIDEO wherever DUBBED track speaks → OUTPUT m
 	python cli.py duck $(VIDEO) $(DUBBED) $(OUTPUT)
 
 webserver:  ## Start static web server on :5005 and open Chrome at web/index.html
+	@python3 web/gen_server_info.py
 	@echo "Starting server at http://localhost:5005/web/index.html"
 	@(sleep 1 && google-chrome --new-tab "http://localhost:5005/web/index.html" 2>/dev/null &) &
 	python3 -m http.server 5005 --directory .

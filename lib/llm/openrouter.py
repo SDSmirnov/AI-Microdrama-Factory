@@ -8,6 +8,7 @@ import base64
 import json
 import logging
 import mimetypes
+import os
 import wave
 from io import BytesIO
 from pathlib import Path
@@ -122,9 +123,11 @@ class OpenRouterLLM(BaseLLM):
             return item
         if isinstance(item, str):
             try:
-                p = Path(item)
-                if p.exists():
-                    return self._to_image_part(p) if media == "image" else self._to_video_part(p)
+                # Only probe filesystem for short, single-line strings (likely paths, not prompts)
+                if len(item) < 4096 and '\n' not in item:
+                    p = Path(item)
+                    if p.exists():
+                        return self._to_image_part(p) if media == "image" else self._to_video_part(p)
             except OSError:
                 pass
             return {"type": "text", "text": item}
@@ -134,13 +137,13 @@ class OpenRouterLLM(BaseLLM):
     # Text / JSON generation
     # ------------------------------------------------------------------
 
-    def _call_openrouter(self, messages: list, schema: dict = None) -> str:
+    def _call_openrouter(self, messages: list, schema: dict = None, max_tokens: int = 32000) -> str:
         """POST to OpenRouter chat completions. Returns raw response text."""
         payload: dict[str, Any] = {
             "model": self._model_name(self.text_model),
             "messages": messages,
             "temperature": 0.5,
-            "max_tokens": 128000,
+            "max_tokens": max_tokens,
         }
         if schema:
             payload["response_format"] = {
@@ -157,20 +160,24 @@ class OpenRouterLLM(BaseLLM):
         data = self._post_openrouter(payload, timeout=300)
         return self._extract_text(data)
 
-    def make_json(self, prompt: str, schema: dict = None) -> dict:
+    def make_json(self, prompt: str, schema: dict = None, max_tokens: int = 32000) -> dict:
         messages = []
         if self.system_prompt:
             messages.append({"role": "system", "content": self.system_prompt})
         messages.append({"role": "user", "content": prompt})
 
-        self.text_limiter.acquire()
-        try:
-            content = self._call_openrouter(messages, schema)
+        @retry_on_errors(max_retries=3, backoff_factor=2)
+        def _call():
+            self.text_limiter.acquire()
+            content = self._call_openrouter(messages, schema, max_tokens=max_tokens)
             logger.debug(content)
-            return json.loads(content)
-        except Exception as e:
-            logger.error(f"    ❌ JSON error: {e}")
-            raise
+            try:
+                return json.loads(content)
+            except json.JSONDecodeError as e:
+                logger.error(f"    ❌ JSON parse error: {e}. Response: {content[:500]}")
+                raise
+
+        return _call()
 
     # ------------------------------------------------------------------
     # Image generation
@@ -206,8 +213,9 @@ class OpenRouterLLM(BaseLLM):
                     "aspect_ratio": aspect_ratio,
                     "image_size": image_size,
                 },
-                # "config": {"temperature": 0.45, 'seed': 37, 'top_p': 0.6}
-                "temperature": 0.35, 'seed': 21, 'top_p': 0.8
+                # temperature/top_p balance creativity vs. consistency for cinematic stills;
+                # seed from AI_SEED env var for reproducibility across retries.
+                "temperature": 0.35, "seed": int(os.getenv('AI_SEED', '21')), "top_p": 0.8
             }
             data = self._post_openrouter(payload, timeout=180)
             try:

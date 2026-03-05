@@ -1,4 +1,5 @@
 {
+  "episodes_count": 3,
   "format": {
     "type": "dual_grid_animation",
     "description": "Two vertically stacked 3x3 grids for START/END keyframes",

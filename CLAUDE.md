@@ -84,26 +84,45 @@ python 01_cinematic_preroll.py s01e01.txt 42
 
 ## Architecture
 
-### Two-Script Pipeline
+### Entry Point
 
-**`00_style_master.py`** — Prompt generator:
-- Analyzes the novel via Gemini text model to extract genre, setting, POV, tone, characters
-- Generates style-adapted versions of all prompt templates into `custom_prompts/`
-- Uses `google.generativeai` (legacy SDK)
+**`cli.py`** — Single CLI with 20+ subcommands covering the full pipeline from text to video.
+Uses `--llm {openrouter|gemini|grok}` to select the backend.
 
-**`01_cinematic_preroll.py`** — Main render engine:
-- Uses `google.genai` (new SDK)
-- Runs a multi-stage concurrent pipeline via `ThreadPoolExecutor`
+### Library Structure (`lib/`)
 
-### Pipeline Stages in `01_cinematic_preroll.py`
+```
+lib/
+  core/        # Project config, path constants, prompts loader, JSON schemas, grid utils
+  llm/         # BaseLLM ABC + backends: GeminiLLM, OpenRouterLLM, GrokLLM
+  studio/      # Production pipeline modules:
+    stylist.py      — novel analysis + custom_prompts/ generation
+    screenwriter.py — episode/scene/reversal AI passes
+    artist.py       — casting, reference rendering, grid/panel image generation, slicing
+    critic.py       — QA gate: fidelity/consistency scoring per panel
+    director.py     — continuity enforcer: enriches refs, aligns scene prompts
+    editor.py       — panel refinement using original + reference images
+    cutter.py       — autocut: AI-trim animation clips
+    retoucher.py    — image editing via LLM
+  animation/   # Veo (Google) and Grok animators
+  audio/       # TTS (Gemini/OpenRouter), SFX (ElevenLabs), dubbing (Whisper→TTS), ducking
+```
 
-1. **Casting** (`auto_cast_characters`): Identifies characters/locations/objects from text; generates reference portrait images into `ref_thriller/` (PNG + JSON metadata)
-2. **Master Screenplay** (`analyze_episodes_master`): Breaks the novel into ~30 episodes with narrative continuity rules
-3. **Scene Keyframes** (`analyze_scenes_for_episode`): Per-episode concurrent generation of panel-level `visual_start`/`visual_end` descriptions
-4. **Refinement** (`refine_scenes_for_episode`): Enhances visual/motion prompts for precision; resolves ambiguity
-5. **Reversal Pass** (`apply_reversal_pass`): For panels flagged `is_reversed`, swaps start/end and generates reversed motion prompts
-6. **Image Rendering** (`generate_combined_grid`): Generates a single grid image per scene using character reference images
-7. **Slicing** (`slice_combined`): Crops the grid image into individual panel files
+### Pipeline Stages (via `cli.py` subcommands)
+
+1. **`styles`** (`stylist.analyze_novel` + `generate_custom_prompts`): Extracts genre/tone/characters; writes style-adapted prompts to `custom_prompts/`
+2. **`casting`** (`artist.auto_cast_characters`): Identifies characters/locations/objects from text; saves reference JSONs to `ref_thriller/`
+3. **`refs`** (`artist.render_character_refs`): Generates missing reference portrait PNGs
+4. **`screenplay`** (`screenwriter.analyze_scenes_master`): Episodes → scenes → refinement → reversal pass; writes `animation_metadata.json`
+5. **`scenes`** (`screenwriter.analyze_scenes_for_episode`): Per-episode keyframe generation; upserts into `animation_metadata.json`
+6. **`consistency`** (`director.run_continuity_pass`): Enriches refs from scene usage; re-aligns panel prompts to approved references
+7. **`storyboard`** (`artist.render_scene_grids` / `render_panels`): Generates grid images or individual panel PNGs
+8. **`qa`** (`critic.run_quality_gate`): Visual fidelity/consistency scoring; writes `quality_report.json`
+9. **`apply-qa`** / **`refinement`** (`editor.refine_panel`): Regenerates flagged panels using reference images
+10. **`accept-qa`**: Promotes refined PNGs into `panels/`, backs up originals
+11. **`rebuild-storyboard`**: Rebuilds grid images from current `panels/`
+12. **`animation`** (`animation.VeoAnimator` / `GrokAnimator`): Image-to-video per panel
+13. **Post-production**: `autocut`, `voiceover`, `tts`, `dub`, `duck`
 
 ### Prompt System
 
@@ -142,6 +161,10 @@ Three structured output schemas enforce the AI response format:
 - `SCREENPLAY_SCHEMA` — episode-level breakdown with continuity rules
 - `SCENE_SCHEMA` — panel-level keyframes with motion/reversal prompts
 - `CHARACTER_SCHEMA` — reference character/location/object descriptions
+
+### Code Style Guidelines
+
+Code must be idiomatic, concise, precise and terse, self-documenting.
 
 ## Протокол проверки: «ПРИДИРА»
 - Используй этот блок вопросов перед выкладкой:

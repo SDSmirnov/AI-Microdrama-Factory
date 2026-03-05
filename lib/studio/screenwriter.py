@@ -5,15 +5,18 @@ All prompts and SYSTEM_PROMPT are preserved verbatim from 01_cinematic_preroll.p
 """
 import json
 import logging
+import os
+import tempfile
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from threading import Lock
+
 
 from lib.core.schemas import SCREENPLAY_SCHEMA, SCENE_SCHEMA, REVERSAL_SCHEMA
+from lib.core.utils import DEFAULT_OUTPUT_DIR
 from lib.llm.base import BaseLLM, retry_on_errors
 
 logger = logging.getLogger(__name__)
-
-OUTPUT_DIR = Path(__file__).resolve().parent.parent.parent / "cinematic_render"
 
 # ---------------------------------------------------------------------------
 # SYSTEM PROMPT — verbatim from 01_cinematic_preroll.py:284-332
@@ -179,6 +182,7 @@ PANEL TYPE (panel_type):
 def analyze_episodes_master(text: str, prompts: dict, config: dict, llm: BaseLLM) -> dict:
     logger.info("\n🎥 MASTER SCREENWRITER: Preparing screenplay...")
     setting_context = prompts.get('setting', '')
+    episodes_count = config.get('episodes_count', 3)
     prompt = f"""
 # Role: MASTER SCREENWRITER — VERTICAL MICRODRAMA (PROD-SPEC)
 
@@ -251,7 +255,7 @@ LAUNCH INSTRUCTION: deliver text that makes the cinematographer itch to grab a c
 3. Each episode should cover from 30 to 50 seconds of real-time action.
 4. Add continuity rules for episodes, e.g. if in episode 3 hero puts on spacesuit, it should be noted in next episodes (4, 5, etc) until he takes it off.
 5. Episodes will be split for animation independently, so should have enough context.
-6. Cover the full story from beginning to end. Use exactly 3 episodes of 30–50 seconds, so that the final cut version will fit 2 minute Shorts format.
+6. Cover the full story from beginning to end. Use exactly {episodes_count} episodes of 30–50 seconds, so that the final cut version will fit 2 minute Shorts format.
 7. Episode 1 panel 1 MUST be a cold_open — consequence before cause, visual question mark, no exposition.
 8. Mark hook_type for the cold_open panel, emotional peak panel, and cliffhanger panel in screenplay_instructions.
 9. Every episode MUST end on a cliffhanger or revelation — never on resolution.
@@ -289,7 +293,11 @@ def analyze_scenes_for_episode(
     TEXT TO ADAPT:
     {text}
 """
-    result = llm.make_json(prompt, SCENE_SCHEMA)
+    @retry_on_errors(max_retries=3, backoff_factor=2)
+    def _call():
+        return llm.make_json(prompt, SCENE_SCHEMA)
+
+    result = _call()
     if not result or 'scenes' not in result:
         logger.error(f"❌ Empty scene result for episode {episode_counter}")
     all_episodes.append((episode_counter, result or {}))
@@ -454,7 +462,9 @@ def process_single_scene(
     config: dict,
     llm: BaseLLM,
     all_scenes: list,
+    output_dir: Path = None,
 ):
+    output_dir = output_dir or DEFAULT_OUTPUT_DIR
     scene['scene_id'] = scene_id
     scene['episode_id'] = episode_counter
     for idx, panel in enumerate(scene.get('panels', []), 1):
@@ -474,11 +484,72 @@ def process_single_scene(
     scene = apply_reversal_pass(scene, prompts, config, llm)
     all_scenes.append(scene)
 
-    out_path = OUTPUT_DIR / f"animation_episode_scenes_{episode_counter:03d}_refined.json"
-    out_path.write_text(
-        json.dumps({'scenes': [scene]}, ensure_ascii=False, indent=2),
-        encoding='utf-8',
+    out_path = output_dir / f"animation_episode_scenes_{episode_counter:03d}_refined.json"
+    content = json.dumps({'scenes': [scene]}, ensure_ascii=False, indent=2)
+    tmp_fd, tmp_name = tempfile.mkstemp(dir=output_dir, suffix='.json.tmp')
+    try:
+        with os.fdopen(tmp_fd, 'w', encoding='utf-8') as f:
+            f.write(content)
+        os.replace(tmp_name, out_path)
+    except Exception:
+        try:
+            os.unlink(tmp_name)
+        except OSError:
+            pass
+        raise
+
+
+# ---------------------------------------------------------------------------
+# Scene merge / upsert
+# ---------------------------------------------------------------------------
+def merge_scenes(
+    old_metadata: dict,
+    new_scenes: list,
+    new_ep_ids: set,
+    panels_dir: Path,
+) -> list:
+    """
+    Upsert new_scenes into old_metadata['scenes'], preserving scene_ids where possible
+    so that panels/<NNN>_*.png filenames remain valid.
+
+    - If the number of scenes for the replaced episodes is unchanged, old scene_ids are reused.
+    - If the count changed, new sequential IDs are assigned and orphaned panel files are logged.
+    Returns the merged, sorted list of scenes.
+    """
+    old_scenes = old_metadata.get('scenes', [])
+    kept = [s for s in old_scenes if s.get('episode_id') not in new_ep_ids]
+    old_ep_scene_ids = sorted(
+        s['scene_id'] for s in old_scenes if s.get('episode_id') in new_ep_ids
     )
+    merged = sorted(kept, key=lambda s: s.get('scene_id', 0))
+
+    if len(new_scenes) == len(old_ep_scene_ids):
+        for scene, sid in zip(new_scenes, old_ep_scene_ids):
+            scene['scene_id'] = sid
+        merged = sorted(merged + new_scenes, key=lambda s: s.get('scene_id', 0))
+    else:
+        if old_ep_scene_ids:
+            logger.warning(
+                f"Scene count changed for episode(s) {sorted(new_ep_ids)}: "
+                f"{len(old_ep_scene_ids)} old → {len(new_scenes)} new. "
+                f"Panels for old scene_ids {old_ep_scene_ids} may be orphaned."
+            )
+            orphaned = sorted(
+                p for sid in old_ep_scene_ids
+                for p in panels_dir.glob(f"{sid:03d}_*.png")
+            )
+            if orphaned:
+                logger.warning(
+                    f"  Orphaned panel files ({len(orphaned)}): "
+                    + ", ".join(p.name for p in orphaned)
+                )
+        next_id = (max(s['scene_id'] for s in merged) + 1) if merged else 1
+        for scene in new_scenes:
+            scene['scene_id'] = next_id
+            next_id += 1
+            merged.append(scene)
+
+    return merged
 
 
 # ---------------------------------------------------------------------------
@@ -491,19 +562,26 @@ def analyze_scenes_master(
     llm: BaseLLM,
     max_workers: int = 10,
     character_info: dict = None,
+    output_dir: Path = None,
 ) -> dict:
     """
     Full pipeline: episodes → scenes → reversal → save JSONs.
     Returns {'scenes': [...]}.
     """
-    episodes = analyze_episodes_master(text, prompts, config, llm)
+    output_dir = output_dir or DEFAULT_OUTPUT_DIR
 
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    (OUTPUT_DIR / "animation_episodes.json").write_text(
+    episodes = analyze_episodes_master(text, prompts, config, llm)
+    if not episodes:
+        raise RuntimeError(
+            "analyze_episodes_master returned None or empty — check LLM response and API key"
+        )
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    (output_dir / "animation_episodes.json").write_text(
         json.dumps(episodes, ensure_ascii=False, indent=2),
         encoding='utf-8',
     )
-    logger.info(episodes)
+    logger.debug(episodes)
 
     all_scenes: list = []
     scene_counter = 0
@@ -515,36 +593,56 @@ def analyze_scenes_master(
         episode_counter = episode.get('episode_id', len(batch_analyze) + 1)
         batch_analyze.append((episode_counter, json.dumps(episode, ensure_ascii=False, indent=2), prompts, config, llm, all_episodes, character_info))
 
+    failed_episodes = []
+    _ep_lock = Lock()
+
     def _safe_analyze(args):
         try:
             analyze_scenes_for_episode(*args)
         except Exception as e:
             logger.error(f"❌ Episode {args[0]} scene analysis failed: {e}")
+            with _ep_lock:
+                failed_episodes.append(args[0])
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         list(executor.map(_safe_analyze, batch_analyze))
+
+    if failed_episodes:
+        total = len(batch_analyze)
+        logger.warning(f"⚠️  {len(failed_episodes)}/{total} episode(s) failed analysis: {failed_episodes}")
+        if len(failed_episodes) >= total:
+            raise RuntimeError(f"All {total} episodes failed scene analysis — aborting pipeline")
 
     all_episodes = sorted(all_episodes, key=lambda e: e[0])
 
     for episode_counter, data in all_episodes:
         logger.info(f"Processing episode: {episode_counter} scene start: {scene_counter}")
-        (OUTPUT_DIR / f"animation_episode_scenes_{episode_counter:03d}.json").write_text(
+        (output_dir / f"animation_episode_scenes_{episode_counter:03d}.json").write_text(
             json.dumps(data, ensure_ascii=False, indent=2),
             encoding='utf-8',
         )
 
         for scene in data.get('scenes', []):
             scene_counter += 1
-            batch_refinement.append((episode_counter, scene_counter, scene, prompts, config, llm, all_scenes))
+            batch_refinement.append((episode_counter, scene_counter, scene, prompts, config, llm, all_scenes, output_dir))
+
+    failed_scenes = []
+    _sc_lock = Lock()
 
     def _safe_process(args):
         try:
             process_single_scene(*args)
         except Exception as e:
             logger.error(f"❌ Scene {args[1]} processing failed: {e}")
+            with _sc_lock:
+                failed_scenes.append(args[1])
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         list(executor.map(_safe_process, batch_refinement))
+
+    if failed_scenes:
+        total = len(batch_refinement)
+        logger.warning(f"⚠️  {len(failed_scenes)}/{total} scene(s) failed processing: {failed_scenes}")
 
     all_scenes = sorted(all_scenes, key=lambda s: s['scene_id'])
     return {'scenes': all_scenes}

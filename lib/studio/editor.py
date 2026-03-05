@@ -11,23 +11,15 @@ from typing import Dict, List, Optional, Tuple
 
 from PIL import Image
 
+from lib.core.project import Project
+from lib.core.utils import DEFAULT_OUTPUT_DIR, DEFAULT_REF_DIR, load_metadata, safe_name
 from lib.llm.base import BaseLLM
 
 logger = logging.getLogger(__name__)
 
-OUTPUT_DIR = Path("cinematic_render")
-PANELS_DIR = OUTPUT_DIR / "panels"
-REFINED_DIR = OUTPUT_DIR / "refined"
-REF_DIR = Path("ref_thriller")
 
 
-def load_metadata(metadata_path: Path = OUTPUT_DIR / "animation_metadata.json") -> Dict:
-    if not metadata_path.exists():
-        raise FileNotFoundError(f"Metadata not found: {metadata_path}")
-    return json.loads(metadata_path.read_text(encoding='utf-8'))
-
-
-def load_quality_report(report_path: Path = OUTPUT_DIR / "quality_report.json") -> Dict[str, str]:
+def load_quality_report(report_path: Path = DEFAULT_OUTPUT_DIR / "quality_report.json") -> Dict[str, str]:
     """Load refinement prompts keyed by 'scene_id_panel_id'."""
     if not report_path.exists():
         logger.warning(f"⚠️  Quality report not found: {report_path}")
@@ -50,7 +42,7 @@ def find_scene_panel(metadata: Dict, scene_id: int, panel_id: int) -> Optional[D
     return None
 
 
-def load_character_references(references: List[str], ref_dir: Path = REF_DIR) -> Tuple[List, List[str]]:
+def load_character_references(references: List[str], ref_dir: Path = DEFAULT_REF_DIR) -> Tuple[List, List[str]]:
     """
     Load PIL images and text blocks for each reference.
     Returns (content_list, loaded_names).
@@ -59,34 +51,28 @@ def load_character_references(references: List[str], ref_dir: Path = REF_DIR) ->
     loaded_refs = []
 
     for ref_name in references:
-        possible_names = [
-            ref_name,
-            ref_name.lower().replace(' ', '_'),
-            ref_name.title().replace(' ', '_'),
-        ]
+        img_path = ref_dir / f"{safe_name(ref_name)}.png"
+        json_path = ref_dir / f"{safe_name(ref_name)}.json"
 
-        for name in possible_names:
-            img_path = ref_dir / f"{name}.png"
-            json_path = ref_dir / f"{name}.json"
+        if img_path.exists():
+            try:
+                img = Image.open(img_path)
+                desc = ""
+                if json_path.exists():
+                    try:
+                        data = json.loads(json_path.read_text(encoding='utf-8'))
+                        desc = data.get('visual_desc', '')
+                    except Exception:
+                        pass
 
-            if img_path.exists():
-                try:
-                    img = Image.open(img_path)
-                    desc = ""
-                    if json_path.exists():
-                        try:
-                            data = json.loads(json_path.read_text(encoding='utf-8'))
-                            desc = data.get('visual_desc', '')
-                        except Exception:
-                            pass
-
-                    ref_content.append(f"## Visual Reference: \"{ref_name}\"\n{desc}\n")
-                    ref_content.append(img)
-                    loaded_refs.append(ref_name)
-                    logger.info(f"  ✓ Loaded ref: {ref_name}")
-                    break
-                except Exception as e:
-                    logger.warning(f"  ⚠️  Error loading {img_path}: {e}")
+                ref_content.append(f"## Visual Reference: \"{ref_name}\"\n{desc}\n")
+                ref_content.append(img)
+                loaded_refs.append(ref_name)
+                logger.info(f"  ✓ Loaded ref: {ref_name}")
+            except Exception as e:
+                logger.warning(f"  ⚠️  Error loading {img_path}: {e}")
+        else:
+            logger.warning(f"  ⚠️  Ref not found: {img_path}")
 
     return ref_content, loaded_refs
 
@@ -100,7 +86,11 @@ def refine_panel(
     config: Dict,
     llm: BaseLLM,
     quality_prompts: Dict[str, str] = None,
+    project: Project = None,
 ) -> bool:
+    panels_dir = project.panels_dir if project else DEFAULT_OUTPUT_DIR / "panels"
+    refined_dir = project.refined_dir if project else DEFAULT_OUTPUT_DIR / "refined"
+
     data = find_scene_panel(metadata, scene_id, panel_id)
     if not data:
         logger.error(f"❌ Panel {panel_id} not found in scene {scene_id}")
@@ -114,7 +104,7 @@ def refine_panel(
     logger.info(f"{'='*60}")
 
     panel_filename = f"{scene_id:03d}_{panel_id:02d}_{frame_type}.png"
-    original_path = PANELS_DIR / panel_filename
+    original_path = panels_dir / panel_filename
 
     if not original_path.exists():
         logger.error(f"❌ Panel file not found: {original_path}")
@@ -124,7 +114,17 @@ def refine_panel(
 
     references = panel.get('references', [])
     if not references:
-        logger.warning("⚠️  No references specified for this panel, skipping")
+        panel_type = panel.get('panel_type', 'narrative')
+        if panel_type == 'atmosphere_insert':
+            logger.info(
+                f"ℹ️  Scene {scene_id} panel {panel_id} is atmosphere_insert — "
+                f"no character refs by design. Regenerate via 'storyboard' instead."
+            )
+        else:
+            logger.warning(
+                f"⚠️  Scene {scene_id} panel {panel_id}: no references specified, "
+                f"cannot refine. Add refs to metadata or regenerate via 'storyboard'."
+            )
         return False
 
     ref_content, loaded_refs = load_character_references(references)
@@ -195,8 +195,8 @@ No captions or text overlays!
 """
 
     refined_filename = f"{scene_id:03d}_{panel_id:02d}_{frame_type}_refined.png"
-    refined_path = REFINED_DIR / refined_filename
-    REFINED_DIR.mkdir(parents=True, exist_ok=True)
+    refined_path = refined_dir / refined_filename
+    refined_dir.mkdir(parents=True, exist_ok=True)
 
     if refined_path.exists():
         logger.info(f"⏭  Refined version already exists: {refined_path}")
