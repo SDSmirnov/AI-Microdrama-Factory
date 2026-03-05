@@ -573,12 +573,13 @@ def slice_combined(path_combined: Path, sid: int, config: dict, project: Project
         cols, rows = 3, (panels_per_scene + 2) // 3
 
     pw, ph = w // cols, h // rows
+    cx, cy = max(1, pw // 100), max(1, ph // 100)  # 1% inset to drop artifact borders
     idx = 1
     for r in range(rows):
         for c in range(cols):
             if idx > panels_per_scene:
                 break
-            box = (c*pw, r*ph, (c+1)*pw, (r+1)*ph)
+            box = (c*pw + cx, r*ph + cy, (c+1)*pw - cx, (r+1)*ph - cy)
             img.crop(box).save(panels_dir / f"{sid:03d}_{idx:02d}_static.png")
             idx += 1
 

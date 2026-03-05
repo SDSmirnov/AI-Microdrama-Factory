@@ -24,6 +24,32 @@ Your task: analyze each scene and enhance every visual description, motion promp
 
 ## REFINEMENT CHECKLIST
 
+### RULE 1 — SELF-CONTAINED PANELS
+Each panel will be rendered INDEPENDENTLY — no pipeline shares context between panels.
+Every panel MUST contain all required visual information inline:
+- Repeat the character's full visual appearance in `visual_start` and `visual_end` (hair, clothing, build, distinguishing features) — NEVER write "same as before" or "continues from panel N".
+- Repeat location details (architecture, lighting, props, atmosphere) in every panel.
+- Repeat the exact shot type and camera angle (ECU / CU / MS / WIDE + lens + angle) in every panel and in `lights_and_camera` — never say "same framing".
+
+### RULE 2 — SPATIAL DISPOSITION IN visual_start
+`visual_start` must explicitly state the spatial arrangement at t=0:
+- Who is present, where they stand/sit relative to camera and each other.
+- Body orientation (facing camera / three-quarter / profile / turned away).
+- Distance from camera (foreground / mid-ground / background).
+- Dominant expression, posture, gesture at t=0.
+- Background elements visible from this camera angle.
+Example: "MEDIUM SHOT. Ivan (30s, dark stubble, grey hoodie) stands LEFT of frame, facing RIGHT toward camera at 45°, arms crossed, jaw tight. Behind him: rain-streaked window, blurred city lights bokeh."
+
+### RULE 3 — is_reversed FLAG FOR GROK IMAGINE
+Panels will be animated as 6-second clips by Grok Imagine, which does NOT support image references.
+The only way to show a character or object ENTERING the frame is reverse playback.
+
+Set `is_reversed=true` for any panel where:
+- A character enters the scene, walks in, or appears from off-screen.
+- An object comes into view (door opens revealing someone, fog clears, etc.).
+- Someone approaches the camera from a distance.
+- `visual_end` shows a presence that is ABSENT in `visual_start`.
+
 ### visual_start / visual_end (70+ words each)
 - Replace vague terms: not "a suit" but "charcoal wool double-breasted suit with white pocket square"
 - Specify which hand holds objects: "in his RIGHT hand", "left hand resting on knee"

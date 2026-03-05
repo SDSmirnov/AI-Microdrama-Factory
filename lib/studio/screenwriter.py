@@ -297,6 +297,86 @@ def analyze_scenes_for_episode(
 
 
 # ---------------------------------------------------------------------------
+# Refinement pass
+# ---------------------------------------------------------------------------
+def refine_scenes_for_episode(scene: dict, prompts: dict, config: dict, llm: BaseLLM) -> dict:
+    """
+    Refinement pass before reversal:
+    1. Makes every panel self-contained — all character/location details inline.
+    2. Ensures visual_start explicitly describes spatial disposition.
+    3. Flags is_reversed=true when a character/object appears in visual_end/motion_prompt
+       without being present in visual_start (Grok Imagine has no image-reference support).
+    """
+    scene_id = scene.get('scene_id', '?')
+    logger.info(f"    ✏️  Refinement pass: scene {scene_id}")
+
+    base_prompt = base_scene_prompt(prompts, config)
+    scene_text = json.dumps(scene, ensure_ascii=False, indent=2)
+
+    prompt = f"""
+{base_prompt}
+
+**IMPORTANT: ADJUST CAMERA AND DYNAMICS TO SCENE NEEDS FOR IMMERSIVE VERTICAL VIEW**
+
+**Your task: refine the single scene below. Return it with the SAME schema, improving every panel
+according to the three rules below. Do NOT change scene_id, panel_index, or structural fields.**
+
+## REFINEMENT RULES
+
+### RULE 1 — SELF-CONTAINED PANELS
+Each panel will be rendered INDEPENDENTLY — no pipeline shares context between panels.
+Therefore every panel MUST contain all required visual information inline:
+- Repeat the character's full visual appearance in visual_start and visual_end (hair, clothing, build,
+  distinguishing features) — NEVER write "same appearance as before" or "continues from panel N".
+- Repeat the location details (architecture, lighting, props, atmosphere) in every panel.
+- Repeat the exact shot type and camera angle (ECU / CU / MS / WIDE + lens + angle) in every panel
+  and in lights_and_camera — never say "same framing".
+
+### RULE 2 — SPATIAL DISPOSITION IN visual_start
+visual_start must explicitly state the spatial arrangement at t=0:
+- Who is present, where they stand/sit relative to camera and to each other.
+- Body orientation (facing camera / three-quarter / profile / turned away).
+- Distance from camera (foreground / mid-ground / background).
+- Dominant expression, posture, gesture at t=0.
+- Background elements visible from this camera angle.
+Example: "MEDIUM SHOT. Ivan (30s, dark stubble, grey hoodie) stands LEFT of frame, facing RIGHT toward
+camera at 45°, arms crossed, jaw tight. Behind him: rain-streaked window, blurred city lights bokeh."
+
+### RULE 3 — is_reversed FLAG FOR GROK IMAGINE
+Panels will be animated as 6-second clips by Grok Imagine, which does NOT support image references.
+The only way to show a character or object ENTERING the frame is reverse playback:
+render the character LEAVING, then play the clip reversed.
+
+Set is_reversed=true for any panel where:
+- A character enters the scene, walks in, or appears from off-screen.
+- An object comes into view (door opens revealing someone, fog clears to show a figure, etc.).
+- Someone approaches the camera from a distance.
+- visual_end shows a presence that is ABSENT in visual_start.
+
+SCENE TO REFINE:
+{scene_text}
+"""
+
+    @retry_on_errors(max_retries=3, backoff_factor=2)
+    def _call_api():
+        return llm.make_json(prompt, SCENE_SCHEMA)
+
+    result = _call_api()
+    if not result or 'scenes' not in result or not result['scenes']:
+        logger.error(f"      ❌ Refinement returned empty for scene {scene_id}, keeping original")
+        return scene
+
+    refined_scene = result['scenes'][0]
+    # Preserve top-level fields the LLM might not echo back
+    for key in ('scene_id', 'episode_id'):
+        if key in scene:
+            refined_scene[key] = scene[key]
+
+    logger.info(f"      ✅ Refinement done for scene {scene_id}")
+    return refined_scene
+
+
+# ---------------------------------------------------------------------------
 # Reversal pass
 # ---------------------------------------------------------------------------
 def apply_reversal_pass(scene: dict, prompts: dict, config: dict, llm: BaseLLM) -> dict:
@@ -390,6 +470,7 @@ def process_single_scene(
         panel.setdefault('sound_design', 'silence')
         panel.setdefault('location_references', [])
 
+    scene = refine_scenes_for_episode(scene, prompts, config, llm)
     scene = apply_reversal_pass(scene, prompts, config, llm)
     all_scenes.append(scene)
 
