@@ -9,17 +9,17 @@ INPUT(Story.TXT) | OUTPUT(Movie.MP4)
 
 ## ACHTUNG / DISCLAIMER
 
-⚠️ DISCLAIMER #1: This is an experimental pipeline, not a magic "Make me an Oscar-winning movie while I drink my coffee" red button. Be prepared for manual edits, re-generations, and unexpected API costs.
+WARNING DISCLAIMER #1: This is an experimental pipeline, not a magic "Make me an Oscar-winning movie while I drink my coffee" red button. Be prepared for manual edits, re-generations, and unexpected API costs.
 
-⚠️ DISCLAIMER #2: The project works, but it requires time, patience, and money for Veo/Gemini quotas. If you want a movie "at the snap of a finger" — this isn't for you, go to Netflix.
+WARNING DISCLAIMER #2: The project works, but it requires time, patience, and money for Veo/Gemini quotas. If you want a movie "at the snap of a finger" — this isn't for you, go to Netflix.
 
-⚠️ DISCLAIMER #3: If the project doesn't work for you, then "Keep sawing, Shura, keep sawing" (Russian idiom meaning: keep grinding/debugging until it works).
+WARNING DISCLAIMER #3: If the project doesn't work for you, then "Keep sawing, Shura, keep sawing" (Russian idiom meaning: keep grinding/debugging until it works).
 
-⚠️ DISCLAIMER #4: Project Status: Proof of Concept. Not maintained. API compatibility not guaranteed.
+WARNING DISCLAIMER #4: Project Status: Proof of Concept. Not maintained. API compatibility not guaranteed.
 
 ---
 
-## 🚀 Key Features
+## Key Features
 
 * **Style Master:** Automatically determines the genre, atmosphere, and visual style based on the text of the story.
 * **Auto-Casting:** Identifies key characters, creates detailed descriptions for them, and generates reference images to maintain facial consistency across different scenes.
@@ -49,11 +49,16 @@ Core pipeline stages:
 2. `casting`: detect references and write `ref_thriller/*.json`.
 3. `refs`: render missing reference portraits `ref_thriller/*.png`.
 4. `screenplay`: generate episodes/scenes/reversal pass and `animation_metadata.json`.
-5. `storyboard`: render scene grids or individual panel images.
-6. `qa`: run visual fidelity checks and produce `quality_report.json`.
-7. `refinement`: regenerate weak panels.
-8. `animation`: generate clips with `veo` or `grok`.
-9. `autocut`, `tts`, `dub`, `duck`, `imgedit`: post-production helpers.
+5. `scenes`: generate keyframes for specific episode(s) and upsert into metadata.
+6. `consistency`: continuity enforcer — sync character references across scenes.
+7. `storyboard`: render scene grids or individual panel images.
+8. `qa`: run visual fidelity checks and produce `quality_report.json`.
+9. `apply-qa`: auto-refine all panels flagged by QA.
+10. `accept-qa`: promote refined panels into `panels/`, backup originals.
+11. `rebuild-storyboard`: rebuild scene grid images from current `panels/`.
+12. `refinement`: manually regenerate a specific panel frame.
+13. `animation`: generate clips with `veo` or `grok`.
+14. `autocut`, `voiceover`, `tts`, `dub`, `duck`: post-production helpers.
 
 ## Install
 
@@ -84,7 +89,7 @@ Optional overrides:
 - `AI_CONCURRENCY` (default: `10`)
 - `AI_LOG_LEVEL` (default: `INFO`)
 
-Note: `make init` currently validates `OPENROUTER_API_KEY`.
+Note: `make init` validates `OPENROUTER_API_KEY`.
 
 ## Quick Start
 
@@ -104,7 +109,7 @@ make refs CUSTOM=--custom-prompts
 # 5) Build screenplay + scene keyframes + metadata
 make screenplay NOVEL=s01e01.txt CUSTOM=--custom-prompts
 
-# 6) Optional continuity pass (writes animation_metadata_consistent.json)
+# 6) Optional continuity pass (updates animation_metadata.json in-place)
 make consistency
 
 # 7) Render scene grids (or panel images via PANEL=<n>)
@@ -113,10 +118,19 @@ make storyboard SCENE=all PANEL=all CUSTOM=--custom-prompts
 # 8) Run QA
 make qa SCENE=all
 
-# 9) Refine low-scoring panel(s)
+# 9) Auto-refine all panels flagged by QA
+make apply-qa SCENE=all CUSTOM=--custom-prompts
+
+# 10) Accept refined panels (promotes to panels/, backs up originals)
+make accept-qa
+
+# 11) Rebuild scene grids from updated panels/
+make rebuild-storyboard SCENE=all
+
+# 12) Manually refine a specific panel if needed
 make refinement SCENE=1 PANEL=3
 
-# 10) Animate clips
+# 13) Animate clips
 make animation PROVIDER=veo SCENE=all PANEL=all
 ```
 
@@ -124,9 +138,11 @@ make animation PROVIDER=veo SCENE=all PANEL=all
 
 Use `make help` to list all targets. Current targets:
 
-- `init`, `styles`, `casting`, `refs`, `screenplay`, `scenes`, `consistency`
-- `storyboard`, `qa`, `refinement`, `animation`
-- `autocut`, `imgedit`, `tts`, `dub`, `duck`
+- `init`, `workdirs`
+- `styles`, `casting`, `refs`, `screenplay`, `scenes`, `consistency`
+- `storyboard`, `qa`, `apply-qa`, `accept-qa`, `rebuild-storyboard`, `refinement`, `animation`
+- `autocut`, `voiceover`, `imgedit`, `tts`, `dub`, `duck`
+- `webserver`
 
 Important defaults from `Makefile`:
 
@@ -158,9 +174,13 @@ Commands:
 - `consistency`
 - `storyboard [scene|all] [panel|all] [--custom-prompts]`
 - `qa [--scene N ...] [--panel N ...] [--threshold N]`
+- `apply-qa [--scene N] [--frame start|end|static|both] [--custom-prompts]`
+- `accept-qa`
+- `rebuild-storyboard [scene|all]`
 - `refinement <scene_id> <panel_id> [--frame start|end|static|both] [--custom-prompts]`
 - `animation <veo|grok> [scene|all] [panel|all]`
 - `autocut --json <metadata.json> --clips-dir <dir> --out-dir <dir> [--min-fidelity N]`
+- `voiceover [--out-dir <dir>] [--output <script.sh>]`
 - `imgedit <output> "<instruction>" <image> [ref_image ...]`
 - `tts speech "<voice/tone text>" <output>`
 - `tts sfx "<prompt>" <duration> <output>`
@@ -184,13 +204,14 @@ Primary generated files:
 - `cinematic_render/animation_episode_scenes_NNN.json`
 - `cinematic_render/animation_episode_scenes_NNN_refined.json`
 - `cinematic_render/animation_metadata.json`
-- `cinematic_render/animation_metadata_consistent.json` (after `consistency`)
+- `cinematic_render/image_prompts/` (per-scene image prompts)
 - `cinematic_render/scene_NNN_grid_combined.png`
 - `cinematic_render/panels/NNN_PP_{static|start|end}.png`
 - `cinematic_render/quality_report.json`
-- `cinematic_render/refined/*.png`
+- `cinematic_render/refined/*_refined.png`
 - `cinematic_render/clips/clip_*.mp4`
 - `cinematic_render/cut/clip_*_cut.mp4` + JSON reports (after `autocut`)
+- `cinematic_render/voiceover/*.wav` + `voiceover.sh` (after `voiceover`)
 
 Reference artifacts:
 
@@ -205,7 +226,7 @@ Makefile
 lib/
   core/        # project/env/prompts/schemas
   llm/         # OpenRouter, Gemini, Grok adapters
-  studio/      # stylist/screenwriter/artist/critic/director/editor/cutter
+  studio/      # stylist/screenwriter/artist/critic/director/editor/cutter/retoucher
   animation/   # Veo and Grok animators
   audio/       # tts/dubbing/ducking
 prompts/
