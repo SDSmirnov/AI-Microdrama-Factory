@@ -4,23 +4,28 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-This project converts a Russian novel (serialized as `s01e01.txt`, etc.) into AI-generated cinematic keyframe images suitable for video animation. It uses Google Gemini API for both text (screenplay generation) and image (rendering) generation.
+This project converts a Russian novel (serialized as `s01e01.txt`, etc.) into AI-generated cinematic keyframe images suitable for video animation. It supports multiple LLM backends — OpenRouter (default), Google Gemini, and Grok — for text generation, and Google Gemini / Grok for image generation and animation.
 
 ## Environment Setup
 
-Requires one mandatory environment variable:
+Required API keys (depending on backend):
 
 ```bash
-export IMG_AI_API_KEY="your_gemini_api_key"
+export OPENROUTER_API_KEY="your_key"   # required for default --llm openrouter
+export IMG_AI_API_KEY="your_key"       # required for --llm gemini, Veo animation, TTS, dubbing
+                                       # (also accepted as GOOGLE_API_KEY)
+export XAI_API_KEY="your_key"          # required for --llm grok / animation grok
+export ELEVEN_API_KEY="your_key"       # required for tts sfx
 ```
 
 Optional overrides:
 ```bash
-export AI_TEXT_MODEL="gemini-2.5-pro"       # default
-export AI_IMAGE_MODEL="gemini-3-pro-image-preview"  # default
-export AI_CONCURRENCY="10"                  # thread pool workers
-export AI_SEED="42"                         # image generation seed
-export AI_LOG_LEVEL="DEBUG"                 # logging verbosity
+export AI_TEXT_MODEL="gemini-2.5-pro"                  # default
+export AI_IMAGE_MODEL="google/gemini-3-pro-image-preview"  # default
+export AI_GEMINI_MODEL="gemini-2.5-flash"              # default (Gemini-specific tasks)
+export AI_CONCURRENCY="10"                             # thread pool workers
+export AI_SEED="42"                                    # image generation seed (openrouter)
+export AI_LOG_LEVEL="DEBUG"                            # logging verbosity
 ```
 
 ## Manual Workflow (Claude Code Skills)
@@ -39,6 +44,9 @@ The full pipeline is available as Claude Code slash commands in `.claude/command
 
 # Step 2: Generate character/location reference descriptions + image gen prompts
 /cast-characters s01e01.txt
+
+# Step 2b: Render missing reference portraits (runs Python — requires API key)
+/render-references
 
 # Step 3: Break the novel into ~30 episodes with screenplay instructions
 /write-screenplay s01e01.txt
