@@ -460,34 +460,57 @@ function renderScenes(container, data, sourceUrl) {
   });
 }
 
+// Map a reference name to its image URL, using castingAll if already loaded
+function refUrl(name) {
+  const found = castingAll.find(r => r.name === name);
+  const filename = found?._filename ?? name.toLowerCase().replace(/\s+/g, '-');
+  return `${PATHS.refDir}/${filename}.png`;
+}
+
 function renderPanelCard(scene, panel) {
   const sceneId = String(scene.scene_id).padStart(3, '0');
   const panelId = String(panel.panel_index).padStart(2, '0');
   const imgUrl  = `${PATHS.panels}/${sceneId}_${panelId}_static.png`;
   const hookCls = `hook-${(panel.hook_type || 'none').replace(/[^a-z_]/g, '_')}`;
 
+  const allRefs = [...(panel.references || []), ...(panel.location_references || [])];
+
   const card = el('div', 'panel-card');
   card.innerHTML = `
-    <div class="panel-img-wrap">
-      <img src="${esc(imgUrl)}" alt="Panel ${panel.panel_index}" loading="lazy"
-           onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-      <div class="panel-img-placeholder" style="display:none">🎬</div>
-    </div>
-    <div class="panel-meta">
-      <div class="panel-idx">Panel ${panel.panel_index}
-        <span class="panel-hook ${hookCls}">${esc(panel.hook_type || 'none')}</span>
-        ${panel.is_reversed ? '<span class="reversed-badge">REV</span>' : ''}
+    <div class="panel-top-row">
+      <div class="panel-img-wrap">
+        <img src="${esc(imgUrl)}" alt="Panel ${panel.panel_index}" loading="lazy"
+             onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+        <div class="panel-img-placeholder" style="display:none">🎬</div>
       </div>
-      <div class="panel-beat"><b>Beat:</b> ${esc(panel.emotional_beat || '')}</div>
-      ${panel.dialogue  ? `<div class="panel-field dialogue">💬 ${esc(panel.dialogue)}</div>` : ''}
-      ${panel.voiceover ? `<div class="panel-field">🎙 ${esc(panel.voiceover)}</div>` : ''}
-      <div class="panel-field"><b>Start:</b> ${esc((panel.visual_start || '').slice(0, 120))}${(panel.visual_start || '').length > 120 ? '…' : ''}</div>
-      <div class="panel-field"><b>End:</b>   ${esc((panel.visual_end   || '').slice(0, 120))}${(panel.visual_end   || '').length > 120 ? '…' : ''}</div>
-      ${panel.motion_prompt ? `<div class="panel-field"><b>Motion:</b> ${esc((panel.motion_prompt).slice(0, 100))}…</div>` : ''}
+      <div class="panel-speech">
+        <div class="panel-idx">Panel ${panel.panel_index}
+          <span class="panel-hook ${hookCls}">${esc(panel.hook_type || 'none')}</span>
+          ${panel.is_reversed ? '<span class="reversed-badge">REV</span>' : ''}
+        </div>
+        ${panel.dialogue  ? `<div class="panel-field dialogue">💬 ${esc(panel.dialogue)}</div>` : '<div class="panel-field panel-no-speech">No dialogue</div>'}
+        ${panel.voiceover ? `<div class="panel-field voiceover">🎙 ${esc(panel.voiceover)}</div>` : ''}
+        ${allRefs.length ? `
+        <div class="panel-refs">
+          ${allRefs.map(name => `<img class="panel-ref-thumb" src="${esc(refUrl(name))}" title="${esc(name)}" loading="lazy" onerror="this.style.display='none'">`).join('')}
+        </div>` : ''}
+      </div>
+    </div>
+    <div class="panel-details">
+      <div class="panel-field"><b>Beat:</b> ${esc(panel.emotional_beat || '')}</div>
+      <div class="panel-field"><b>Start:</b> ${esc(panel.visual_start || '')}</div>
+      <div class="panel-field"><b>End:</b> ${esc(panel.visual_end || '')}</div>
+      ${panel.motion_prompt ? `<div class="panel-field"><b>Motion:</b> ${esc(panel.motion_prompt)}</div>` : ''}
       ${panel.sound_design  ? `<div class="panel-field">🔊 ${esc(panel.sound_design)}</div>` : ''}
     </div>
   `;
+
   makeLightboxHandler(card.querySelector('.panel-img-wrap'), imgUrl);
+  card.querySelectorAll('.panel-ref-thumb').forEach(img => {
+    img.addEventListener('click', () => {
+      if (img.complete && img.naturalWidth > 0) openLightbox(img.src);
+    });
+  });
   return card;
 }
 
