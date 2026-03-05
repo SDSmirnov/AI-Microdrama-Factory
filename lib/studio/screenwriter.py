@@ -158,6 +158,36 @@ In escalation and twist panels, compose with shallow DOF to isolate a single for
 Specify in lights_and_camera: "shallow DOF, [object] sharp in foreground, subject/background as bokeh at [distance]."
 This directs the viewer's attention to a prop that carries subtext — without dialogue, the framing tells them what matters.
 
+SHADOW & SILHOUETTE — indirect reveal technique (use in escalation/confrontation):
+Show the threat, emotion, or subject through its shadow or silhouette — never directly. The hidden is more powerful than the visible.
+- Shadow play: camera aimed at a lit wall or floor surface. The character appears only as a moving shadow. motion_prompt: "shadow of a hand advances slowly across sunlit wall from left, fingers splayed, reaching toward a door handle — the hand itself is never in frame."
+- Silhouette: subject backlit against window light, open doorway, or fire. Pure dark shape, no features — emotion only through body posture and outline. visual_start: "silhouette of [subject] against [bright window / fire / streetlight], no facial features visible, form and posture carry all meaning."
+- Shadow-object contrast: show a small, innocent object (child's toy, wedding ring, glass of wine) sharply lit while a looming shadow falls across it. The shadow implies the unseen threat.
+These techniques create menace without showing it, allowing the viewer's imagination to complete the horror.
+
+REFLECTION REVEAL — hidden truth technique (use in twist panels):
+Show a character's real internal state in a reflective surface while their face performs the opposite for another character.
+- Phone screen reflection: "camera frames the dark phone screen — Ruslan's eyes reflected in the glass show cold calculation while off-screen his voice sounds warm and reassuring."
+- Window / mirror: character faces away, their true expression visible only in the reflection behind them.
+- Liquid surface: close-up of wine, water, or rain puddle — a distorted face reflected, showing what they really feel.
+motion_prompt example: "camera locks on the dark surface of a phone screen. At 2s, the reflection of Alisa's eyes appears — pupils contracted, jaw clenched — while her voice off-screen says 'I'm fine'. The reflection tells the truth."
+
+RACK FOCUS — prop-to-face revelation (use in escalation/confrontation):
+Camera static. Start with foreground object in sharp focus, subject's face as background bokeh. At the emotional peak, pull focus to the face.
+The object carries the subtext; the face carries the reaction. Together they form the meaning.
+motion_prompt: "camera static. At 0s, a wedding ring sits sharp in extreme foreground, the blurred face of [subject] barely visible behind it. At 3s, rack focus pulls from the ring to [subject]'s face — revealing an expression of [emotion] as the ring becomes bokeh."
+Use in confrontation panels when a prop is the unspoken subject of the scene (a ring, a phone, money, a key, a weapon).
+
+MATCH CUT — visual shape continuity (use in escalation transitions):
+Plan the visual_end of one panel to share a geometric shape or motion vector with the visual_start of the next.
+Concrete shape pairs to plan deliberately:
+- Circular: a glass rim → a clock face → an eye iris → a tunnel end
+- Vertical line: a door frame → a standing figure → a knife blade → a pillar
+- Upward sweep: a hand rising → a bird launching → smoke curling → a head tilting back
+- Falling diagonal: a body slumping → rain streaking glass → a torn letter falling
+In motion_prompt, name the match explicitly: "visual_end: [subject]'s arm sweeps upward in an arc — MATCH CUT via upward diagonal to next panel."
+MANDATORY: plan at least one match_cut transition per episode in the escalation zone (panels 3–5).
+
 DIALOGUE: ≤8 words, delivered in CU on speaker's face. Populate both `dialogue` and sync `voiceover` for inner counterpoint.
 VOICEOVER: inner monologue revealing what the image cannot show. Russian language.
 
@@ -165,7 +195,7 @@ SOUND DESIGN (sound_design) — required for EVERY panel:
 - Capture the sonic atmosphere of this exact panel moment, separate from dialogue/voiceover.
 - Plan sonic contrast deliberately: sustained silence broken by a sharp sound is more powerful than continuous noise.
 - MANDATORY: at least one panel per scene must have sound_design="silence" as deliberate setup for the next panel's sonic event. Pair with transition_to_next=smash_cut on the following panel.
-- For j_cut transitions: describe the next scene's audio that bleeds in ("J-cut: rain from next scene starts at 5s mark").
+- For j_cut transitions: describe the next scene's audio that bleeds in ("J-cut: rain ambient from next scene starts at 5s mark").
 - Examples: "silence", "low-frequency hum builds", "amplified footstep at 2s, then silence", "heartbeat rises to bass drop on cut", "glass crack at 4s, then pin-drop silence", "distant thunder, growing".
 
 TRANSITION TO NEXT PANEL (transition_to_next):
@@ -176,11 +206,12 @@ TRANSITION TO NEXT PANEL (transition_to_next):
 - hard_cut: standard clean cut (default).
 
 PANEL TYPE (panel_type):
-- narrative: standard story panel (default for all 9 panels).
-- atmosphere_insert: a single minimalist WOW shot used as emotional anchor or rhythm break. Two subtypes:
-  * ENVIRONMENTAL: 1–2 macro-scale elements (wave, flame, fog bank, storm wall, silhouette on horizon). Grand scale, 2–3 color palette, "minimalism: [element], [light], hyper-realistic." No character refs.
-  * TEXTURE/DETAIL: extreme macro close-up of a physical surface — scarred skin, condensation on glass, cracked concrete, a wedding ring, fabric fibers. Shows what the story is made of. Shallow DOF, single element, fill frame.
-  Used once per episode at the emotional peak or pre-cliffhanger. Duration 3–4s. Transition into/out with smash_cut or match_cut.
+- narrative: standard story panel.
+- atmosphere_insert: MANDATORY — exactly one per episode, at panel 7 or 8 (emotional peak / pre-cliffhanger). A single minimalist WOW shot with no dialogue, no character close-ups. Two subtypes:
+  * ENVIRONMENTAL: 1–2 macro-scale elements only (crashing wave, wall of flame, fog swallowing a city, storm wall, lone tree in wind). Grand scale, 2–3 color palette. visual_start: "minimalism: [element], [light condition], hyper-realistic. No people, no faces." No character refs needed.
+  * TEXTURE/DETAIL: extreme macro of a single physical surface — cracked concrete, condensation on cold glass, a scar, a burning letter, fabric under tension. Reveals what the story is made of. Shallow DOF, single element, fills the frame.
+  Duration 3–4s. Transition in via smash_cut or match_cut; transition out via smash_cut or match_cut.
+  The voiceover or sound from the surrounding panels spills over this image — the abstract visual amplifies the emotion without explaining it.
 
 **IMPORTANT: EACH SCENE MUST HAVE EXACTLY 9 PANELS following the structure above.**
     """
