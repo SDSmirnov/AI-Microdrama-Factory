@@ -204,12 +204,18 @@ async function initPrompts() {
 }
 
 async function loadPromptFile(file, el) {
-  el.className = 'text-content';
+  el.className = 'prose';
   el.textContent = 'Loading…';
   try {
-    el.textContent = await fetchText(`${BASE}/${promptsDir}/${file}`);
+    const text = await fetchText(`${BASE}/${promptsDir}/${file}`);
+    if (file.endsWith('.md') && typeof marked !== 'undefined') {
+      el.innerHTML = marked.parse(text);
+    } else {
+      el.className = 'text-content';
+      el.textContent = text;
+    }
   } catch {
-    el.className = 'text-content placeholder';
+    el.className = 'prose placeholder';
     el.textContent = `Not found: ${promptsDir}/${file}`;
   }
 }
@@ -288,7 +294,10 @@ async function initCasting() {
     const loaded = await Promise.all(names.map(async name => {
       const url = `${PATHS.refDir}/${name}`;
       try {
-        return await fetchJSON(url);
+        const data = await fetchJSON(url);
+        // Store actual filename (without .json) so PNG lookup uses the real on-disk name
+        data._filename = name.replace(/\.json$/, '');
+        return data;
       } catch (e) {
         console.warn('ref load failed:', url, e);
         return null;
@@ -332,7 +341,8 @@ function renderRefGrid(container, refs) {
     return;
   }
   refs.forEach(ref => {
-    const imgSrc  = `${PATHS.refDir}/${ref.name}.png`;
+    // Use actual filename from disk (tracks JSON name, avoids capitalisation mismatch)
+    const imgSrc  = `${PATHS.refDir}/${ref._filename || ref.name.toLowerCase().replace(/\s+/g, '-')}.png`;
     const typeCls = `type-${(ref.type || 'unknown').toLowerCase()}`;
     const card = el('div', 'ref-card');
     card.innerHTML = `
