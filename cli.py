@@ -13,6 +13,7 @@ Usage:
     python cli.py qa [--scene N [--panel N ...]] [--threshold N]
     python cli.py apply-qa [--scene N] [--frame start|end|static|both]
     python cli.py accept-qa
+    python cli.py rebuild-storyboard [SCENE|all]
     python cli.py refinement SCENE PANEL [--frame start|end|both]
     python cli.py animation PROVIDER SCENE PANEL [--frame start|end]
 
@@ -26,11 +27,18 @@ Usage:
     python cli.py duck video.mp4 dubbed.mp3 output.mp3
 """
 import argparse
+import datetime
 import json
 import logging
 import os
+import re
+import shlex
+import shutil
+import stat
 import sys
 from pathlib import Path
+
+from PIL import Image
 
 from lib.animation.grok import GrokAnimator
 from lib.animation.veo import VeoAnimator
@@ -445,10 +453,6 @@ def cmd_dub(args):
 
 def cmd_voiceover(args):
     """Generate voiceover.sh — a shell script with one tts call per panel voiceover."""
-    import re
-    import shlex
-    import stat
-
     project = Project()
     meta_path = project.output_dir / "animation_metadata.json"
     if not meta_path.exists():
@@ -513,9 +517,6 @@ def cmd_duck(args):
 
 def cmd_accept_qa(args):
     """Accept refined panels: backup originals, promote refined PNGs into panels/."""
-    import datetime
-    import shutil
-
     project = Project()
     refined_dir = project.refined_dir
     panels_dir = project.panels_dir
@@ -576,6 +577,109 @@ def cmd_accept_qa(args):
     logger.info(f"\n✅ Accepted {accepted} refined panel(s). Backup: {backup_dir}")
     if skipped:
         logger.info(f"   ⚠️  Skipped {skipped} unexpected file(s).")
+
+
+def cmd_rebuild_storyboard(args):
+    """Rebuild scene_NNN_grid_combined.png from current panels/, backup originals."""
+    project = Project()
+    panels_dir = project.panels_dir
+    output_dir = project.output_dir
+
+    meta_path = output_dir / "animation_metadata.json"
+    if not meta_path.exists():
+        logger.error("❌ animation_metadata.json not found. Run 'screenplay' first.")
+        sys.exit(1)
+
+    metadata = json.loads(meta_path.read_text(encoding='utf-8'))
+    config = metadata.get('config', {})
+    panels_per_scene = config.get('format', {}).get('panels_per_scene', 9)
+
+    if panels_per_scene == 9:
+        cols, rows = 3, 3
+    elif panels_per_scene == 6:
+        cols, rows = 3, 2
+    elif panels_per_scene == 4:
+        cols, rows = 2, 2
+    else:
+        cols, rows = 3, (panels_per_scene + 2) // 3
+
+    scene_filter = None
+    if hasattr(args, 'scene') and args.scene and args.scene != 'all':
+        scene_filter = int(args.scene)
+
+    scenes = metadata.get('scenes', [])
+    if scene_filter is not None:
+        scenes = [s for s in scenes if s['scene_id'] == scene_filter]
+
+    if not scenes:
+        logger.error(f"❌ No scenes found{' for scene ' + str(scene_filter) if scene_filter else ''}.")
+        sys.exit(1)
+
+    date_str = datetime.date.today().strftime("%Y%m%d")
+    rebuilt = 0
+    skipped = 0
+
+    for scene in scenes:
+        sid = scene['scene_id']
+        panel_count = len(scene.get('panels', []))
+        if panel_count == 0:
+            logger.warning(f"  ⚠️  Scene {sid}: no panels in metadata, skipping")
+            skipped += 1
+            continue
+
+        # Collect panel images in order
+        panel_imgs = []
+        missing = []
+        for pidx in range(1, panel_count + 1):
+            # Prefer _static, fall back to _start
+            for suffix in ('_static', '_start'):
+                p = panels_dir / f"{sid:03d}_{pidx:02d}{suffix}.png"
+                if p.exists():
+                    panel_imgs.append(p)
+                    break
+            else:
+                missing.append(pidx)
+
+        if missing:
+            logger.warning(f"  ⚠️  Scene {sid}: missing panel(s) {missing}, skipping")
+            skipped += 1
+            continue
+
+        # Determine grid size from the first panel
+        sample = Image.open(panel_imgs[0])
+        pw, ph = sample.size
+        sample.close()
+
+        grid_w, grid_h = pw * cols, ph * rows
+        grid = Image.new('RGB', (grid_w, grid_h))
+
+        for i, img_path in enumerate(panel_imgs):
+            r, c = divmod(i, cols)
+            panel_img = Image.open(img_path).convert('RGB')
+            if panel_img.size != (pw, ph):
+                panel_img = panel_img.resize((pw, ph), Image.LANCZOS)
+            grid.paste(panel_img, (c * pw, r * ph))
+            panel_img.close()
+
+        grid_path = output_dir / f"scene_{sid:03d}_grid_combined.png"
+
+        # Backup existing grid
+        if grid_path.exists():
+            backup_name = f"scene_{sid:03d}_grid_combined_backup-{date_str}.png"
+            # Handle same-day collisions
+            backup_path = output_dir / backup_name
+            collision = 1
+            while backup_path.exists():
+                backup_path = output_dir / f"scene_{sid:03d}_grid_combined_backup-{date_str}-{collision}.png"
+                collision += 1
+            shutil.copy2(grid_path, backup_path)
+            logger.info(f"  💾 Backed up: scene_{sid:03d}_grid_combined.png → {backup_path.name}")
+
+        grid.save(grid_path)
+        logger.info(f"  ✅ Scene {sid}: rebuilt grid ({panel_count} panels, {cols}x{rows})")
+        rebuilt += 1
+
+    logger.info(f"\n✅ Rebuilt {rebuilt} grid(s). Skipped {skipped}.")
 
 
 def cmd_animation(args):
@@ -710,6 +814,10 @@ def main():
     # accept-qa
     sub.add_parser('accept-qa', help='Promote refined panels into panels/, backup originals')
 
+    # rebuild-storyboard
+    p = sub.add_parser('rebuild-storyboard', help='Rebuild scene grid images from current panels/, backup originals')
+    p.add_argument('scene', nargs='?', default='all', help='Scene number or "all"')
+
     # refinement
     p = sub.add_parser('refinement', help='Refine a specific panel')
     p.add_argument('scene_id', type=int)
@@ -791,6 +899,7 @@ def main():
         'qa': cmd_qa,
         'apply-qa': cmd_apply_qa,
         'accept-qa': cmd_accept_qa,
+        'rebuild-storyboard': cmd_rebuild_storyboard,
         'refinement': cmd_refinement,
         'animation': cmd_animation,
         'autocut': cmd_autocut,
@@ -800,9 +909,6 @@ def main():
         'dub': cmd_dub,
         'duck': cmd_duck,
     }
-
-    import datetime
-    import shlex
 
     def _log_command(event: str):
         ts = datetime.datetime.now().isoformat(timespec='seconds')
