@@ -645,22 +645,33 @@ async function initStoryboards() {
   container.innerHTML = '';
 
   storyboards.forEach(({ scene, current, backups }) => {
-    const row    = el('div', 'sb-row');
-    const badge  = el('div', 'sb-scene-badge', String(scene).padStart(3, '0'));
-    const images = el('div', 'sb-images');
+    const row   = el('div', 'sb-row');
+    const badge = el('div', 'sb-scene-badge', String(scene).padStart(3, '0'));
+    const body  = el('div', 'sb-body');
+
+    // Primary pair: current + first backup side-by-side
+    const primary = el('div', 'sb-primary-pair');
 
     if (current) {
-      const url  = `${BASE}/${current}${CACHE_BUST}`;
-      const wrap = el('div', 'sb-current-wrap');
-      wrap.innerHTML = `<img src="${esc(url)}" alt="Scene ${scene}" loading="lazy"
-           onerror="this.parentElement.style.display='none'">`;
-      makeLightboxHandler(wrap, url);
-      images.appendChild(wrap);
+      const url = `${BASE}/${current}${CACHE_BUST}`;
+      primary.appendChild(sbPrimaryItem(url, 'Current'));
     }
 
-    if (backups?.length) {
-      const backupsEl = el('div', 'sb-backups');
-      backups.forEach(bpath => {
+    const firstBackup = backups?.[0];
+    if (firstBackup) {
+      const url       = `${BASE}/${firstBackup}${CACHE_BUST}`;
+      const dateMatch = firstBackup.match(/backup-(\d{8}(?:-\d+)?)/);
+      const label     = dateMatch ? `Original (${dateMatch[1]})` : 'Original';
+      primary.appendChild(sbPrimaryItem(url, label));
+    }
+
+    body.appendChild(primary);
+
+    // Remaining backups below as small thumbnails
+    const extraBackups = (backups || []).slice(1);
+    if (extraBackups.length) {
+      const secondaryEl = el('div', 'sb-secondary');
+      extraBackups.forEach(bpath => {
         const url       = `${BASE}/${bpath}${CACHE_BUST}`;
         const dateMatch = bpath.match(/backup-(\d{8}(?:-\d+)?)/);
         const label     = dateMatch ? dateMatch[1] : 'backup';
@@ -669,15 +680,28 @@ async function initStoryboards() {
              onerror="this.parentElement.style.display='none'">
            <div class="sb-backup-label">${esc(label)}</div>`;
         makeLightboxHandler(wrap, url);
-        backupsEl.appendChild(wrap);
+        secondaryEl.appendChild(wrap);
       });
-      images.appendChild(backupsEl);
+      body.appendChild(secondaryEl);
     }
 
     row.appendChild(badge);
-    row.appendChild(images);
+    row.appendChild(body);
     container.appendChild(row);
   });
+}
+
+function sbPrimaryItem(url, label) {
+  const wrap = el('div', 'sb-primary-item');
+  wrap.innerHTML = `
+    <div class="sb-primary-label">${esc(label)}</div>
+    <div class="sb-primary-img-wrap">
+      <img src="${esc(url)}" alt="${esc(label)}" loading="lazy"
+           onerror="this.parentElement.style.display='none'">
+    </div>
+  `;
+  makeLightboxHandler(wrap.querySelector('.sb-primary-img-wrap'), url);
+  return wrap;
 }
 
 // ── Refinements ───────────────────────────────────────────────────────────────
