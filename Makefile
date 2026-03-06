@@ -52,8 +52,8 @@ screenplay:  ## Run full screenplay + scene keyframe pipeline
 scenes:  ## Generate keyframes for episode SCENE (or all)
 	python cli.py --llm $(LLM) scenes $(SCENE) $(CUSTOM)
 
-consistency:  ## Run continuity enforcer to sync references
-	python cli.py --llm $(LLM) consistency
+consistency:  ## Run continuity enforcer to sync references (dry-run by default; use RENDER=--no-dry-run to regenerate PNGs)
+	python cli.py --llm $(LLM) consistency $(RENDER)
 
 storyboard:  ## Render scene grid images or individual panels
 	python cli.py --llm $(LLM) storyboard $(SCENE) $(PANEL) $(CUSTOM)

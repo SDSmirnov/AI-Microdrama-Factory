@@ -304,7 +304,10 @@ def cmd_consistency(args):
     project = Project()
     project.ensure_dirs()
     llm = _make_vision_llm(args.llm, project)
-    out = run_continuity_pass(llm, ref_dir=project.ref_dir, max_workers=project.max_workers, output_dir=project.output_dir)
+    dry_run = args.dry_run
+    if dry_run:
+        logger.info("ℹ️  Dry-run mode: ref JSONs will be enriched but PNGs will NOT be regenerated. Run `make refs` to render.")
+    out = run_continuity_pass(llm, ref_dir=project.ref_dir, max_workers=project.max_workers, output_dir=project.output_dir, dry_run=dry_run)
     logger.info(f"✅ animation_metadata.json updated in-place: {out}")
 
 
@@ -836,7 +839,9 @@ def main():
     p.add_argument('--custom-prompts', action='store_true')
 
     # consistency
-    sub.add_parser('consistency', help='Run continuity enforcer')
+    p = sub.add_parser('consistency', help='Run continuity enforcer')
+    p.add_argument('--dry-run', action=argparse.BooleanOptionalAction, default=True,
+                   help='Skip image regeneration (default: on); use --no-dry-run to render refs')
 
     # storyboard
     p = sub.add_parser('storyboard', help='Render scene grids or panels')

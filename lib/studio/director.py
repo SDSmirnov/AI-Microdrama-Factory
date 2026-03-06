@@ -87,6 +87,7 @@ def enrich_and_regenerate_reference(
     usage_contexts: List[str],
     llm: BaseLLM,
     ref_dir: Path = DEFAULT_REF_DIR,
+    dry_run: bool = True,
 ):
     """Enrich reference description and regenerate the portrait image."""
     sname = safe_name(ref_name)
@@ -125,33 +126,39 @@ def enrich_and_regenerate_reference(
 
     updated_desc = llm.make_json(prompt, UPDATED_REF_SCHEMA)
 
-    if updated_desc:
-        ref_data['visual_desc'] = updated_desc['visual_desc']
-        ref_data['video_visual_desc'] = updated_desc['video_visual_desc']
-        json_path.write_text(json.dumps(ref_data, indent=2), encoding='utf-8')
+    if not updated_desc:
+        return
 
-        logger.info(f"  🎨 Regenerating PNG for {ref_name}...")
-        ref_prompt = (
-            f"CINEMATIC REFERENCE FOR {ref_data.get('type', 'Entity')}: {ref_name}. "
-            f"{ref_data['visual_desc']}. \n\n{CASTING_RULES}"
-        )
+    ref_data['visual_desc'] = updated_desc['visual_desc']
+    ref_data['video_visual_desc'] = updated_desc['video_visual_desc']
+    json_path.write_text(json.dumps(ref_data, indent=2), encoding='utf-8')
 
-        refs = []
-        if ref_data.get('style_reference') and ref_data['style_reference'] != ref_name:
-            style_path = ref_dir / f"{safe_name(ref_data['style_reference'])}.png"
-            if style_path.exists():
-                refs.append(f"## Visual Style reference for {ref_data['style_reference']}")
-                refs.append(Image.open(style_path))
+    if dry_run:
+        logger.info(f"  ⏭️  Dry-run: skipping PNG regeneration for {ref_name} (run `make refs` to render)")
+        return
 
-        try:
-            img_bytes = llm.make_image(ref_prompt, refs=refs, aspect_ratio='9:16', image_size='1K')
-            if img_bytes:
-                png_path.write_bytes(img_bytes)
-                logger.info(f"    ✅ PNG saved: {png_path}")
-            else:
-                logger.error(f"    ❌ Empty image response for {ref_name}")
-        except Exception as e:
-            logger.error(f"    ❌ Failed to render {ref_name}: {e}")
+    logger.info(f"  🎨 Regenerating PNG for {ref_name}...")
+    ref_prompt = (
+        f"CINEMATIC REFERENCE FOR {ref_data.get('type', 'Entity')}: {ref_name}. "
+        f"{ref_data['visual_desc']}. \n\n{CASTING_RULES}"
+    )
+
+    refs = []
+    if ref_data.get('style_reference') and ref_data['style_reference'] != ref_name:
+        style_path = ref_dir / f"{safe_name(ref_data['style_reference'])}.png"
+        if style_path.exists():
+            refs.append(f"## Visual Style reference for {ref_data['style_reference']}")
+            refs.append(Image.open(style_path))
+
+    try:
+        img_bytes = llm.make_image(ref_prompt, refs=refs, aspect_ratio='9:16', image_size='1K')
+        if img_bytes:
+            png_path.write_bytes(img_bytes)
+            logger.info(f"    ✅ PNG saved: {png_path}")
+        else:
+            logger.error(f"    ❌ Empty image response for {ref_name}")
+    except Exception as e:
+        logger.error(f"    ❌ Failed to render {ref_name}: {e}")
 
 
 def align_scene_prompts(scene: Dict, all_refs_data: Dict, llm: BaseLLM) -> Dict:
@@ -221,6 +228,7 @@ def run_continuity_pass(
     ref_dir: Path = DEFAULT_REF_DIR,
     max_workers: int = 5,
     output_dir: Path = DEFAULT_OUTPUT_DIR,
+    dry_run: bool = True,
 ) -> Path:
     """
     Full continuity pipeline:
@@ -246,7 +254,7 @@ def run_continuity_pass(
     error_count = 0
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = {
-            executor.submit(enrich_and_regenerate_reference, ref_name, usages, llm, ref_dir): ref_name
+            executor.submit(enrich_and_regenerate_reference, ref_name, usages, llm, ref_dir, dry_run): ref_name
             for ref_name, usages in ref_usage.items()
         }
         for future in as_completed(futures):

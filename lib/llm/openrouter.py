@@ -137,7 +137,7 @@ class OpenRouterLLM(BaseLLM):
     # Text / JSON generation
     # ------------------------------------------------------------------
 
-    def _call_openrouter(self, messages: list, schema: dict = None, max_tokens: int = 32000) -> str:
+    def _call_openrouter(self, messages: list, schema: dict = None, max_tokens: int = 64000) -> str:
         """POST to OpenRouter chat completions. Returns raw response text."""
         payload: dict[str, Any] = {
             "model": self._model_name(self.text_model),
@@ -160,7 +160,7 @@ class OpenRouterLLM(BaseLLM):
         data = self._post_openrouter(payload, timeout=300)
         return self._extract_text(data)
 
-    def make_json(self, prompt: str, schema: dict = None, max_tokens: int = 32000) -> dict:
+    def make_json(self, prompt: str, schema: dict = None, max_tokens: int = 64000) -> dict:
         messages = []
         if self.system_prompt:
             messages.append({"role": "system", "content": self.system_prompt})
