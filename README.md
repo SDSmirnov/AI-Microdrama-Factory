@@ -49,8 +49,8 @@ Core pipeline stages:
 2. `casting`: detect references and write `ref_thriller/*.json`.
 3. `refs`: render missing reference portraits `ref_thriller/*.png`.
 4. `screenplay`: generate episodes/scenes/reversal pass and `animation_metadata.json`.
-5. `scenes`: generate keyframes for specific episode(s) and upsert into metadata.
-6. `consistency`: continuity enforcer — sync character references across scenes.
+5. `scenes`: generate keyframes for specific episode(s) with cross-episode continuity rules and upsert into metadata.
+6. `consistency`: continuity enforcer — enrich ref JSONs from scene/location usage, re-align panel visuals to approved refs. Default: `--dry-run` (JSON only); use `--no-dry-run` or follow with `make refs` to regenerate PNGs.
 7. `storyboard`: render scene grids or individual panel images.
 8. `qa`: run visual fidelity checks and produce `quality_report.json`.
 9. `apply-qa`: auto-refine all panels flagged by QA.

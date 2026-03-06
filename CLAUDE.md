@@ -122,8 +122,8 @@ lib/
 2. **`casting`** (`artist.auto_cast_characters`): Identifies characters/locations/objects from text; saves reference JSONs to `ref_thriller/`
 3. **`refs`** (`artist.render_character_refs`): Generates missing reference portrait PNGs
 4. **`screenplay`** (`screenwriter.analyze_scenes_master`): Episodes → scenes → refinement → reversal pass; writes `animation_metadata.json`
-5. **`scenes`** (`screenwriter.analyze_scenes_for_episode`): Per-episode keyframe generation; upserts into `animation_metadata.json`
-6. **`consistency`** (`director.run_continuity_pass`): Enriches refs from scene usage; re-aligns panel prompts to approved references
+5. **`scenes`** (`screenwriter.run_scenes_pipeline`): Per-episode keyframe generation with cross-episode continuity rules; upserts into `animation_metadata.json`
+6. **`consistency`** (`director.run_continuity_pass`): Enriches ref JSONs from scene/location usage; re-aligns `visual_start`/`visual_end`/`lights_and_camera` to approved references. Default `--dry-run` enriches JSONs only — run `make refs` after to regenerate PNGs. Pass `--no-dry-run` to regenerate PNGs in one step.
 7. **`storyboard`** (`artist.render_scene_grids` / `render_panels`): Generates grid images or individual panel PNGs
 8. **`qa`** (`critic.run_quality_gate`): Visual fidelity/consistency scoring; writes `quality_report.json`
 9. **`apply-qa`** / **`refinement`** (`editor.refine_panel`): Regenerates flagged panels using reference images
@@ -165,10 +165,11 @@ Built-in token-bucket rate limiters: 25 RPM for refinement calls, 20 RPM for ima
 
 ### JSON Schemas
 
-Three structured output schemas enforce the AI response format:
+Four structured output schemas enforce the AI response format:
 - `SCREENPLAY_SCHEMA` — episode-level breakdown with continuity rules
-- `SCENE_SCHEMA` — panel-level keyframes with motion/reversal prompts
+- `SCENE_SCHEMA` — scene-level keyframes including `camera_master` / `lighting_master` per scene and full panel fields (motion, reversal, sound, transitions)
 - `CHARACTER_SCHEMA` — reference character/location/object descriptions
+- `SCENE_REWRITE_SCHEMA` — used by the continuity enforcer to align `visual_start`, `visual_end`, and `lights_and_camera` to approved refs
 
 ### Code Style Guidelines
 

@@ -5,12 +5,13 @@ Steps:
 2. Extract the episode number from the filename (e.g., `animation_episode_scenes_003.json` → episode 3)
 3. Read `cinematic_render/animation_episodes.json` and extract that episode for context
 4. If episode > 1, also extract the previous episode for continuity context
-5. Check if `custom_prompts/scenery.md` exists — use it; otherwise use `prompts/scenery.md`. Read it.
-6. Check if `custom_prompts/setting.md` exists — use it; otherwise use `prompts/setting.md`. Read it.
-7. For each name in any panel's `references` array, try to read `ref_thriller/{name_lowercased_underscored}.json` and extract `video_visual_desc`
-8. Refine every scene following all instructions below.
-9. Write the result to the same path with `_refined` inserted before `.json` (e.g., `animation_episode_scenes_003_refined.json`)
-10. **Update `cinematic_render/animation_metadata.json` (single source of truth):**
+5. Read `cinematic_render/animation_metadata.json` if it exists — find the scene that immediately precedes the first scene in this file (by `scene_id`) and note its last panel's `visual_end` as the **cross-scene terminal frame** for Rule 4.
+6. Check if `custom_prompts/scenery.md` exists — use it; otherwise use `prompts/scenery.md`. Read it.
+7. Check if `custom_prompts/setting.md` exists — use it; otherwise use `prompts/setting.md`. Read it.
+8. For each name in any panel's `references` array, try to read `ref_thriller/{name_lowercased_underscored}.json` and extract `video_visual_desc`
+9. Refine every scene following all instructions below.
+10. Write the result to the same path with `_refined` inserted before `.json` (e.g., `animation_episode_scenes_003_refined.json`)
+11. **Update `cinematic_render/animation_metadata.json` (single source of truth):**
     - Read `animation_metadata.json`. For each refined scene, find the matching entry by `scene_id` and replace it. If a scene has no matching `scene_id` in metadata (was added manually), append it.
     - Write the updated metadata back to `animation_metadata.json`.
 
@@ -65,6 +66,14 @@ Set `is_reversed=true` for any panel where:
 - Physical actions must be achievable in 6–8 seconds — no teleportation, no scene jumps
 - Include audio cues if they drive the visual: "glass clinks against table"
 
+**PHYSICAL REALISM PROTOCOL — apply during refinement pass. The video model renders every phrase literally.**
+
+1. **Physical movements only. No emotional language.** Strip all interpretive adjectives (`"poleaxed"`, `"barely-controlled panic"`, `"utter disbelief"`). Replace with anatomical descriptions: joint angles, degrees, distances, durations.
+2. **No spectacle verbs for small actions.** Flag and rewrite any use of `erupts`, `sprays`, `fountains`, `explodes`, `bursts`, `ejaculates` for human actions — these generate special-effect-scale artifacts.
+3. **No speed metaphors.** Replace `"blurring speed"`, `"in an instant"`, `"lightning-fast"`, `"snapped"` with explicit timestamps and distances.
+4. **Anatomically correct scale.** A tear: 2–3 mm bead. Choking on liquid: small amount escapes the lips, not a spray. Over-reactive emotions (ping-pong-ball tears, vomit-fountain coffee) are the direct result of dramatic language in motion_prompt — remove it.
+5. **Self-check every phrase:** could the AI render this as a grotesque artifact? If yes — rewrite as a plain physical movement.
+
 ### lights_and_camera
 - Specify lens (e.g., "50mm anamorphic prime")
 - Depth of field: "shallow DOF, subject sharp, background bokeh"
@@ -97,6 +106,26 @@ Set `is_reversed=true` for any panel where:
 
 ### location_references
 - Verify `location_references` lists any room, building, or outdoor location refs (from `ref_thriller/`) visible in this panel. Add any missing location refs. Leave empty if truly no location reference applies.
+
+### RULE 4 — CROSS-SCENE SPATIAL CONTINUITY
+
+Panel 1's `visual_start` MUST be spatially compatible with the cross-scene terminal frame identified in step 5 (previous scene's last panel `visual_end`): same environment, same lighting condition, same character positions — unless this scene opens in a different location or after a time-skip, in which case state that **explicitly** in panel 1's `visual_start` (e.g. "CUT TO: new location, 10 minutes later").
+
+### RULE 5 — CROSS-PANEL SPATIAL CONTINUITY
+
+Characters do not teleport between panels. Each panel's `visual_start` at t=0 must be spatially compatible with the previous panel's `visual_end`, unless a `hard_cut` or location change is established. If a character was LEFT of frame at the end of panel N, they cannot be RIGHT of frame at the start of panel N+1 without a stated camera repositioning or character movement. Build a spatial anchor chain from the existing panel endpoints and check each panel against it.
+
+### RULE 6 — EMOTIONAL ARC INTEGRITY
+
+Verify and enforce the 9-panel arc structure. Do NOT allow resolution before panel 9:
+- Panel 1: `cold_open` | Panel 2: `context` | Panels 3–5: `escalation`
+- Panel 6: `confrontation` | Panel 7: `peak` | Panel 8: `twist` | Panel 9: `cliffhanger`
+
+Each panel's `emotional_beat` and `hook_type` must align with its arc position. Correct mismatches.
+
+### RULE 7 — CAMERA AND LIGHTING MASTER COMPLIANCE
+
+Every panel's `lights_and_camera` must stay within the scene's `camera_master` and `lighting_master` DNA. Deviations for dramatic effect are allowed but must be flagged explicitly in that field (e.g. "deviation from master: snap to 24mm wide for panic effect, then return to established 85mm CU").
 
 ### Reference Alignment
 - For each character in `references`, ensure visual descriptions match their `video_visual_desc` exactly

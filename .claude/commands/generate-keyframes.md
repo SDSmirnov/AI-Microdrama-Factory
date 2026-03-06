@@ -3,13 +3,14 @@ Episode number to process: $ARGUMENTS
 Steps:
 1. Read `cinematic_render/animation_episodes.json`
 2. Extract the episode where `episode_id` equals $ARGUMENTS
-3. Check if `custom_prompts/scenery.md` exists — use it; otherwise use `prompts/scenery.md`. Read it.
-4. Check if `custom_prompts/setting.md` exists — use it; otherwise use `prompts/setting.md`. Read it.
-5. Check if `custom_prompts/config.json` exists — use it; otherwise use `prompts/config.json`. Read it for `panels_per_scene` and `animation.enabled`.
-6. List all `.png` files in `ref_thriller/` — these are the available character/location references.
-7. Generate scene keyframes following all instructions below. Set `episode_id` = $ARGUMENTS in every scene object.
-8. Write output to `cinematic_render/animation_episode_scenes_{episode_id:03d}.json` (zero-padded to 3 digits).
-9. **Update `cinematic_render/animation_metadata.json` (single source of truth):**
+3. If $ARGUMENTS > 1, extract the **previous episode** (`episode_id` = $ARGUMENTS − 1) and note its `visual_continuity_rules` — enforce these in every panel of this episode.
+4. Check if `custom_prompts/scenery.md` exists — use it; otherwise use `prompts/scenery.md`. Read it.
+5. Check if `custom_prompts/setting.md` exists — use it; otherwise use `prompts/setting.md`. Read it.
+6. Check if `custom_prompts/config.json` exists — use it; otherwise use `prompts/config.json`. Read it for `panels_per_scene` and `animation.enabled`.
+7. List all `.png` files in `ref_thriller/` — these are the available character/location references.
+8. Generate scene keyframes following all instructions below. Set `episode_id` = $ARGUMENTS in every scene object.
+9. Write output to `cinematic_render/animation_episode_scenes_{episode_id:03d}.json` (zero-padded to 3 digits).
+10. **Update `cinematic_render/animation_metadata.json` (single source of truth):**
    - If the file exists, read it. Remove all scenes where `episode_id` equals $ARGUMENTS. Find the `scene_id` of the last remaining scene (or 0 if none). Assign sequential `scene_id` values to the new scenes starting from that value + 1. Insert the new scenes, keeping all others, sorted by `scene_id`. Preserve the existing `config` key if present, otherwise set it from the config loaded in step 5.
    - If the file does not exist, create it as `{"scenes": [...new scenes with scene_id starting at 1...], "config": <config from step 5>}`.
    - Write the result back to `cinematic_render/animation_metadata.json`.
@@ -43,6 +44,24 @@ Precise instruction for the AI video model for a 6–8 second clip. **100+ words
 - "At 6s he sets it down, eyes still on Alisa."
 
 Camera movement: specify if camera is static, slow push-in, pan direction and degrees, rack focus.
+
+**PHYSICAL REALISM PROTOCOL — the model renders every word literally, with no narrative context.**
+
+1. **Physical movements only. No emotional language.** Emotions belong in `voiceover` and `emotional_beat`, not here. Describe joint angles, degrees, distances.
+   - BAD: `"he recoils in horror, utterly poleaxed, mouth agape in disbelief"`
+   - GOOD: `"at 1.5s his eyes open wide, jaw drops ~2 cm, upper body leans back 10°"`
+
+2. **No spectacle verbs for small actions.** Words like `erupts`, `sprays`, `fountains`, `explodes`, `bursts` instruct the model to generate special-effect-scale events.
+   - BAD: `"a fine spray of liquid erupts from his mouth catching the light"`
+   - GOOD: `"at 2s a small amount of liquid escapes his lips as he exhales sharply"`
+
+3. **No speed metaphors.** `"blurring speed"`, `"in an instant"`, `"lightning-fast"` cause motion blur artifacts and broken geometry. Use timestamps.
+   - BAD: `"her hand enters with blurring speed"`
+   - GOOD: `"at 0.5s her hand enters from the right; finger contacts the screen at 0.8s"`
+
+4. **Anatomically correct scale for tears and body fluids.** A tear is a 2–3 mm bead tracking down the cheek — not "streams" or "rivers". Crying: `"at 3s a small tear forms at the outer corner of his left eye and tracks slowly down his cheek."`
+
+5. **Self-check:** before writing any phrase, ask — could the AI render this as a grotesque artifact or broken anatomy? If yes, replace it with a minimal literal anatomical description.
 
 ### lights_and_camera
 Camera angle, lens type (anamorphic, 50mm prime, wide), focal length, depth of field (shallow/deep), key light position, fill ratio. Must be IDENTICAL between start/end.
@@ -116,6 +135,19 @@ Sonic atmosphere cue for this panel, **required for every panel**, independent o
 ### location_references
 List of location/environment reference names (from `ref_thriller/`) visible in this panel (rooms, buildings, outdoor settings). Used for panel-by-panel rendering to maintain location consistency. Empty array if no location reference applies.
 
+### SCENE-LEVEL CAMERA AND LIGHTING MASTER
+
+For every scene, generate two master fields:
+- `camera_master`: one sentence — dominant lens (mm), angle, primary lighting condition shared by all panels.
+- `lighting_master`: one sentence — key light direction/color/quality, fill ratio, visible practicals. All panels inherit this DNA; deviations must be noted explicitly in that panel's `lights_and_camera`.
+
+### INDEPENDENCE PROTOCOL — NON-NEGOTIABLE
+
+Each panel is rendered by a separate image-generation model that receives ONLY that panel's text — no history, no context, no memory.
+- **FORBIDDEN**: "same as before", "same POV", "same framing", "same appearance", "as in panel N", "continues from", "identical to", "as established".
+- **REQUIRED**: Restate character appearance (hair, clothing, build, expression), location details, shot type, camera angle, and lighting in EVERY panel's `visual_start` and `visual_end` — even if they repeat word-for-word from the previous panel.
+- Treat each panel description as the ONLY instruction the image model will ever receive for that shot.
+
 ## COVERAGE RULES
 
 - EACH SCENE must have EXACTLY `panels_per_scene` panels from config.json
@@ -133,6 +165,8 @@ List of location/environment reference names (from `ref_thriller/`) visible in t
       "episode_id": 1,
       "location": "INT. LOCATION — TIME OF DAY",
       "pre_action_description": "Setup/context before the first panel action begins",
+      "camera_master": "85mm prime, eye-level, dim tungsten backlight. All panels share this base.",
+      "lighting_master": "Key: 45° camera-left, warm tungsten 3200K. Fill: 2:1 soft left. Practical: phone screen glow.",
       "panels": [
         {
           "panel_index": 1,
