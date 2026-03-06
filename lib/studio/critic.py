@@ -214,6 +214,27 @@ Expected characters/objects: {', '.join(ref_names) if ref_names else 'None speci
 # Scene processing
 # ---------------------------------------------------------------------------
 
+def _load_panel_images_individual(
+    output_dir: Path,
+    scene_id: int,
+    panels: list,
+) -> Dict[int, "Image.Image"]:
+    """Load individual panel PNGs from panels/ dir. Returns {panel_index: Image}."""
+    panels_dir = output_dir / "panels"
+    result: Dict[int, "Image.Image"] = {}
+    for panel in panels:
+        pid = panel["panel_index"]
+        for suffix in ("_static", "_start"):
+            p = panels_dir / f"{scene_id:03d}_{pid:02d}{suffix}.png"
+            if p.exists():
+                try:
+                    result[pid] = Image.open(p)
+                except Exception as e:
+                    logger.warning(f"  ⚠️  Could not open {p}: {e}")
+                break
+    return result
+
+
 def process_scene(
     llm: BaseLLM,
     scene: Dict,
@@ -227,27 +248,35 @@ def process_scene(
 ) -> List[Dict]:
     scene_id = scene["scene_id"]
     grid_path = output_dir / f"scene_{scene_id:03d}_grid_combined.png"
-    if not grid_path.exists():
-        logger.warning(f"⏭️  Grid not found: {grid_path}")
-        return []
-
-    panel_images = slice_grid(grid_path, panels_per_scene)
     panels = sorted(scene.get("panels", []), key=lambda p: p["panel_index"])
+
+    if grid_path.exists():
+        panel_images_list = slice_grid(grid_path, panels_per_scene)
+        # index 0-based list → dict by panel_index for uniform access below
+        panel_images: Dict[int, "Image.Image"] = {
+            i + 1: img for i, img in enumerate(panel_images_list)
+        }
+    else:
+        logger.warning(f"⏭️  Grid not found: {grid_path} — trying individual panel files")
+        panel_images = _load_panel_images_individual(output_dir, scene_id, panels)
+        if not panel_images:
+            logger.warning(f"⏭️  No panel images found for scene {scene_id}, skipping")
+            return []
     results = []
 
     for panel_meta in panels:
         pid = panel_meta["panel_index"]
         if panel_filter and pid not in panel_filter:
             continue
-        if pid < 1 or pid > len(panel_images):
-            logger.warning(f"  ⚠️  Panel {pid} out of range (have {len(panel_images)} images)")
+        if pid not in panel_images:
+            logger.warning(f"  ⚠️  Panel {pid} image not available (have {sorted(panel_images)})")
             continue
 
         logger.info(f"  🔍 Scene {scene_id}, Panel {pid} (refs: {panel_meta.get('references', [])})")
 
         result = analyze_panel(
             llm=llm,
-            panel_img=panel_images[pid - 1],
+            panel_img=panel_images[pid],
             panel_meta=panel_meta,
             scene_meta=scene,
             ref_catalog=ref_catalog,

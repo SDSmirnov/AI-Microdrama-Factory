@@ -29,8 +29,11 @@ class RateLimiter:
             self.last_update = now
 
             if self.tokens < 1:
+                # Reserve a future slot by going negative so each concurrent
+                # caller gets a progressively longer wait (staggered release,
+                # not thundering herd).
                 wait_time = (1 - self.tokens) * (60.0 / self.rpm)
-                self.tokens = 0
+                self.tokens -= 1
             else:
                 wait_time = 0
                 self.tokens -= 1
@@ -90,7 +93,7 @@ class BaseLLM(ABC):
     def edit_image(self, src_img, prompt: str, refs=None) -> bytes:
         raise NotImplementedError(f"{self.__class__.__name__} does not support edit_image")
 
-    def analyze_image(self, image, prompt: str, refs=None) -> dict:
+    def analyze_image(self, image, prompt: str, refs=None, schema: dict = None) -> dict:
         raise NotImplementedError(f"{self.__class__.__name__} does not support analyze_image")
 
     def analyze_video(self, video, prompt: str, refs=None, schema: dict = None) -> dict:

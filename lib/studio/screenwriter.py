@@ -567,6 +567,26 @@ PANELS TO PROCESS:
 
 
 # ---------------------------------------------------------------------------
+# Checkpoint writer
+# ---------------------------------------------------------------------------
+def _write_episode_checkpoint(episode_counter: int, scenes: list, output_dir: Path):
+    """Atomically write all refined scenes for an episode to its checkpoint file."""
+    out_path = output_dir / f"animation_episode_scenes_{episode_counter:03d}_refined.json"
+    content = json.dumps({'scenes': scenes}, ensure_ascii=False, indent=2)
+    tmp_fd, tmp_name = tempfile.mkstemp(dir=output_dir, suffix='.json.tmp')
+    try:
+        with os.fdopen(tmp_fd, 'w', encoding='utf-8') as f:
+            f.write(content)
+        os.replace(tmp_name, out_path)
+    except Exception:
+        try:
+            os.unlink(tmp_name)
+        except OSError:
+            pass
+        raise
+
+
+# ---------------------------------------------------------------------------
 # Single scene processing
 # ---------------------------------------------------------------------------
 def process_single_scene(
@@ -600,20 +620,6 @@ def process_single_scene(
     scene = refine_scenes_for_episode(scene, prompts, config, llm, character_info, prev_scene_terminal)
     scene = apply_reversal_pass(scene, prompts, config, llm)
     all_scenes.append(scene)
-
-    out_path = output_dir / f"animation_episode_scenes_{episode_counter:03d}_refined.json"
-    content = json.dumps({'scenes': [scene]}, ensure_ascii=False, indent=2)
-    tmp_fd, tmp_name = tempfile.mkstemp(dir=output_dir, suffix='.json.tmp')
-    try:
-        with os.fdopen(tmp_fd, 'w', encoding='utf-8') as f:
-            f.write(content)
-        os.replace(tmp_name, out_path)
-    except Exception:
-        try:
-            os.unlink(tmp_name)
-        except OSError:
-            pass
-        raise
     return scene
 
 
@@ -757,12 +763,14 @@ def analyze_scenes_master(
 
     def _process_episode_scenes(ep_counter: int):
         prev_terminal: str = None
+        ep_refined: list = []
         for sc_id, scene in ep_scene_groups[ep_counter]:
             try:
                 refined = process_single_scene(
                     ep_counter, sc_id, scene, prompts, config, llm,
                     all_scenes, output_dir, character_info, prev_terminal,
                 )
+                ep_refined.append(refined)
                 # Thread the terminal frame into the next scene's refinement
                 if refined:
                     last_panel = max(
@@ -776,6 +784,12 @@ def analyze_scenes_master(
                 logger.error(f"❌ Scene {sc_id} processing failed: {e}")
                 with _sc_lock:
                     failed_scenes.append(sc_id)
+        # Write checkpoint with ALL scenes for this episode (not per-scene overwrite)
+        if ep_refined:
+            try:
+                _write_episode_checkpoint(ep_counter, ep_refined, output_dir)
+            except Exception as e:
+                logger.warning(f"⚠️  Could not write checkpoint for episode {ep_counter}: {e}")
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = {executor.submit(_process_episode_scenes, ep_c): ep_c for ep_c in ep_scene_groups}

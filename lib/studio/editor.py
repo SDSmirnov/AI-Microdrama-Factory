@@ -135,7 +135,12 @@ def refine_panel(
     style_prompt = prompts.get('style', '')
     imagery_prompt = prompts.get('imagery', '')
     setting_context = prompts.get('setting', '')
-    visual_desc = panel.get('visual_start', '')
+    if frame_type == 'end':
+        visual_desc = panel.get('visual_end', '')
+    elif frame_type == 'start':
+        visual_desc = panel.get('visual_start', '')
+    else:  # static
+        visual_desc = panel.get('visual_start', panel.get('visual_end', ''))
 
     panel_specific = ""
     if quality_prompts:
