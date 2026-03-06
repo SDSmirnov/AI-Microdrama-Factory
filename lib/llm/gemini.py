@@ -331,6 +331,9 @@ class GeminiLLM(BaseLLM):
                     speech_config=speech_config,
                 ),
             )
+            if not response.candidates:
+                logger.warning("❌ Gemini TTS: no candidates in response (safety block?)")
+                return False
             for part in response.candidates[0].content.parts:
                 if part.inline_data:
                     data = part.inline_data.data

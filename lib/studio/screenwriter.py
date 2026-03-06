@@ -532,6 +532,9 @@ the action was originally written in chronological order, but the AI Image-To-Vi
 Your job: write motion_prompt_reversed describing how the scene transitions
 FROM visual_end TO visual_start. This will be initially rendered as a forward-playing clip,
 then REVERSED during post-processing so the viewer sees visual_start → visual_end.
+It must be viewed closer to natural when replayed backwards,
+e.g. if person walks in room from the open door, then "motion_prompt_reversed" should be like
+"Jack goes backwards to the open door and then closes the door, all time facing camera".
 
 Rules:
 - The motion must be physically plausible as a forward-playing clip.

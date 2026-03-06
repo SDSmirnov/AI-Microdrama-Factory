@@ -160,12 +160,15 @@ def _render_single_ref(char: dict, config: dict, project: Project, llm: BaseLLM)
     logger.info(f"  🎬 Rendering reference: {name}")
 
     refs = []
+    opened_imgs = []
     style_ref = char.get('style_reference', '')
     if style_ref and style_ref != name:
         ref_png = project.ref_dir / f"{safe_name(style_ref)}.png"
         if ref_png.exists():
             refs.append(f"## Visual Style reference for {style_ref}")
-            refs.append(Image.open(ref_png))
+            img = Image.open(ref_png)
+            opened_imgs.append(img)
+            refs.append(img)
 
     ref_aspect = config.get('reference_characters', {}).get('ref_aspect_ratio', '3:4')
     prompt_text = (
@@ -184,6 +187,9 @@ def _render_single_ref(char: dict, config: dict, project: Project, llm: BaseLLM)
             logger.error(f"    ❌ Empty response for {name}")
     except Exception as e:
         logger.error(f"    ❌ Failed to render {name}: {e}")
+    finally:
+        for img in opened_imgs:
+            img.close()
 
 
 def render_character_refs(prompts: dict, config: dict, llm: BaseLLM, project: Project):
@@ -269,6 +275,7 @@ def _render_single_grid(scene: dict, scene_id: int, prompts: dict, config: dict,
     logger.info(f"  📎 Scene {scene_id} refs: {chars}")
 
     refs = []
+    opened_imgs = []
     ref_chars = [name for name in chars if name in project.character_images]
     if ref_chars:
         refs.append(
@@ -286,7 +293,9 @@ def _render_single_grid(scene: dict, scene_id: int, prompts: dict, config: dict,
             except Exception:
                 pass
             refs.append(f"## Visual Reference for: \"{name}\"\nUse it for appearances\n{info}\n")
-            refs.append(Image.open(png_path))
+            img = Image.open(png_path)
+            opened_imgs.append(img)
+            refs.append(img)
 
     prompt_text = _build_grid_prompt(scene, prompts, config)
     aspect_ratio = config['image_generation']['aspect_ratio']
@@ -304,6 +313,9 @@ def _render_single_grid(scene: dict, scene_id: int, prompts: dict, config: dict,
     except Exception as e:
         logger.error(f"    ❌ Failed to render scene {scene_id}: {e}")
         return
+    finally:
+        for img in opened_imgs:
+            img.close()
 
     if config['slicing']['enabled']:
         slice_combined(path_combined, scene_id, config, project)
@@ -420,12 +432,15 @@ Camera / Lighting: {panel.get('lights_and_camera', '')}
     return prompt
 
 
-def _build_ref_contents(panel: dict, project: Project) -> list:
-    """Build reference image content parts for a panel."""
+def _build_ref_contents(panel: dict, project: Project) -> tuple[list, list]:
+    """Build reference image content parts for a panel.
+
+    Returns (contents, opened_imgs) — caller must close opened_imgs after use.
+    """
     chars = list(set(panel.get('references', []) + panel.get('location_references', [])))
     ref_chars = [name for name in chars if name in project.character_images]
     if not ref_chars:
-        return []
+        return [], []
 
     contents = [
         "# Visual Reference Library\n"
@@ -433,6 +448,7 @@ def _build_ref_contents(panel: dict, project: Project) -> list:
         "Always prioritize the visual design of characters/objects "
         "from the provided images over your internal concepts."
     ]
+    opened_imgs = []
     for name in ref_chars:
         png_path = project.character_images[name]
         info = ""
@@ -442,8 +458,10 @@ def _build_ref_contents(panel: dict, project: Project) -> list:
         except Exception:
             pass
         contents.append(f"## Visual Reference for: \"{name}\"\n{info}\n")
-        contents.append(Image.open(png_path))
-    return contents
+        img = Image.open(png_path)
+        opened_imgs.append(img)
+        contents.append(img)
+    return contents, opened_imgs
 
 
 def _panel_output_path(project: Project, scene_id: int, panel_index: int, frame_type: str) -> Path:
@@ -468,7 +486,7 @@ def _render_single_panel(
 
     logger.info(f"  🎨 Rendering {out_path.name} ...")
 
-    refs = _build_ref_contents(panel, project)
+    refs, opened_imgs = _build_ref_contents(panel, project)
     prompt_text = _build_panel_prompt(scene, panel, frame_type, prompts)
 
     try:
@@ -480,6 +498,9 @@ def _render_single_panel(
             logger.error(f"    ❌ Empty response for {out_path.name}")
     except Exception as e:
         logger.error(f"    ❌ Failed {out_path.name}: {e}")
+    finally:
+        for img in opened_imgs:
+            img.close()
 
 
 def render_panels(
@@ -532,13 +553,14 @@ def slice_combined(path_combined: Path, sid: int, config: dict, project: Project
     panels_dir = project.panels_dir
     panels_dir.mkdir(exist_ok=True)
 
-    img = Image.open(path_combined)
-    w, h = img.size
+    with Image.open(path_combined) as img:
+        w, h = img.size
+        panels_per_scene = config['format']['panels_per_scene']
+        cols, rows = grid_dims(panels_per_scene)
+        crops = [(idx, img.crop(box).copy()) for idx, box in enumerate(panel_boxes(w, h, cols, rows, panels_per_scene), 1)]
 
-    panels_per_scene = config['format']['panels_per_scene']
-    cols, rows = grid_dims(panels_per_scene)
-    for idx, box in enumerate(panel_boxes(w, h, cols, rows, panels_per_scene), 1):
-        img.crop(box).save(panels_dir / f"{sid:03d}_{idx:02d}_static.png")
+    for idx, crop in crops:
+        crop.save(panels_dir / f"{sid:03d}_{idx:02d}_static.png")
 
 
 # ---------------------------------------------------------------------------

@@ -460,6 +460,8 @@ class OpenRouterLLM(BaseLLM):
                 }
             data = self._post_openrouter(payload, timeout=240)
             text = self._extract_text(data)
+            if schema:
+                return json.loads(text)
             try:
                 return json.loads(text)
             except Exception:

@@ -24,6 +24,17 @@ def load_metadata(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def atomic_write(path: Path, content: str, encoding: str = 'utf-8'):
+    """Write content to path atomically via tmp-file + rename (POSIX-safe)."""
+    tmp = path.with_suffix('.tmp')
+    try:
+        tmp.write_text(content, encoding=encoding)
+        tmp.replace(path)
+    except Exception:
+        tmp.unlink(missing_ok=True)
+        raise
+
+
 def panel_boxes(w: int, h: int, cols: int, rows: int, panels_count: int) -> list[tuple]:
     """
     Compute (left, top, right, bottom) crop boxes for a grid image.

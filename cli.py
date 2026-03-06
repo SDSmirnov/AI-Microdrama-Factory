@@ -61,7 +61,7 @@ from lib.studio.artist import (
 from lib.studio.critic import print_summary, run_quality_gate
 from lib.studio.cutter import run_autocut
 from lib.studio.director import run_continuity_pass
-from lib.core.utils import load_metadata
+from lib.core.utils import atomic_write, load_metadata
 from lib.studio.editor import load_quality_report, refine_panel
 from lib.studio.retoucher import edit_image as retoucher_edit_image
 from lib.studio.screenwriter import (
@@ -200,7 +200,7 @@ def cmd_screenplay(args):
     data.setdefault('config', config)
 
     meta_path = project.output_dir / "animation_metadata.json"
-    meta_path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding='utf-8')
+    atomic_write(meta_path, json.dumps(data, ensure_ascii=False, indent=2))
 
     for scene in data['scenes']:
         export_image_prompt(scene, scene['scene_id'], prompts, config, project)
@@ -254,7 +254,7 @@ def cmd_scenes(args):
     new_ep_ids = {s.get('episode_id') for s in all_scenes if s.get('episode_id')}
     metadata['scenes'] = merge_scenes(metadata, all_scenes, new_ep_ids, project.panels_dir)
     metadata.setdefault('config', config)
-    meta_path.write_text(json.dumps(metadata, ensure_ascii=False, indent=2), encoding='utf-8')
+    atomic_write(meta_path, json.dumps(metadata, ensure_ascii=False, indent=2))
     logger.info(f"✅ animation_metadata.json updated: {len(metadata['scenes'])} total scene(s)")
 
 

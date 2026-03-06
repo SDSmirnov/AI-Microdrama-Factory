@@ -58,15 +58,19 @@ class Project:
             d.mkdir(parents=True, exist_ok=True)
 
     def validate_env(self, llm_type: str = None) -> list[str]:
-        """Return list of validation errors for the selected backend."""
+        """Return list of validation errors for the selected backend.
+
+        When llm_type is None, validates only the default backend (openrouter).
+        """
         errors = []
-        if llm_type is None or llm_type == 'openrouter':
+        effective = llm_type or 'openrouter'
+        if effective == 'openrouter':
             if not self.openrouter_api_key:
                 errors.append("OPENROUTER_API_KEY is not set (required for --llm openrouter)")
-        if llm_type is None or llm_type == 'gemini':
+        elif effective == 'gemini':
             if not self.gemini_api_key:
                 errors.append("IMG_AI_API_KEY / GOOGLE_API_KEY is not set (required for --llm gemini, Veo animation, TTS, dubbing)")
-        if llm_type == 'grok':
+        elif effective == 'grok':
             if not self.grok_api_key:
                 errors.append("XAI_API_KEY is not set (required for --llm grok)")
         return errors

@@ -74,10 +74,10 @@ def find_ref(name: str, catalog: Dict[str, Dict]) -> Optional[Dict]:
 # ---------------------------------------------------------------------------
 
 def slice_grid(grid_path: Path, panels_count: int) -> List[Image.Image]:
-    img = Image.open(grid_path)
-    w, h = img.size
-    cols, rows = grid_dims(panels_count)
-    return [img.crop(box) for box in panel_boxes(w, h, cols, rows, panels_count)]
+    with Image.open(grid_path) as img:
+        w, h = img.size
+        cols, rows = grid_dims(panels_count)
+        return [img.crop(box).copy() for box in panel_boxes(w, h, cols, rows, panels_count)]
 
 
 # ---------------------------------------------------------------------------
@@ -100,11 +100,13 @@ def analyze_panel(
     ref_descriptions: List[str] = []
     loaded_refs: List[str] = []
 
+    opened_ref_imgs: List[Image.Image] = []
     for rname in ref_names[:MAX_REFS_PER_PANEL]:
         ref = find_ref(rname, ref_catalog)
         if ref and ref.get("img_path"):
             try:
                 rimg = Image.open(ref["img_path"])
+                opened_ref_imgs.append(rimg)
                 desc = ref.get("video_visual_desc") or ref.get("visual_desc", "")
                 ref_images_content.append(f'Reference "{rname}" ({ref.get("type", "?")}):\n{desc}')
                 ref_images_content.append(rimg)
@@ -202,6 +204,9 @@ Expected characters/objects: {', '.join(ref_names) if ref_names else 'None speci
             "refinement_prompt": "API call failed, manual review required.",
             "reasoning": f"Error: {e}",
         }
+    finally:
+        for img in opened_ref_imgs:
+            img.close()
 
     result["scene_id"] = scene_id
     result["panel_id"] = panel_id

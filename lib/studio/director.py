@@ -14,7 +14,7 @@ from typing import Dict, List
 from PIL import Image
 
 from lib.core.schemas import UPDATED_REF_SCHEMA, SCENE_REWRITE_SCHEMA
-from lib.core.utils import DEFAULT_OUTPUT_DIR, DEFAULT_REF_DIR, safe_name
+from lib.core.utils import DEFAULT_OUTPUT_DIR, DEFAULT_REF_DIR, atomic_write, safe_name
 from lib.llm.base import BaseLLM
 
 logger = logging.getLogger(__name__)
@@ -144,11 +144,14 @@ def enrich_and_regenerate_reference(
     )
 
     refs = []
+    opened_imgs = []
     if ref_data.get('style_reference') and ref_data['style_reference'] != ref_name:
         style_path = ref_dir / f"{safe_name(ref_data['style_reference'])}.png"
         if style_path.exists():
             refs.append(f"## Visual Style reference for {ref_data['style_reference']}")
-            refs.append(Image.open(style_path))
+            img = Image.open(style_path)
+            opened_imgs.append(img)
+            refs.append(img)
 
     try:
         img_bytes = llm.make_image(ref_prompt, refs=refs, aspect_ratio='9:16', image_size='1K')
@@ -159,6 +162,9 @@ def enrich_and_regenerate_reference(
             logger.error(f"    ❌ Empty image response for {ref_name}")
     except Exception as e:
         logger.error(f"    ❌ Failed to render {ref_name}: {e}")
+    finally:
+        for img in opened_imgs:
+            img.close()
 
 
 def align_scene_prompts(scene: Dict, all_refs_data: Dict, llm: BaseLLM) -> Dict:
@@ -285,6 +291,6 @@ def run_continuity_pass(
     metadata['scenes'] = aligned_scenes
     # Overwrite animation_metadata.json in-place — it IS the single source of truth
     out_path = metadata_path
-    out_path.write_text(json.dumps(metadata, ensure_ascii=False, indent=2), encoding='utf-8')
+    atomic_write(out_path, json.dumps(metadata, ensure_ascii=False, indent=2))
     logger.info(f"✅ Done. Metadata updated in-place: {out_path}")
     return out_path

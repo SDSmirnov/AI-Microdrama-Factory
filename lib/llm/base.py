@@ -86,7 +86,9 @@ def retry_on_errors(max_retries=3, backoff_factor=2):
                         '429' in error_str or '500' in error_str or '503' in error_str or
                         'Too Many Requests' in error_str or 'Rate limit' in error_str or
                         'Internal Server Error' in error_str or 'Service Unavailable' in error_str or
-                        'timed out' in error_str.lower() or 'connection' in error_str.lower()
+                        'timed out' in error_str.lower() or
+                        'connection refused' in error_str.lower() or
+                        'connection reset' in error_str.lower()
                     )
                     if retryable:
                         retries += 1

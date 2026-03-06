@@ -42,13 +42,14 @@ def find_scene_panel(metadata: Dict, scene_id: int, panel_id: int) -> Optional[D
     return None
 
 
-def load_character_references(references: List[str], ref_dir: Path = DEFAULT_REF_DIR) -> Tuple[List, List[str]]:
+def load_character_references(references: List[str], ref_dir: Path = DEFAULT_REF_DIR) -> Tuple[List, List[str], List[Image.Image]]:
     """
     Load PIL images and text blocks for each reference.
-    Returns (content_list, loaded_names).
+    Returns (content_list, loaded_names, opened_imgs) — caller must close opened_imgs after use.
     """
     ref_content = []
     loaded_refs = []
+    opened_imgs = []
 
     for ref_name in references:
         img_path = ref_dir / f"{safe_name(ref_name)}.png"
@@ -57,6 +58,7 @@ def load_character_references(references: List[str], ref_dir: Path = DEFAULT_REF
         if img_path.exists():
             try:
                 img = Image.open(img_path)
+                opened_imgs.append(img)
                 desc = ""
                 if json_path.exists():
                     try:
@@ -74,7 +76,7 @@ def load_character_references(references: List[str], ref_dir: Path = DEFAULT_REF
         else:
             logger.warning(f"  ⚠️  Ref not found: {img_path}")
 
-    return ref_content, loaded_refs
+    return ref_content, loaded_refs, opened_imgs
 
 
 def refine_panel(
@@ -110,8 +112,6 @@ def refine_panel(
         logger.error(f"❌ Panel file not found: {original_path}")
         return False
 
-    original_img = Image.open(original_path)
-
     references = panel.get('references', [])
     if not references:
         panel_type = panel.get('panel_type', 'narrative')
@@ -127,10 +127,12 @@ def refine_panel(
             )
         return False
 
-    ref_content, loaded_refs = load_character_references(references)
+    ref_content, loaded_refs, opened_ref_imgs = load_character_references(references)
     if not ref_content:
         logger.warning("⚠️  Could not load any references")
         return False
+
+    original_img = Image.open(original_path)
 
     style_prompt = prompts.get('style', '')
     imagery_prompt = prompts.get('imagery', '')
@@ -245,3 +247,7 @@ No captions or text overlays!
     except Exception as e:
         logger.error(f"❌ Generation error: {e}", exc_info=True)
         return False
+    finally:
+        original_img.close()
+        for img in opened_ref_imgs:
+            img.close()
