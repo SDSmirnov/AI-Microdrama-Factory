@@ -66,11 +66,9 @@ from lib.studio.editor import load_quality_report, refine_panel
 from lib.studio.retoucher import edit_image as retoucher_edit_image
 from lib.studio.screenwriter import (
     SYSTEM_PROMPT,
-    _write_episode_checkpoint,
-    analyze_scenes_for_episode,
     analyze_scenes_master,
     merge_scenes,
-    process_single_scene,
+    run_scenes_pipeline,
 )
 from lib.studio.stylist import analyze_novel, generate_custom_prompts
 
@@ -231,51 +229,11 @@ def cmd_scenes(args):
     else:
         episodes = episodes_list
 
-    all_episodes = []
-    for ep in episodes:
-        ep_id = ep['episode_id']
-        # BUG-3 fix: pass prev episode's continuity rules for cross-episode consistency
-        idx = next((i for i, e in enumerate(episodes_list) if e['episode_id'] == ep_id), -1)
-        prev_rules = episodes_list[idx - 1].get('visual_continuity_rules', '') if idx > 0 else ''
-        analyze_scenes_for_episode(
-            ep_id, json.dumps(ep, ensure_ascii=False, indent=2), prompts, config, llm, all_episodes,
-            character_info=project.character_info,
-            prev_continuity_rules=prev_rules,
-        )
-
-    # Group scenes per episode to chain prev_scene_terminal and write correct checkpoints
-    ep_scenes_map: dict = {}
-    scene_counter = 0
-    for ep_counter, data in sorted(all_episodes, key=lambda x: x[0]):
-        ep_scenes_map[ep_counter] = []
-        for scene in data.get('scenes', []):
-            scene_counter += 1
-            ep_scenes_map[ep_counter].append((scene_counter, scene))
-
-    all_scenes = []
-    for ep_counter, scene_list in sorted(ep_scenes_map.items()):
-        # BUG-2 fix: chain prev_scene_terminal between scenes of the same episode
-        prev_terminal = None
-        ep_refined = []
-        for sc_id, scene in scene_list:
-            refined = process_single_scene(ep_counter, sc_id, scene, prompts, config, llm, all_scenes,
-                                 output_dir=project.output_dir, character_info=project.character_info,
-                                 prev_scene_terminal=prev_terminal)
-            ep_refined.append(refined)
-            if refined:
-                last_panel = max(
-                    refined.get('panels', []),
-                    key=lambda p: p.get('panel_index', 0),
-                    default=None,
-                )
-                if last_panel:
-                    prev_terminal = last_panel.get('visual_end', '')
-        # BUG-1 fix: write checkpoint with ALL scenes, not one per scene
-        if ep_refined:
-            try:
-                _write_episode_checkpoint(ep_counter, ep_refined, project.output_dir)
-            except Exception as e:
-                logger.warning(f"⚠️  Could not write checkpoint for episode {ep_counter}: {e}")
+    all_scenes = run_scenes_pipeline(
+        episodes, episodes_list, prompts, config, llm,
+        output_dir=project.output_dir,
+        character_info=project.character_info,
+    )
 
     logger.info(f"\n✅ Done. {len(all_scenes)} scene(s) processed.")
 
@@ -287,8 +245,9 @@ def cmd_scenes(args):
     if meta_path.exists():
         try:
             metadata = json.loads(meta_path.read_text(encoding='utf-8'))
-        except Exception:
-            metadata = {}
+        except json.JSONDecodeError as e:
+            logger.error(f"❌ Corrupt animation_metadata.json: {e}. Back up and delete the file before retrying.")
+            sys.exit(1)
     else:
         metadata = {}
 

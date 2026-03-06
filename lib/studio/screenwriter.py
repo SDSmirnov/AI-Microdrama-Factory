@@ -624,6 +624,71 @@ def process_single_scene(
 
 
 # ---------------------------------------------------------------------------
+# Sequential scenes pipeline (used by cli.py `scenes` subcommand)
+# ---------------------------------------------------------------------------
+def run_scenes_pipeline(
+    episodes: list,
+    episodes_list: list,
+    prompts: dict,
+    config: dict,
+    llm: BaseLLM,
+    output_dir: Path,
+    character_info: dict = None,
+) -> list:
+    """
+    Process a filtered list of episodes sequentially:
+      analyze → refine → reversal → write checkpoint per episode.
+    Returns all_scenes (list of refined scene dicts, mutated in place by process_single_scene).
+    """
+    all_episodes: list = []
+    for ep in episodes:
+        ep_id = ep['episode_id']
+        idx = next((i for i, e in enumerate(episodes_list) if e['episode_id'] == ep_id), -1)
+        prev_rules = episodes_list[idx - 1].get('visual_continuity_rules', '') if idx > 0 else ''
+        analyze_scenes_for_episode(
+            ep_id, json.dumps(ep, ensure_ascii=False, indent=2),
+            prompts, config, llm, all_episodes,
+            character_info=character_info,
+            prev_continuity_rules=prev_rules,
+        )
+
+    ep_scenes_map: dict = {}
+    scene_counter = 0
+    for ep_counter, data in sorted(all_episodes, key=lambda x: x[0]):
+        ep_scenes_map[ep_counter] = []
+        for scene in data.get('scenes', []):
+            scene_counter += 1
+            ep_scenes_map[ep_counter].append((scene_counter, scene))
+
+    all_scenes: list = []
+    for ep_counter, scene_list in sorted(ep_scenes_map.items()):
+        prev_terminal = None
+        ep_refined: list = []
+        for sc_id, scene in scene_list:
+            refined = process_single_scene(
+                ep_counter, sc_id, scene, prompts, config, llm, all_scenes,
+                output_dir=output_dir, character_info=character_info,
+                prev_scene_terminal=prev_terminal,
+            )
+            ep_refined.append(refined)
+            if refined:
+                last_panel = max(
+                    refined.get('panels', []),
+                    key=lambda p: p.get('panel_index', 0),
+                    default=None,
+                )
+                if last_panel:
+                    prev_terminal = last_panel.get('visual_end', '')
+        if ep_refined:
+            try:
+                _write_episode_checkpoint(ep_counter, ep_refined, output_dir)
+            except Exception as e:
+                logger.warning(f"⚠️  Could not write checkpoint for episode {ep_counter}: {e}")
+
+    return all_scenes
+
+
+# ---------------------------------------------------------------------------
 # Scene merge / upsert
 # ---------------------------------------------------------------------------
 def merge_scenes(

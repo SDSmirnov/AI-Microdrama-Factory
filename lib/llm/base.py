@@ -9,6 +9,32 @@ import time
 from abc import ABC, abstractmethod
 from threading import Lock
 
+# Optional backend-specific retryable exception types — imported defensively
+# so base.py stays usable even without a particular SDK installed.
+try:
+    import requests.exceptions as _req_exc
+    _REQUESTS_RETRYABLE = (
+        _req_exc.ConnectionError,
+        _req_exc.Timeout,
+        _req_exc.ReadTimeout,
+        _req_exc.ChunkedEncodingError,
+    )
+except ImportError:
+    _REQUESTS_RETRYABLE = ()
+
+try:
+    from google.api_core import exceptions as _gapi_exc
+    _GOOGLE_RETRYABLE = (
+        _gapi_exc.ServiceUnavailable,   # 503
+        _gapi_exc.InternalServerError,  # 500
+        _gapi_exc.ResourceExhausted,    # 429
+        _gapi_exc.DeadlineExceeded,
+    )
+except ImportError:
+    _GOOGLE_RETRYABLE = ()
+
+_TYPED_RETRYABLE = _REQUESTS_RETRYABLE + _GOOGLE_RETRYABLE
+
 logger = logging.getLogger(__name__)
 
 
@@ -54,6 +80,9 @@ def retry_on_errors(max_retries=3, backoff_factor=2):
                 except Exception as e:
                     error_str = str(e)
                     retryable = (
+                        # Type-safe check for known SDK exception types
+                        (_TYPED_RETRYABLE and isinstance(e, _TYPED_RETRYABLE)) or
+                        # String fallback for exceptions wrapped in generic types
                         '429' in error_str or '500' in error_str or '503' in error_str or
                         'Too Many Requests' in error_str or 'Rate limit' in error_str or
                         'Internal Server Error' in error_str or 'Service Unavailable' in error_str or
