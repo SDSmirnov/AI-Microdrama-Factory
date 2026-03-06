@@ -93,6 +93,7 @@ def analyze_panel(
     scene_id: int,
     panel_id: int,
     threshold: int,
+    prev_scene_terminal: str = None,
 ) -> Dict:
     ref_names = panel_meta.get("references", [])
     ref_images_content: List[Any] = []
@@ -114,10 +115,21 @@ def analyze_panel(
 
     visual_desc = panel_meta.get("visual_start", "") or panel_meta.get("visual_end", "")
     prev_panels = [
-        {'panel_index': p['panel_index'], 'visual_desc': p['visual_end']}
+        {'panel_index': p['panel_index'], 'visual_desc': p['visual_end'], 'lights_and_camera': p.get('lights_and_camera', '')}
         for p in scene_meta.get('panels', [])
         if p['panel_index'] < panel_meta['panel_index']
     ]
+
+    inter_scene_block = ""
+    if panel_id == 1 and prev_scene_terminal:
+        inter_scene_block = f"""
+## PREVIOUS SCENE TERMINAL FRAME (cross-scene continuity check)
+The previous scene ended on this visual state:
+{prev_scene_terminal}
+Check panel 1: does it maintain spatial continuity (location, lighting, character positions)?
+If a location change or time-skip occurs, it must be stated explicitly in visual_start.
+Flag in artifacts if there is an unexplained discontinuity.
+"""
 
     prompt = f"""You are a QA supervisor for an AI film production pipeline.
 
@@ -129,7 +141,9 @@ Score the visual fidelity and decide if the panel needs regeneration.
 Scene ID: {scene_meta.get('scene_id')}
 Location: {scene_meta.get('location', 'N/A')}
 Setup: {scene_meta.get('pre_action_description', '')}
-
+Camera master: {scene_meta.get('camera_master', 'N/A')}
+Lighting master: {scene_meta.get('lighting_master', 'N/A')}
+{inter_scene_block}
 ## PREVIOUS PANELS - FOR CONTEXT AND CONSISTENCY CHECKS
 <PREV_PANELS>{json.dumps(prev_panels, ensure_ascii=False, indent=2)}</PREV_PANELS>
 
@@ -209,6 +223,7 @@ def process_scene(
     threshold: int,
     panel_filter: Optional[List[int]] = None,
     output_dir: Path = DEFAULT_OUTPUT_DIR,
+    prev_scene_last_panel: str = None,
 ) -> List[Dict]:
     scene_id = scene["scene_id"]
     grid_path = output_dir / f"scene_{scene_id:03d}_grid_combined.png"
@@ -239,6 +254,7 @@ def process_scene(
             scene_id=scene_id,
             panel_id=pid,
             threshold=threshold,
+            prev_scene_terminal=prev_scene_last_panel if pid == 1 else None,
         )
         results.append(result)
 
@@ -284,16 +300,34 @@ def run_quality_gate(
                 panels_per_scene = config.get("format", {}).get("panels_per_scene", panels_per_scene)
                 break
 
-    scenes = metadata.get("scenes", [])
-    if scene_ids:
-        scenes = [s for s in scenes if s["scene_id"] in scene_ids]
+    all_scenes = metadata.get("scenes", [])
+
+    # Build terminal-frame map for inter-scene continuity checks at panel 1
+    all_scenes_sorted = sorted(all_scenes, key=lambda s: s.get("scene_id", 0))
+    sorted_scene_ids = [s["scene_id"] for s in all_scenes_sorted]
+    terminal_frame_map: Dict[int, str] = {}
+    for s in all_scenes_sorted:
+        panels = sorted(s.get("panels", []), key=lambda p: p.get("panel_index", 0))
+        if panels:
+            terminal_frame_map[s["scene_id"]] = panels[-1].get("visual_end", "")
+
+    def _prev_terminal(scene_id: int) -> Optional[str]:
+        idx = sorted_scene_ids.index(scene_id) if scene_id in sorted_scene_ids else -1
+        if idx > 0:
+            return terminal_frame_map.get(sorted_scene_ids[idx - 1])
+        return None
+
+    scenes = all_scenes if not scene_ids else [s for s in all_scenes if s["scene_id"] in scene_ids]
 
     all_results: List[Dict] = []
     if max_workers > 1 and len(scenes) > 1 and not panel_ids:
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             futures = {
-                executor.submit(process_scene, llm, scene, ref_catalog, grid_format,
-                                panels_per_scene, threshold, None, output_dir): scene["scene_id"]
+                executor.submit(
+                    process_scene, llm, scene, ref_catalog, grid_format,
+                    panels_per_scene, threshold, None, output_dir,
+                    _prev_terminal(scene["scene_id"]),
+                ): scene["scene_id"]
                 for scene in scenes
             }
             for future in as_completed(futures):
@@ -306,7 +340,7 @@ def run_quality_gate(
         for scene in scenes:
             all_results.extend(
                 process_scene(llm, scene, ref_catalog, grid_format, panels_per_scene,
-                               threshold, panel_ids, output_dir)
+                               threshold, panel_ids, output_dir, _prev_terminal(scene["scene_id"]))
             )
 
     all_results.sort(key=lambda r: (r["scene_id"], r["panel_id"]))

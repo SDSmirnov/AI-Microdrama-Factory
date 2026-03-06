@@ -66,18 +66,18 @@ def _backup_refs(ref_dir: Path, extra_files: list = None) -> Path:
 
 
 def collect_reference_usage(metadata: Dict) -> Dict[str, List[str]]:
-    """Collect all panel descriptions where each reference is mentioned."""
+    """Collect all panel descriptions where each reference (character or location) is mentioned."""
     ref_usage: Dict[str, List[str]] = {}
     for scene in metadata.get('scenes', []):
         for panel in scene.get('panels', []):
-            for ref in panel.get('references', []):
+            context = (
+                f"Scene {scene['scene_id']}, Panel {panel['panel_index']}: "
+                f"Start: {panel['visual_start']} | End: {panel['visual_end']} | "
+                f"Camera: {panel.get('lights_and_camera', '')}"
+            )
+            for ref in panel.get('references', []) + panel.get('location_references', []):
                 if ref not in ref_usage:
                     ref_usage[ref] = []
-                context = (
-                    f"Scene {scene['scene_id']}, Panel {panel['panel_index']}: "
-                    f"Start: {panel['visual_start']} | End: {panel['visual_end']} | "
-                    f"Camera: {panel.get('lights_and_camera', '')}"
-                )
                 ref_usage[ref].append(context)
     return ref_usage
 
@@ -171,6 +171,16 @@ def align_scene_prompts(scene: Dict, all_refs_data: Dict, llm: BaseLLM) -> Dict:
         if ref_key in all_refs_data:
             ref_context[ref] = all_refs_data[ref_key]['video_visual_desc']
 
+    camera_master = scene.get('camera_master', '')
+    lighting_master = scene.get('lighting_master', '')
+    master_block = ""
+    if camera_master or lighting_master:
+        master_block = f"""
+    Scene camera master: {camera_master}
+    Scene lighting master: {lighting_master}
+    Enforce these across all panels — correct lights_and_camera when it contradicts the master.
+"""
+
     prompt = f"""
     You are a Script Supervisor enforcing Visual Continuity.
 
@@ -178,17 +188,18 @@ def align_scene_prompts(scene: Dict, all_refs_data: Dict, llm: BaseLLM) -> Dict:
     <APPROVED_REFERENCES>
     {json.dumps(ref_context, indent=2)}
     </APPROVED_REFERENCES>
-
+    {master_block}
     Here is the current scene data:
     <CURRENT_SCENE>
     {json.dumps(scene['panels'], indent=2)}
     </CURRENT_SCENE>
 
     TASK:
-    Rewrite 'visual_start' and 'visual_end' for each panel ONLY IF they contradict the APPROVED_REFERENCES.
-    Ensure that colors, props, and materials mentioned in the scene exactly match the approved references.
-    Do not change the action or cinematography, only enforce physical prop/character consistency.
-    Return the full list of panels with your adjusted visual_start and visual_end.
+    For each panel, correct ONLY what contradicts the APPROVED_REFERENCES or the scene masters:
+    1. Rewrite 'visual_start' and 'visual_end' where colors, props, or materials contradict references.
+    2. Rewrite 'lights_and_camera' where it contradicts camera_master or lighting_master.
+    Do not change action, dialogue, or structure — only enforce physical and technical consistency.
+    Return the full list of panels with adjusted visual_start, visual_end, and lights_and_camera.
     """
 
     aligned_data = llm.make_json(prompt, SCENE_REWRITE_SCHEMA)
@@ -199,6 +210,8 @@ def align_scene_prompts(scene: Dict, all_refs_data: Dict, llm: BaseLLM) -> Dict:
             if panel['panel_index'] in aligned_map:
                 panel['visual_start'] = aligned_map[panel['panel_index']]['visual_start']
                 panel['visual_end'] = aligned_map[panel['panel_index']]['visual_end']
+                if lc := aligned_map[panel['panel_index']].get('lights_and_camera'):
+                    panel['lights_and_camera'] = lc
 
     return scene
 

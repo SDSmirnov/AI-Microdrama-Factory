@@ -7,7 +7,7 @@ import json
 import logging
 import os
 import tempfile
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from threading import Lock
 
@@ -214,6 +214,11 @@ PANEL TYPE (panel_type):
   The voiceover or sound from the surrounding panels spills over this image — the abstract visual amplifies the emotion without explaining it.
 
 **IMPORTANT: EACH SCENE MUST HAVE EXACTLY 9 PANELS following the structure above.**
+
+SCENE-LEVEL CAMERA AND LIGHTING MASTER:
+For every scene, generate:
+- camera_master: one sentence capturing the dominant lens (mm), angle, and primary lighting condition shared by all panels in this scene.
+- lighting_master: one sentence capturing key light direction/color/quality, fill ratio, and any visible practicals. All panels must stay within this lighting DNA — deviations must be noted in that panel's lights_and_camera.
     """
     return prompt
 
@@ -326,12 +331,27 @@ def analyze_scenes_for_episode(
     llm: BaseLLM,
     all_episodes: list,
     character_info: dict = None,
+    prev_continuity_rules: str = None,
 ):
     logger.info(f"\n🎥 MASTER CINEMATOGRAPHER: Preparing Keyframes for episode {episode_counter}...")
     base_prompt = base_scene_prompt(prompts, config, character_info)
+
+    # Extract current episode's own continuity rules (for downstream episodes) and surface prev ones
+    try:
+        episode_data = json.loads(text)
+        current_continuity = episode_data.get('visual_continuity_rules', '')
+    except (json.JSONDecodeError, AttributeError):
+        current_continuity = ''
+
+    continuity_block = ""
+    if prev_continuity_rules:
+        continuity_block += f"\n## VISUAL CONTINUITY FROM PREVIOUS EPISODE — MANDATORY\nThese rules MUST be enforced in every panel of this episode:\n{prev_continuity_rules}\n"
+    if current_continuity:
+        continuity_block += f"\n## THIS EPISODE'S VISUAL STATE (carry forward to future scenes)\n{current_continuity}\n"
+
     prompt = f"""
     {base_prompt}
-
+    {continuity_block}
     TEXT TO ADAPT:
     {text}
 """
@@ -349,13 +369,16 @@ def analyze_scenes_for_episode(
 # ---------------------------------------------------------------------------
 # Refinement pass
 # ---------------------------------------------------------------------------
-def refine_scenes_for_episode(scene: dict, prompts: dict, config: dict, llm: BaseLLM, character_info: dict = None) -> dict:
+def refine_scenes_for_episode(scene: dict, prompts: dict, config: dict, llm: BaseLLM, character_info: dict = None, prev_scene_terminal: str = None) -> dict:
     """
     Refinement pass before reversal:
     1. Makes every panel self-contained — all character/location details inline.
     2. Ensures visual_start explicitly describes spatial disposition.
     3. Flags is_reversed=true when a character/object appears in visual_end/motion_prompt
        without being present in visual_start (Grok Imagine has no image-reference support).
+    4. Enforces cross-panel spatial continuity and cross-scene entry state.
+    5. Verifies 9-panel emotional arc integrity.
+    6. Enforces camera_master/lighting_master compliance across all panels.
     """
     scene_id = scene.get('scene_id', '?')
     logger.info(f"    ✏️  Refinement pass: scene {scene_id}")
@@ -363,13 +386,34 @@ def refine_scenes_for_episode(scene: dict, prompts: dict, config: dict, llm: Bas
     base_prompt = base_scene_prompt(prompts, config, character_info)
     scene_text = json.dumps(scene, ensure_ascii=False, indent=2)
 
+    # Build spatial chain: existing panel endpoints for cross-panel anchor
+    panels_sorted = sorted(scene.get('panels', []), key=lambda p: p.get('panel_index', 0))
+    panels_spatial_chain = "\n".join(
+        f"  Panel {p.get('panel_index', '?')} visual_end: {p.get('visual_end', '')[:250]}"
+        for p in panels_sorted
+    )
+
+    # Cross-scene entry block
+    prev_terminal_block = ""
+    if prev_scene_terminal:
+        prev_terminal_block = f"""
+### RULE 4 — CROSS-SCENE SPATIAL CONTINUITY
+The PREVIOUS scene ended on this exact visual state:
+<PREV_SCENE_TERMINAL>
+{prev_scene_terminal}
+</PREV_SCENE_TERMINAL>
+Panel 1's visual_start MUST be spatially compatible: same environment, same lighting condition,
+same character positions — unless this scene opens in a different location or after a time-skip,
+in which case state that explicitly in panel 1's visual_start (e.g. "CUT TO: new location, 10 minutes later").
+"""
+
     prompt = f"""
 {base_prompt}
 
 **IMPORTANT: ADJUST CAMERA AND DYNAMICS TO SCENE NEEDS FOR IMMERSIVE VERTICAL VIEW**
 
 **Your task: refine the single scene below. Return it with the SAME schema, improving every panel
-according to the three rules below. Do NOT change scene_id, panel_index, or structural fields.**
+according to the rules below. Do NOT change scene_id, panel_index, or structural fields.**
 
 ## REFINEMENT RULES
 
@@ -402,6 +446,28 @@ Set is_reversed=true for any panel where:
 - An object comes into view (door opens revealing someone, fog clears to show a figure, etc.).
 - Someone approaches the camera from a distance.
 - visual_end shows a presence that is ABSENT in visual_start.
+{prev_terminal_block}
+### RULE 5 — CROSS-PANEL SPATIAL CONTINUITY
+Characters do not teleport between panels. Each panel's visual_start at t=0 must be spatially
+compatible with the PREVIOUS panel's visual_end unless a hard_cut or location change is established.
+If a character was LEFT of frame at the end of panel N, they cannot be RIGHT of frame at the start
+of panel N+1 without a stated camera repositioning or character movement.
+
+Current panel endpoint chain (use as spatial anchor when refining):
+<PANEL_SPATIAL_CHAIN>
+{panels_spatial_chain}
+</PANEL_SPATIAL_CHAIN>
+
+### RULE 6 — EMOTIONAL ARC INTEGRITY
+Verify and enforce the 9-panel arc structure. Do NOT allow resolution before panel 9:
+  Panel 1: cold_open | Panel 2: context | Panels 3–5: escalation
+  Panel 6: confrontation | Panel 7: peak | Panel 8: twist | Panel 9: cliffhanger
+Each panel's emotional_beat and hook_type must align with its position in the arc.
+
+### RULE 7 — CAMERA AND LIGHTING MASTER COMPLIANCE
+Every panel's lights_and_camera must stay within the scene's camera_master and lighting_master DNA.
+Deviations for dramatic effect are allowed but must be flagged explicitly (e.g. "deviation from master:
+snap to 24mm wide for panic effect, then return to established 85mm CU").
 
 SCENE TO REFINE:
 {scene_text}
@@ -506,7 +572,8 @@ def process_single_scene(
     all_scenes: list,
     output_dir: Path = None,
     character_info: dict = None,
-):
+    prev_scene_terminal: str = None,
+) -> dict:
     output_dir = output_dir or DEFAULT_OUTPUT_DIR
     scene['scene_id'] = scene_id
     scene['episode_id'] = episode_counter
@@ -523,7 +590,7 @@ def process_single_scene(
         panel.setdefault('sound_design', 'silence')
         panel.setdefault('location_references', [])
 
-    scene = refine_scenes_for_episode(scene, prompts, config, llm, character_info)
+    scene = refine_scenes_for_episode(scene, prompts, config, llm, character_info, prev_scene_terminal)
     scene = apply_reversal_pass(scene, prompts, config, llm)
     all_scenes.append(scene)
 
@@ -540,6 +607,7 @@ def process_single_scene(
         except OSError:
             pass
         raise
+    return scene
 
 
 # ---------------------------------------------------------------------------
@@ -627,14 +695,15 @@ def analyze_scenes_master(
     logger.debug(episodes)
 
     all_scenes: list = []
-    scene_counter = 0
-    batch_refinement: list = []
     batch_analyze: list = []
     all_episodes: list = []
 
-    for episode in episodes.get('episodes', []):
-        episode_counter = episode.get('episode_id', len(batch_analyze) + 1)
-        batch_analyze.append((episode_counter, json.dumps(episode, ensure_ascii=False, indent=2), prompts, config, llm, all_episodes, character_info))
+    # Pass each episode the previous episode's visual_continuity_rules
+    episodes_list = episodes.get('episodes', [])
+    for i, episode in enumerate(episodes_list):
+        episode_counter = episode.get('episode_id', i + 1)
+        prev_rules = episodes_list[i - 1].get('visual_continuity_rules', '') if i > 0 else ''
+        batch_analyze.append((episode_counter, json.dumps(episode, ensure_ascii=False, indent=2), prompts, config, llm, all_episodes, character_info, prev_rules))
 
     failed_episodes = []
     _ep_lock = Lock()
@@ -658,33 +727,58 @@ def analyze_scenes_master(
 
     all_episodes = sorted(all_episodes, key=lambda e: e[0])
 
+    # Assign global scene IDs and group by episode for sequential per-episode refinement.
+    # Scenes within an episode are processed sequentially so the terminal visual_end of
+    # scene N can be passed as spatial anchor into scene N+1's refinement pass.
+    # Different episodes are still refined in parallel.
+    scene_counter = 0
+    ep_scene_groups: dict = {}  # {episode_counter: [(scene_id, scene), ...]}
+
     for episode_counter, data in all_episodes:
         logger.info(f"Processing episode: {episode_counter} scene start: {scene_counter}")
         (output_dir / f"animation_episode_scenes_{episode_counter:03d}.json").write_text(
             json.dumps(data, ensure_ascii=False, indent=2),
             encoding='utf-8',
         )
-
+        ep_scene_groups[episode_counter] = []
         for scene in data.get('scenes', []):
             scene_counter += 1
-            batch_refinement.append((episode_counter, scene_counter, scene, prompts, config, llm, all_scenes, output_dir, character_info))
+            ep_scene_groups[episode_counter].append((scene_counter, scene))
 
     failed_scenes = []
     _sc_lock = Lock()
 
-    def _safe_process(args):
-        try:
-            process_single_scene(*args)
-        except Exception as e:
-            logger.error(f"❌ Scene {args[1]} processing failed: {e}")
-            with _sc_lock:
-                failed_scenes.append(args[1])
+    def _process_episode_scenes(ep_counter: int):
+        prev_terminal: str = None
+        for sc_id, scene in ep_scene_groups[ep_counter]:
+            try:
+                refined = process_single_scene(
+                    ep_counter, sc_id, scene, prompts, config, llm,
+                    all_scenes, output_dir, character_info, prev_terminal,
+                )
+                # Thread the terminal frame into the next scene's refinement
+                if refined:
+                    last_panel = max(
+                        refined.get('panels', []),
+                        key=lambda p: p.get('panel_index', 0),
+                        default=None,
+                    )
+                    if last_panel:
+                        prev_terminal = last_panel.get('visual_end', '')
+            except Exception as e:
+                logger.error(f"❌ Scene {sc_id} processing failed: {e}")
+                with _sc_lock:
+                    failed_scenes.append(sc_id)
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        list(executor.map(_safe_process, batch_refinement))
+        futures = {executor.submit(_process_episode_scenes, ep_c): ep_c for ep_c in ep_scene_groups}
+        for future in as_completed(futures):
+            ep_c = futures[future]
+            if exc := future.exception():
+                logger.error(f"❌ Episode {ep_c} scene processing error: {exc}")
 
     if failed_scenes:
-        total = len(batch_refinement)
+        total = scene_counter
         logger.warning(f"⚠️  {len(failed_scenes)}/{total} scene(s) failed processing: {failed_scenes}")
 
     all_scenes = sorted(all_scenes, key=lambda s: s['scene_id'])

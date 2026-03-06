@@ -40,6 +40,8 @@ SCENE_SCHEMA = {
                     "scene_id": {"type": "integer"},
                     "location": {"type": "string"},
                     "pre_action_description": {"type": "string"},
+                    "camera_master": {"type": "string", "description": "Master camera setup for the entire scene: dominant lens (mm), angle, primary lighting condition. All panels share this baseline — explicit deviations stated in lights_and_camera."},
+                    "lighting_master": {"type": "string", "description": "Master lighting blueprint for the scene: key light direction/color/quality, fill ratio, visible practicals. All panels inherit this lighting DNA."},
                     "panels": {
                         "type": "array",
                         "items": {
@@ -186,9 +188,10 @@ SCENE_REWRITE_SCHEMA = {
                 "properties": {
                     "panel_index": {"type": "integer"},
                     "visual_start": {"type": "string"},
-                    "visual_end": {"type": "string"}
+                    "visual_end": {"type": "string"},
+                    "lights_and_camera": {"type": "string", "description": "Camera/lighting corrected to match scene camera_master and lighting_master. Copy original value verbatim if no correction needed."}
                 },
-                "required": ["panel_index", "visual_start", "visual_end"]
+                "required": ["panel_index", "visual_start", "visual_end", "lights_and_camera"]
             }
         }
     },
