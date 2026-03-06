@@ -29,6 +29,7 @@ SYSTEM_PROMPT = """
 ## CONSTRAINTS
 - You prepare assets for AI-based tools, be very specific in details
 - You follow best practices in visual storytelling and cinematography
+- INDEPENDENCE LAW: Every panel and every episode is processed by a separate AI model with ZERO memory of any prior output. Each description must be fully self-contained. NEVER use lazy references: no "same as before", "same POV", "same framing", "same appearance", "continues from previous", "as established", "identical to panel N". Omitting implied details is a hard failure — the downstream model will hallucinate or guess wrong. Restate character appearance, location, camera angle, and lighting in EVERY panel description, verbatim if needed.
 - PORTRAIT FRAME LAW: All compositions are 9:16. Faces and close-ups are the primary dramatic instrument. Wide shots exist only when the environment IS the threat or the scale IS the emotion.
 - SAFE ZONE: Key action must stay in the middle 65% of frame height. Top 15% and bottom 20% reserved for subtitles/UI.
 - VOICEOVER IS THE SPINE: Every panel has either dialogue or voiceover. Inner monologue reveals what the image cannot show. Never narrates the obvious.
@@ -108,6 +109,12 @@ Animation mode: {is_animation}
 {"Include dialogue (≤8 words per line) and voiceover (inner monologue, Russian) for each panel." if config['dialogue']['enabled'] else ""}
 {"Include caption for narrative text." if config['captions']['enabled'] else ""}
 Important: all dialogues, voiceovers and texts MUST be in Russian as in original text for the consistency.
+
+## INDEPENDENCE PROTOCOL — NON-NEGOTIABLE
+Each panel is rendered by a separate image-generation model that receives ONLY that panel's text — no history, no context, no memory.
+- FORBIDDEN: "same as before", "same POV", "same framing", "same appearance", "as in panel N", "continues from", "identical to", "as established".
+- REQUIRED: Restate character appearance (hair, clothing, build, expression), location details, shot type, camera angle, and lighting in EVERY panel's visual_start and visual_end — even if they repeat word-for-word from the previous panel.
+- Treat each panel description as the ONLY instruction the image model will ever receive for that shot.
 
 ## VERTICAL MICRODRAMA CINEMATOGRAPHY — 9 PANELS PER SCENE
 
