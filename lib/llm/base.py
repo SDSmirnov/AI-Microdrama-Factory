@@ -5,6 +5,7 @@ Single definition reused everywhere — no more per-script duplication.
 import functools
 import logging
 import random
+import re
 import time
 from abc import ABC, abstractmethod
 from threading import Lock
@@ -82,8 +83,9 @@ def retry_on_errors(max_retries=3, backoff_factor=2):
                     retryable = (
                         # Type-safe check for known SDK exception types
                         (_TYPED_RETRYABLE and isinstance(e, _TYPED_RETRYABLE)) or
-                        # String fallback for exceptions wrapped in generic types
-                        '429' in error_str or '500' in error_str or '503' in error_str or
+                        # Regex fallback for HTTP status codes wrapped in generic exceptions.
+                        # Word boundaries prevent matching codes inside URLs or longer numbers.
+                        bool(re.search(r'\b(429|500|503)\b', error_str)) or
                         'Too Many Requests' in error_str or 'Rate limit' in error_str or
                         'Internal Server Error' in error_str or 'Service Unavailable' in error_str or
                         'timed out' in error_str.lower() or

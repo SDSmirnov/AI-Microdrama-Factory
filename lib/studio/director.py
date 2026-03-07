@@ -131,7 +131,7 @@ def enrich_and_regenerate_reference(
 
     ref_data['visual_desc'] = updated_desc['visual_desc']
     ref_data['video_visual_desc'] = updated_desc['video_visual_desc']
-    json_path.write_text(json.dumps(ref_data, indent=2), encoding='utf-8')
+    atomic_write(json_path, json.dumps(ref_data, ensure_ascii=False, indent=2))
 
     if dry_run:
         logger.info(f"  ⏭️  Dry-run: skipping PNG regeneration for {ref_name} (run `make refs` to render)")

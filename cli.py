@@ -224,7 +224,11 @@ def cmd_scenes(args):
 
     scene_arg = args.scene if hasattr(args, 'scene') else 'all'
     if scene_arg != 'all':
-        target = int(scene_arg)
+        try:
+            target = int(scene_arg)
+        except ValueError:
+            logger.error(f"❌ Invalid scene number: {scene_arg!r}. Expected an integer.")
+            sys.exit(1)
         episodes = [e for e in episodes_list if e.get('episode_id') == target]
     else:
         episodes = episodes_list

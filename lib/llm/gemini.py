@@ -21,12 +21,16 @@ from lib.llm.base import BaseLLM, RateLimiter, retry_on_errors
 
 logger = logging.getLogger(__name__)
 
-SAFETY = [
+# AI_SAFETY_LEVEL=permissive (default) disables all content filters — required for
+# fictional violence/adult content in creative pipelines.
+# Set AI_SAFETY_LEVEL=default to use Google SDK defaults instead.
+_SAFETY_PERMISSIVE = [
     {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
     {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
     {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
     {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
 ]
+SAFETY = _SAFETY_PERMISSIVE if os.getenv('AI_SAFETY_LEVEL', 'permissive') == 'permissive' else []
 
 
 class GeminiLLM(BaseLLM):
@@ -393,9 +397,11 @@ class GeminiLLM(BaseLLM):
             poll_interval = 10
             while not operation.done:
                 if time.time() > deadline:
+                    op_name = getattr(operation, 'name', 'unknown')
                     logger.warning(
-                        f"⚠️  Veo job timed out after {max_wait_seconds}s. "
-                        f"The server-side job may still be running and consuming quota."
+                        f"⚠️  Veo job timed out after {max_wait_seconds}s "
+                        f"(operation={op_name}). The server-side job may still be running "
+                        f"and consuming quota. Cancel it via Google AI Studio or the API."
                     )
                     raise TimeoutError(f"Veo job did not complete within {max_wait_seconds}s")
                 time.sleep(poll_interval)

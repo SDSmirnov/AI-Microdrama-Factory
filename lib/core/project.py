@@ -27,6 +27,9 @@ class Project:
     image_model: str = field(default_factory=lambda: os.getenv('AI_IMAGE_MODEL', 'google/gemini-3-pro-image-preview'))
     gemini_model: str = field(default_factory=lambda: os.getenv('AI_GEMINI_MODEL', 'gemini-2.5-flash'))
     max_workers: int = field(default_factory=lambda: int(os.getenv('AI_CONCURRENCY', '10')))
+    # Separate limit for image generation — defaults to 5 to stay within typical image API quotas.
+    # Override per-backend: export AI_IMAGE_CONCURRENCY=3
+    image_workers: int = field(default_factory=lambda: int(os.getenv('AI_IMAGE_CONCURRENCY', '5')))
 
     # API keys
     openrouter_api_key: str = field(default_factory=lambda: os.getenv('OPENROUTER_API_KEY', ''))

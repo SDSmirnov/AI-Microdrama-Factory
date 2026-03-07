@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Optional
 from PIL import Image
 
 from lib.core.schemas import PANEL_QA_SCHEMA
-from lib.core.utils import DEFAULT_OUTPUT_DIR, grid_dims, load_metadata, panel_boxes
+from lib.core.utils import DEFAULT_OUTPUT_DIR, atomic_write, grid_dims, load_metadata, panel_boxes
 from lib.llm.base import BaseLLM
 
 logger = logging.getLogger(__name__)
@@ -400,7 +400,7 @@ def run_quality_gate(
         "avg_fidelity": round(sum(r["fidelity"] for r in all_results) / max(len(all_results), 1), 2),
         "panels": all_results,
     }
-    output_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding='utf-8')
+    atomic_write(output_path, json.dumps(report, ensure_ascii=False, indent=2))
     logger.info(f"📄 Report saved: {output_path}")
     return report
 

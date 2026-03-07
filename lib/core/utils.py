@@ -9,6 +9,7 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 DEFAULT_OUTPUT_DIR = Path("cinematic_render")
+# Override per project: export AI_REF_DIR=ref_my_novel
 DEFAULT_REF_DIR = Path(os.getenv('AI_REF_DIR', 'ref_thriller'))
 
 

@@ -220,7 +220,7 @@ def render_character_refs(prompts: dict, config: dict, llm: BaseLLM, project: Pr
             failed.append(c.get('name', '?'))
 
     if failed:
-        logger.warning(f"  ⚠️  {len(failed)}/{len(to_render)} ref(s) failed to render: {failed}")
+        logger.warning(f"  ⚠️  {len(failed)}/{len(to_render)} ref(s) failed to render: {failed}. Run 'python cli.py refs' to retry.")
 
 
 # ---------------------------------------------------------------------------
@@ -259,6 +259,8 @@ def _build_grid_prompt(scene: dict, prompts: dict, config: dict) -> str:
 
 
 _MAX_GRID_RETRIES = 3
+# Slightly increase temperature on each retry to vary output.
+# Range 0.35–0.45 is intentionally narrow: enough to diversify without breaking prompt-following.
 _GRID_BASE_TEMP = 0.35
 _GRID_TEMP_STEP = 0.05
 
@@ -450,7 +452,7 @@ def render_scene_grids(
             return
 
     logger.info(f"  📋 {len(scenes)} scene(s) to process.")
-    with ThreadPoolExecutor(max_workers=project.max_workers) as executor:
+    with ThreadPoolExecutor(max_workers=project.image_workers) as executor:
         executor.map(
             lambda s: _render_single_grid(s, s['scene_id'], prompts, config, project, llm),
             scenes
@@ -617,7 +619,7 @@ def render_panels(
         return
 
     logger.info(f"  📋 {len(tasks)} panel frame(s) to render.")
-    with ThreadPoolExecutor(max_workers=project.max_workers) as executor:
+    with ThreadPoolExecutor(max_workers=project.image_workers) as executor:
         executor.map(
             lambda t: _render_single_panel(*t, project=project, llm=llm, prompts=prompts),
             tasks
@@ -640,7 +642,11 @@ def slice_combined(path_combined: Path, sid: int, config: dict, project: Project
         crops = [(idx, img.crop(box).copy()) for idx, box in enumerate(panel_boxes(w, h, cols, rows, panels_per_scene), 1)]
 
     for idx, crop in crops:
-        crop.save(panels_dir / f"{sid:03d}_{idx:02d}_static.png")
+        out = panels_dir / f"{sid:03d}_{idx:02d}_static.png"
+        try:
+            crop.save(out)
+        except Exception as e:
+            logger.error(f"    ❌ Failed to save panel {idx} for scene {sid}: {e}")
 
 
 # ---------------------------------------------------------------------------
