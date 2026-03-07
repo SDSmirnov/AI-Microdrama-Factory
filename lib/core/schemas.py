@@ -169,6 +169,30 @@ PANEL_QA_SCHEMA = {
     ],
 }
 
+GRID_QA_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "passed": {
+            "type": "boolean",
+            "description": (
+                "True if the grid is worth keeping for downstream QA refinement. "
+                "False ONLY if the grid is fundamentally unusable: completely blank or corrupted image, "
+                "wrong number of panels in the grid, "
+                "entirely wrong scene/setting with no resemblance to references, "
+                "or so many simultaneous catastrophic failures that refinement cannot recover it. "
+                "Character drift, minor identity mismatch, wrong lighting, missing props — "
+                "these are NOT grounds for failure; QA refinement handles them. "
+                "When in doubt, pass=true."
+            ),
+        },
+        "reason": {
+            "type": "string",
+            "description": "If passed=false: specific description of what is fundamentally broken. If passed=true: empty string.",
+        },
+    },
+    "required": ["passed", "reason"],
+}
+
 UPDATED_REF_SCHEMA = {
     "type": "object",
     "properties": {

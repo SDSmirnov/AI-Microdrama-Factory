@@ -189,6 +189,7 @@ class OpenRouterLLM(BaseLLM):
         refs: list = None,
         aspect_ratio: str = '9:16',
         image_size: str = '2K',
+        temperature: float = None,
     ) -> bytes:
         """
         Generate an image via OpenRouter.
@@ -201,6 +202,7 @@ class OpenRouterLLM(BaseLLM):
         """
         contents = [self._normalize_multimodal_part(item) for item in (refs or [])]
         contents.append({"type": "text", "text": prompt})
+        _temperature = temperature if temperature is not None else 0.35
 
         @retry_on_errors(max_retries=3, backoff_factor=2)
         def _call():
@@ -215,7 +217,7 @@ class OpenRouterLLM(BaseLLM):
                 },
                 # temperature/top_p balance creativity vs. consistency for cinematic stills;
                 # seed from AI_SEED env var for reproducibility across retries.
-                "temperature": 0.35, "seed": int(os.getenv('AI_SEED', '21')), "top_p": 0.8
+                "temperature": _temperature, "seed": int(os.getenv('AI_SEED', '21')), "top_p": 0.8
             }
             data = self._post_openrouter(payload, timeout=180)
             try:

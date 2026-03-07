@@ -114,7 +114,8 @@ class BaseLLM(ABC):
 
     @abstractmethod
     def make_image(self, prompt: str, refs: list = None,
-                   aspect_ratio: str = '9:16', image_size: str = '2K') -> bytes:
+                   aspect_ratio: str = '9:16', image_size: str = '2K',
+                   temperature: float = None) -> bytes:
         """Generate an image. Returns raw PNG bytes."""
         ...
 

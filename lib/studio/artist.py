@@ -8,12 +8,13 @@ slice_combined, export_image_prompt from old numbered scripts.
 import json
 import logging
 from concurrent.futures import ThreadPoolExecutor
+from io import BytesIO
 from pathlib import Path
 from typing import Optional
 
 from PIL import Image
 
-from lib.core.schemas import CHARACTER_SCHEMA
+from lib.core.schemas import CHARACTER_SCHEMA, GRID_QA_SCHEMA
 from lib.core.project import Project
 from lib.core.utils import grid_dims, panel_boxes, safe_name
 from lib.llm.base import BaseLLM
@@ -257,6 +258,66 @@ def _build_grid_prompt(scene: dict, prompts: dict, config: dict) -> str:
     return prompt
 
 
+_MAX_GRID_RETRIES = 3
+_GRID_BASE_TEMP = 0.35
+_GRID_TEMP_STEP = 0.05
+
+
+def _quick_grid_check(img_bytes: bytes, scene: dict, project: Project, llm: BaseLLM) -> tuple[bool, str]:
+    """Quick vision check on a rendered grid. Returns (passed, reason).
+
+    Catches only catastrophic failures (wrong identity, missing people).
+    On any error, returns (True, ...) to avoid blocking the pipeline.
+    """
+    all_refs = list({
+        ref
+        for panel in scene.get('panels', [])
+        for ref in panel.get('references', []) + panel.get('location_references', [])
+    })
+    loadable = [name for name in all_refs if name in project.character_images]
+    if not loadable:
+        return True, ""
+
+    contents = ["# VISUAL REFERENCES (characters, locations, objects)\n"]
+    opened = []
+    for name in loadable[:4]:
+        try:
+            img = Image.open(project.character_images[name])
+            opened.append(img)
+            contents.append(f"## Reference: {name}\n")
+            contents.append(img)
+        except Exception:
+            pass
+
+    try:
+        grid_img = Image.open(BytesIO(img_bytes))
+        opened.append(grid_img)
+        contents.append("\n# RENDERED GRID\n")
+        contents.append(grid_img)
+
+        expected_panels = len(scene.get('panels', []))
+        prompt = (
+            f"Quick sanity check on this storyboard grid against the references above "
+            f"(characters, locations, objects). Expected panel count: {expected_panels}.\n"
+            "passed=false ONLY if the grid is fundamentally unusable:\n"
+            "- blank or corrupted image\n"
+            f"- wrong number of panels (not {expected_panels})\n"
+            "- completely wrong scene with no resemblance to any reference\n"
+            "- so many simultaneous catastrophic failures that downstream QA refinement cannot recover it\n"
+            "Character drift, minor identity mismatch, wrong props, lighting issues — "
+            "these are handled by QA refinement and are NOT grounds for failure.\n"
+            "When in doubt, passed=true."
+        )
+        result = llm.analyze_image(image=contents, prompt=prompt, schema=GRID_QA_SCHEMA)
+        return result.get('passed', True), result.get('reason', '')
+    except Exception as e:
+        logger.warning(f"  ⚠️  Grid QA check error — accepting grid: {e}")
+        return True, ""
+    finally:
+        for img in opened:
+            img.close()
+
+
 def _render_single_grid(scene: dict, scene_id: int, prompts: dict, config: dict,
                          project: Project, llm: BaseLLM):
     path_combined = project.output_dir / f"scene_{scene_id:03d}_grid_combined.png"
@@ -302,17 +363,36 @@ def _render_single_grid(scene: dict, scene_id: int, prompts: dict, config: dict,
     resolution = config['image_generation']['image_size']
 
     logger.info(f"  🎨 Rendering scene {scene_id} ({config['format']['type']})...")
+    img_bytes = None
     try:
-        img_bytes = llm.make_image(prompt_text, refs=refs, aspect_ratio=aspect_ratio, image_size=resolution)
+        for attempt in range(_MAX_GRID_RETRIES):
+            temp = _GRID_BASE_TEMP + attempt * _GRID_TEMP_STEP
+            try:
+                candidate = llm.make_image(
+                    prompt_text, refs=refs,
+                    aspect_ratio=aspect_ratio, image_size=resolution,
+                    temperature=temp,
+                )
+            except Exception as e:
+                logger.error(f"    ❌ Render error scene {scene_id} attempt {attempt + 1}: {e}")
+                continue
+            if not candidate:
+                logger.error(f"    ❌ Empty response scene {scene_id} attempt {attempt + 1}")
+                continue
+            passed, reason = _quick_grid_check(candidate, scene, project, llm)
+            img_bytes = candidate
+            if passed:
+                logger.info(f"    ✅ Scene {scene_id} passed grid QA (attempt {attempt + 1})")
+                break
+            logger.warning(
+                f"  🔄 Scene {scene_id} grid QA failed attempt {attempt + 1}/{_MAX_GRID_RETRIES}: {reason}"
+            )
         if img_bytes:
             path_combined.write_bytes(img_bytes)
             logger.info(f"    ✅ Saved {path_combined}")
         else:
-            logger.error(f"    ❌ Empty response for scene {scene_id}")
+            logger.error(f"    ❌ All attempts failed for scene {scene_id}")
             return
-    except Exception as e:
-        logger.error(f"    ❌ Failed to render scene {scene_id}: {e}")
-        return
     finally:
         for img in opened_imgs:
             img.close()

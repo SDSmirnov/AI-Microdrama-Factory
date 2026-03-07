@@ -97,11 +97,13 @@ class GeminiLLM(BaseLLM):
         refs: list = None,
         aspect_ratio: str = '9:16',
         image_size: str = '1K',
+        temperature: float = None,
     ) -> bytes:
         """
         Generate an image via Gemini.
 
         refs: mixed list of PIL.Image objects and str text blocks.
+        temperature: ignored (Imagen does not support temperature).
         Returns raw PNG bytes.
         """
         def _to_part(item):
