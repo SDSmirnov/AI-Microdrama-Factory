@@ -626,6 +626,44 @@ def render_panels(
         )
 
 
+def render_extra_panel(
+    scene: dict,
+    panel: dict,
+    out_path: Path,
+    aspect_ratio: str,
+    project: "Project",
+    llm: "BaseLLM",
+    prompts: dict,
+):
+    """Render a single extra panel to an arbitrary output path.
+
+    Reuses the same prompt/ref building logic as normal panel rendering,
+    but writes to *out_path* instead of the canonical panels/ directory.
+    """
+    if out_path.exists():
+        logger.info(f"  ⏭  Skip {out_path.name} (exists)")
+        return
+
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    logger.info(f"  🎨 Rendering extra panel → {out_path} ...")
+
+    refs, opened_imgs = _build_ref_contents(panel, project)
+    prompt_text = _build_panel_prompt(scene, panel, 'static', prompts)
+
+    try:
+        img_bytes = llm.make_image(prompt_text, refs=refs, aspect_ratio=aspect_ratio, image_size='1K')
+        if img_bytes:
+            out_path.write_bytes(img_bytes)
+            logger.info(f"    ✅ Saved {out_path}")
+        else:
+            logger.error(f"    ❌ Empty image response for {out_path.name}")
+    except Exception as e:
+        logger.error(f"    ❌ Failed to render {out_path.name}: {e}")
+    finally:
+        for img in opened_imgs:
+            img.close()
+
+
 # ---------------------------------------------------------------------------
 # Grid slicing
 # ---------------------------------------------------------------------------

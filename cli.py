@@ -55,6 +55,7 @@ from lib.studio.artist import (
     export_image_prompt,
     load_character_refs,
     render_character_refs,
+    render_extra_panel,
     render_panels,
     render_scene_grids,
 )
@@ -758,6 +759,118 @@ def cmd_animation(args):
     logger.info(f"\n✅ Done. Clips in {out_dir}/")
 
 
+def cmd_extra_panel(args):
+    """Generate an extra micro-panel not in the original screenplay.
+
+    Loads scene context (camera_master, lighting_master, flanking panels) from
+    animation_metadata.json, feeds the supplied narrative to the LLM, writes:
+      cinematic_render/extra_animation_{scene}_{index}.json
+      cinematic_render/extra_panels/{scene:03d}_{index}_static.png
+    """
+    if not re.match(r'^\d+_\d+$', args.index):
+        logger.error(f"❌ --index must be N_M format (e.g. 4_5), got: {args.index!r}")
+        sys.exit(1)
+
+    project, prompts, config = load_project(use_custom=args.custom_prompts)
+    llm = _make_llm(args.llm, project, system_prompt=SYSTEM_PROMPT)
+    load_character_refs(project)
+
+    meta_path = project.output_dir / "animation_metadata.json"
+    if not meta_path.exists():
+        logger.error("❌ animation_metadata.json not found. Run 'screenplay' first.")
+        sys.exit(1)
+
+    metadata = json.loads(meta_path.read_text(encoding='utf-8'))
+    scene = next((s for s in metadata.get('scenes', []) if s['scene_id'] == args.scene), None)
+    if scene is None:
+        logger.error(f"❌ Scene {args.scene} not found in animation_metadata.json")
+        sys.exit(1)
+
+    prev_idx, next_idx = (int(x) for x in args.index.split('_'))
+    panels = scene.get('panels', [])
+    prev_panel = next((p for p in panels if p['panel_index'] == prev_idx), None)
+    next_panel = next((p for p in panels if p['panel_index'] == next_idx), None)
+
+    if prev_panel is None:
+        logger.warning(f"⚠️  Panel {prev_idx} not found in scene {args.scene} — context will be partial")
+    if next_panel is None:
+        logger.warning(f"⚠️  Panel {next_idx} not found in scene {args.scene} — context will be partial")
+
+    narrative = Path(args.narrative).read_text(encoding='utf-8')
+
+    char_block = ""
+    if project.character_info:
+        lines = [f"- {n}: {i.get('video_visual_desc') or i.get('visual_desc', '')}"
+                 for n, i in project.character_info.items()]
+        char_block = "CHARACTER/LOCATION REFERENCES:\n" + "\n".join(lines)
+
+    prev_ctx = f"Panel {prev_idx} visual_end: {prev_panel['visual_end']}" if prev_panel else f"Panel {prev_idx}: not found"
+    next_ctx = f"Panel {next_idx} visual_start: {next_panel['visual_start']}" if next_panel else f"Panel {next_idx}: not found"
+
+    from lib.core.schemas import SCENE_SCHEMA
+    from lib.llm.base import retry_on_errors
+
+    prompt = f"""\
+Generate EXACTLY ONE extra micro-panel to insert between panels {prev_idx} and {next_idx} in scene {args.scene}.
+
+## SCENE CONTEXT
+Scene {args.scene}: {scene.get('location', '')}
+Camera master: {scene.get('camera_master', 'N/A')}
+Lighting master: {scene.get('lighting_master', 'N/A')}
+{prev_ctx}
+{next_ctx}
+
+{char_block}
+
+## INDEPENDENCE LAW (non-negotiable)
+This panel is rendered by a model with ZERO memory of any other panel.
+Fully restate character appearance, location, shot type, lighting in visual_start and visual_end.
+NEVER write "same as before", "same POV", "continues from", etc.
+
+## NARRATIVE FOR THIS EXTRA PANEL
+{narrative}
+
+Return a single scene (scene_id={args.scene}) containing exactly 1 panel (panel_index=1).
+Match camera_master and lighting_master from context above verbatim in lights_and_camera.
+All dialogues, voiceovers and captions MUST be in Russian.
+"""
+
+    @retry_on_errors(max_retries=3, backoff_factor=2)
+    def _call():
+        return llm.make_json(prompt, SCENE_SCHEMA)
+
+    result = _call()
+    if not result or 'scenes' not in result or not result['scenes']:
+        logger.error("❌ LLM failed to generate extra panel")
+        sys.exit(1)
+
+    extra_scene = result['scenes'][0]
+    extra_panels = extra_scene.get('panels', [])
+    if not extra_panels:
+        logger.error("❌ LLM returned scene with no panels")
+        sys.exit(1)
+
+    panel = extra_panels[0]
+
+    out_data = {
+        "scene_id": args.scene,
+        "index": args.index,
+        "location": extra_scene.get('location', scene.get('location', '')),
+        "camera_master": extra_scene.get('camera_master', scene.get('camera_master', '')),
+        "lighting_master": extra_scene.get('lighting_master', scene.get('lighting_master', '')),
+        "panel": panel,
+    }
+
+    out_json = project.output_dir / f"extra_animation_{args.scene}_{args.index}.json"
+    atomic_write(out_json, json.dumps(out_data, ensure_ascii=False, indent=2))
+    logger.info(f"✅ Extra panel JSON: {out_json}")
+
+    extra_panels_dir = project.output_dir / "extra_panels"
+    out_png = extra_panels_dir / f"{args.scene:03d}_{args.index}_static.png"
+    aspect_ratio = config['image_generation'].get('aspect_ratio', '9:16')
+    render_extra_panel(extra_scene, panel, out_png, aspect_ratio, project, llm, prompts)
+
+
 # ---------------------------------------------------------------------------
 # Argument parsing
 # ---------------------------------------------------------------------------
@@ -887,6 +1000,14 @@ def main():
     p.add_argument('--output', default='voiceover.sh',
                    help='Path for the generated shell script (default: voiceover.sh)')
 
+    # extra-panel
+    p = sub.add_parser('extra-panel', help='Generate an extra micro-panel not in the original screenplay')
+    p.add_argument('narrative', help='Text file describing the extra panel narrative')
+    p.add_argument('--scene', type=int, required=True, help='Scene ID to insert the panel into')
+    p.add_argument('--index', required=True,
+                   help='Insertion index in N_M format, e.g. 4_5 (between panels 4 and 5)')
+    p.add_argument('--custom-prompts', action='store_true')
+
     # duck
     p = sub.add_parser('duck', help='Auto-duck original audio during dubbed speech')
     p.add_argument('video', help='Input MP4 with original audio')
@@ -916,6 +1037,7 @@ def main():
         'rebuild-storyboard': cmd_rebuild_storyboard,
         'refinement': cmd_refinement,
         'animation': cmd_animation,
+        'extra-panel': cmd_extra_panel,
         'autocut': cmd_autocut,
         'imgedit': cmd_imgedit,
         'tts': cmd_tts,
