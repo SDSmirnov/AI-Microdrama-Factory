@@ -74,13 +74,7 @@ LAUNCH INSTRUCTION: deliver text that makes the cinematographer itch to grab a c
 3. Each episode should cover from 30 to 50 seconds of real-time action.
 4. Add continuity rules for episodes, e.g. if in episode 3 hero puts on spacesuit, it should be noted in next episodes (4, 5, etc) until he takes it off.
 5. Episodes will be split for animation independently, so should have enough context.
-6. MULTI-POV DECOMPOSITION: Decompose each chapter into exactly 3 sub-episodes in this fixed order:
-   a. POV-A (episode_type: "pov_a"): First protagonist's perspective exclusively. Their actions, thoughts, observations. Other character absent or peripheral. Set pov_character to their name.
-   b. POV-B (episode_type: "pov_b"): Second protagonist's perspective exclusively. Their reaction to the same events, internal world. Set pov_character to their name.
-   c. Confrontation (episode_type: "confrontation"): Both characters present, direct interaction, peak conflict of the chapter. pov_character: "".
-   Cover the full story from beginning to end. Each sub-episode covers 30–50 seconds of real-time action.
-   Tag each episode with chapter_id = source chapter number (integer, 1-based). All three sub-episodes of the same chapter share the same chapter_id. Transition episodes use chapter_id: 0.
-6b. TEMPORAL PARALLELISM (MANDATORY): POV-A and POV-B of the same chapter cover the SAME clock window — they are parallel timelines, not sequential. Both open at the same diegetic moment and both end at the exact same narrative threshold: the instant before the two characters meet. Confrontation picks up from that threshold. Never advance POV-B past where POV-A ends, and never let POV-A events bleed into POV-B time. The viewer sees the same chapter twice — once through each character's eyes — and the two lines converge at the confrontation.
+__MULTI_POV_INSTRUCTION__
 __TRANSITIONS_INSTRUCTION__
 8. Every pov_a and pov_b episode MUST have panel 2 or 3 with hook_type: "backlink" — a brief visual callback (duration 2–3s, no dialogue) to the most emotionally charged moment from the PREVIOUS chapter, as remembered or triggered in this character's mind. The voiceover reveals the inner echo of that memory.
 9. Episode 1 (first pov_a) panel 1 MUST be a cold_open — consequence before cause, visual question mark, no exposition.

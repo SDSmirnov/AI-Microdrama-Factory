@@ -144,5 +144,8 @@ def get_default_config() -> dict:
             "enabled": True,
             "auto_cast": True,
             "ref_aspect_ratio": "9:16"
+        },
+        "multi_pov": {
+            "enabled": False
         }
     }

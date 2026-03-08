@@ -33,6 +33,9 @@
     "gap_threshold": "4h",
     "style": "visual_rhyme"
   },
+  "multi_pov": {
+    "enabled": true
+  },
   "reference_characters": {
     "enabled": true,
     "auto_cast": true

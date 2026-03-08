@@ -3,6 +3,7 @@ Screenwriter — screenplay and scene keyframe generation.
 
 Prompts are loaded from lib/prompting/<style>/ via load_prompts().
 """
+import copy
 import json
 import logging
 import os
@@ -169,6 +170,7 @@ def analyze_episodes_master(text: str, prompts: dict, config: dict, llm: BaseLLM
     gap_threshold = transitions_cfg.get('gap_threshold', '4h')
     transition_style = transitions_cfg.get('style', 'visual_rhyme')
     panels_per_scene = config['format'].get('panels_per_scene', 9)
+    multi_pov_enabled = config.get('multi_pov', {}).get('enabled', False)
 
     transitions_instruction = (
         f'7. TRANSITION EPISODES (episode_type: "transition"): When a significant time gap (>{gap_threshold}) exists between chapters, insert one Transition episode BEFORE the POV-A episode of the next chapter. Transitions bridge the gap using {transition_style} technique — parallel images from each character\'s space during the time gap (e.g. both characters\' environments at dawn, rain on two different windows). Rules: no dialogue, no voiceover, all panels are atmosphere_insert, panel durations 2–3s. pov_character: "". Episode must still have {panels_per_scene} panels.'
@@ -176,11 +178,37 @@ def analyze_episodes_master(text: str, prompts: dict, config: dict, llm: BaseLLM
         '7. Do not generate transition episodes.'
     )
 
+    if multi_pov_enabled:
+        multi_pov_instruction = (
+            '6. MULTI-POV DECOMPOSITION: Decompose each chapter into exactly 3 sub-episodes in this fixed order:\n'
+            '   a. POV-A (episode_type: "pov_a"): First protagonist\'s perspective exclusively. Their actions, thoughts, observations. Other character absent or peripheral. Set pov_character to their name.\n'
+            '   b. POV-B (episode_type: "pov_b"): Second protagonist\'s perspective exclusively. Their reaction to the same events, internal world. Set pov_character to their name.\n'
+            '   c. Confrontation (episode_type: "confrontation"): Both characters present, direct interaction, peak conflict of the chapter. pov_character: "".\n'
+            '   Cover the full story from beginning to end. Each sub-episode covers 30–50 seconds of real-time action.\n'
+            '   Tag each episode with chapter_id = source chapter number (integer, 1-based). All three sub-episodes of the same chapter share the same chapter_id. Transition episodes use chapter_id: 0.\n'
+            '6b. TEMPORAL PARALLELISM (MANDATORY): POV-A and POV-B of the same chapter cover the SAME clock window — they are parallel timelines, not sequential. '
+            'Both open at the same diegetic moment and both end at the exact same narrative threshold: the instant before the two characters meet. '
+            'Confrontation picks up from that threshold. Never advance POV-B past where POV-A ends, and never let POV-A events bleed into POV-B time. '
+            'The viewer sees the same chapter twice — once through each character\'s eyes — and the two lines converge at the confrontation.'
+        )
+        schema = SCREENPLAY_SCHEMA
+    else:
+        multi_pov_instruction = (
+            '6. EPISODE STRUCTURE: Each narrative chapter produces one episode covering its full events in chronological order. '
+            'Set episode_type: "standard" and pov_character: "" for all episodes.'
+        )
+        schema = copy.deepcopy(SCREENPLAY_SCHEMA)
+        ep_required = schema['properties']['episodes']['items']['required']
+        for field in ('chapter_id', 'episode_type', 'pov_character'):
+            if field in ep_required:
+                ep_required.remove(field)
+
     episodes_rules = prompts.get('screenplay_episodes', '')
+    episodes_rules = episodes_rules.replace('__MULTI_POV_INSTRUCTION__', multi_pov_instruction)
     episodes_rules = episodes_rules.replace('__TRANSITIONS_INSTRUCTION__', transitions_instruction)
 
     prompt = f"{episodes_rules}\n\n{setting_context}\n\nRespond in specified JSON format.\n\nTEXT TO ADAPT:\n<STORY>{text}</STORY>"
-    return llm.make_json(prompt, SCREENPLAY_SCHEMA)
+    return llm.make_json(prompt, schema)
 
 
 # ---------------------------------------------------------------------------
