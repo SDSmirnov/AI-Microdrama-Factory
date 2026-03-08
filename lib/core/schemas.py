@@ -16,6 +16,7 @@ SCREENPLAY_SCHEMA = {
                 "type": "object",
                 "properties": {
                     "episode_id": {"type": "integer"},
+                    "chapter_id": {"type": "integer", "description": "Source chapter number (1-based). All three sub-episodes of the same chapter share the same chapter_id. Transition episodes use 0."},
                     "episode_type": {"type": "string", "description": "Structural role: pov_a (first protagonist's perspective only), pov_b (second protagonist's perspective only), confrontation (both characters, direct interaction), transition (time-gap bridge — no dialogue, visual rhyme, short panel durations)"},
                     "pov_character": {"type": "string", "description": "Name of the POV character for pov_a/pov_b episodes. Empty string for confrontation and transition."},
                     "location": {"type": "string"},
@@ -24,7 +25,7 @@ SCREENPLAY_SCHEMA = {
                     "visual_continuity_rules": {"type": "string", "description": "Visual continunity enforcement for the next episode to avoid discrepancies throughout the movie. Never tell 'same', instead pass full details for the visual state."},
                     "screenplay_instructions": {"type": "string", "description": "Very detailed instructions"},
                 },
-                "required": ["episode_id", "episode_type", "pov_character", "location", "daytime", "raw_narrative", "screenplay_instructions", "visual_continuity_rules"],
+                "required": ["episode_id", "chapter_id", "episode_type", "pov_character", "location", "daytime", "raw_narrative", "screenplay_instructions", "visual_continuity_rules"],
             }
         }
     },

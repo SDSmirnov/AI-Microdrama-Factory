@@ -20,6 +20,103 @@ logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
+# 3-POV continuity map — enforces temporal parallelism
+# ---------------------------------------------------------------------------
+def _build_continuity_map(episodes_list: list) -> dict:
+    """
+    Return {episode_id: prev_continuity_rules} enforcing 3-POV temporal parallelism.
+
+    Within each chapter (same chapter_id):
+    - pov_a and pov_b both receive the chapter entry state (previous chapter's
+      confrontation exit) — NOT each other's output, because they are parallel timelines.
+    - confrontation receives merged pov_a + pov_b exit states (both characters'
+      visual state at the meeting threshold).
+    - transition (chapter_id: 0): linear chain from previous episode.
+
+    Falls back to linear chaining when chapter_id is absent (pre-schema episodes).
+    """
+    if not episodes_list or 'chapter_id' not in episodes_list[0]:
+        result = {}
+        for i, ep in enumerate(episodes_list):
+            prev = episodes_list[i - 1].get('visual_continuity_rules', '') if i > 0 else ''
+            result[ep['episode_id']] = prev
+        return result
+
+    # First pass: collect chapter entry states and pov exits.
+    chapter_state: dict = {}  # {chapter_id: {entry_state, pov_a_exit, pov_b_exit}}
+    last_confrontation_exit = ''
+
+    for ep in episodes_list:
+        cid = ep.get('chapter_id', 0)
+        etype = ep.get('episode_type', '')
+        if cid == 0 or etype == 'transition':
+            continue
+        if cid not in chapter_state:
+            chapter_state[cid] = {
+                'entry_state': last_confrontation_exit,
+                'pov_a_exit': '',
+                'pov_b_exit': '',
+            }
+        cs = chapter_state[cid]
+        if etype == 'pov_a':
+            cs['pov_a_exit'] = ep.get('visual_continuity_rules', '')
+        elif etype == 'pov_b':
+            cs['pov_b_exit'] = ep.get('visual_continuity_rules', '')
+        elif etype == 'confrontation':
+            last_confrontation_exit = ep.get('visual_continuity_rules', '')
+
+    # Second pass: assign prev_rules per episode.
+    continuity_map: dict = {}
+    last_prev = ''
+    for ep in episodes_list:
+        cid = ep.get('chapter_id', 0)
+        etype = ep.get('episode_type', '')
+        eid = ep['episode_id']
+        cs = chapter_state.get(cid, {})
+
+        if etype == 'pov_a':
+            continuity_map[eid] = cs.get('entry_state', '')
+        elif etype == 'pov_b':
+            continuity_map[eid] = cs.get('entry_state', '')  # same entry, not pov_a output
+        elif etype == 'confrontation':
+            pov_a_exit = cs.get('pov_a_exit', '')
+            pov_b_exit = cs.get('pov_b_exit', '')
+            if pov_a_exit and pov_b_exit:
+                continuity_map[eid] = (
+                    f"POV-A state at meeting threshold:\n{pov_a_exit}"
+                    f"\n\nPOV-B state at meeting threshold:\n{pov_b_exit}"
+                )
+            else:
+                continuity_map[eid] = pov_a_exit or pov_b_exit or cs.get('entry_state', '')
+        else:
+            # transition or unknown: linear
+            continuity_map[eid] = last_prev
+
+        last_prev = ep.get('visual_continuity_rules', '')
+
+    return continuity_map
+
+
+def validate_episode_structure(episodes_list: list) -> None:
+    """Warn on 3-POV structural violations (wrong triplet order or missing types)."""
+    if not any('chapter_id' in ep for ep in episodes_list):
+        return
+    chapters: dict = {}
+    for ep in episodes_list:
+        cid = ep.get('chapter_id', 0)
+        if cid == 0 or ep.get('episode_type') == 'transition':
+            continue
+        chapters.setdefault(cid, []).append(ep.get('episode_type', ''))
+    expected = ['pov_a', 'pov_b', 'confrontation']
+    for cid in sorted(chapters):
+        if chapters[cid] != expected:
+            logger.warning(
+                "⚠️  Chapter %d 3-POV violation: expected %s, got %s",
+                cid, expected, chapters[cid],
+            )
+
+
+# ---------------------------------------------------------------------------
 # base_scene_prompt — verbatim from 01_cinematic_preroll.py:468-525
 # ---------------------------------------------------------------------------
 def base_scene_prompt(prompts: dict, config: dict, character_info: dict = None) -> str:
@@ -426,10 +523,10 @@ def run_scenes_pipeline(
     Returns all_scenes (list of refined scene dicts, mutated in place by process_single_scene).
     """
     all_episodes: list = []
+    continuity_map = _build_continuity_map(episodes_list)
     for ep in episodes:
         ep_id = ep['episode_id']
-        idx = next((i for i, e in enumerate(episodes_list) if e['episode_id'] == ep_id), -1)
-        prev_rules = episodes_list[idx - 1].get('visual_continuity_rules', '') if idx > 0 else ''
+        prev_rules = continuity_map.get(ep_id, '')
         analyze_scenes_for_episode(
             ep_id, json.dumps(ep, ensure_ascii=False, indent=2),
             prompts, config, llm, all_episodes,
@@ -561,11 +658,13 @@ def analyze_scenes_master(
     batch_analyze: list = []
     all_episodes: list = []
 
-    # Pass each episode the previous episode's visual_continuity_rules
     episodes_list = episodes.get('episodes', [])
+    validate_episode_structure(episodes_list)
+    continuity_map = _build_continuity_map(episodes_list)
+
     for i, episode in enumerate(episodes_list):
         episode_counter = episode.get('episode_id', i + 1)
-        prev_rules = episodes_list[i - 1].get('visual_continuity_rules', '') if i > 0 else ''
+        prev_rules = continuity_map.get(episode_counter, '')
         batch_analyze.append((episode_counter, json.dumps(episode, ensure_ascii=False, indent=2), prompts, config, llm, all_episodes, character_info, prev_rules))
 
     failed_episodes = []
