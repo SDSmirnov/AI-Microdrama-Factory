@@ -170,7 +170,8 @@ def analyze_episodes_master(text: str, prompts: dict, config: dict, llm: BaseLLM
     gap_threshold = transitions_cfg.get('gap_threshold', '4h')
     transition_style = transitions_cfg.get('style', 'visual_rhyme')
     panels_per_scene = config['format'].get('panels_per_scene', 9)
-    multi_pov_enabled = config.get('multi_pov', {}).get('enabled', False)
+    multi_pov_cfg = config.get('multi_pov', {})
+    multi_pov_enabled = multi_pov_cfg.get('enabled', False)
 
     transitions_instruction = (
         f'7. TRANSITION EPISODES (episode_type: "transition"): When a significant time gap (>{gap_threshold}) exists between chapters, insert one Transition episode BEFORE the POV-A episode of the next chapter. Transitions bridge the gap using {transition_style} technique — parallel images from each character\'s space during the time gap (e.g. both characters\' environments at dawn, rain on two different windows). Rules: no dialogue, no voiceover, all panels are atmosphere_insert, panel durations 2–3s. pov_character: "". Episode must still have {panels_per_scene} panels.'
@@ -179,17 +180,31 @@ def analyze_episodes_master(text: str, prompts: dict, config: dict, llm: BaseLLM
     )
 
     if multi_pov_enabled:
+        temporal_mode = multi_pov_cfg.get('temporal_mode', 'parallel')
+        if temporal_mode == 'complementary':
+            temporal_rule = (
+                '6b. COMPLEMENTARY PERSPECTIVES (MANDATORY): POV-A and POV-B of the same chapter are NOT required to cover the same clock window — '
+                'they may be parallel timelines OR emotionally sequential, depending on narrative needs. '
+                'POV-B may show backstory, the other side of a conversation, or parallel moments that reframe POV-A\'s emotional logic. '
+                'Both episodes MUST end at the same emotional surrender threshold: the instant before the two characters\' next charged meeting. '
+                'The test: a viewer who watches both POVs must feel they understand the full emotional geometry of the chapter — '
+                'her desire and restraint, his obsession and control — before the connection episode resolves the tension.'
+            )
+        else:
+            temporal_rule = (
+                '6b. TEMPORAL PARALLELISM (MANDATORY): POV-A and POV-B of the same chapter cover the SAME clock window — they are parallel timelines, not sequential. '
+                'Both open at the same diegetic moment and both end at the exact same narrative threshold: the instant before the two characters meet. '
+                'Confrontation picks up from that threshold. Never advance POV-B past where POV-A ends, and never let POV-A events bleed into POV-B time. '
+                'The viewer sees the same chapter twice — once through each character\'s eyes — and the two lines converge at the confrontation.'
+            )
         multi_pov_instruction = (
             '6. MULTI-POV DECOMPOSITION: Decompose each chapter into exactly 3 sub-episodes in this fixed order:\n'
             '   a. POV-A (episode_type: "pov_a"): First protagonist\'s perspective exclusively. Their actions, thoughts, observations. Other character absent or peripheral. Set pov_character to their name.\n'
             '   b. POV-B (episode_type: "pov_b"): Second protagonist\'s perspective exclusively. Their reaction to the same events, internal world. Set pov_character to their name.\n'
-            '   c. Confrontation (episode_type: "confrontation"): Both characters present, direct interaction, peak conflict of the chapter. pov_character: "".\n'
+            '   c. Confrontation (episode_type: "confrontation"): Both characters present, direct interaction, peak emotional charge of the chapter. pov_character: "".\n'
             '   Cover the full story from beginning to end. Each sub-episode covers 30–50 seconds of real-time action.\n'
             '   Tag each episode with chapter_id = source chapter number (integer, 1-based). All three sub-episodes of the same chapter share the same chapter_id. Transition episodes use chapter_id: 0.\n'
-            '6b. TEMPORAL PARALLELISM (MANDATORY): POV-A and POV-B of the same chapter cover the SAME clock window — they are parallel timelines, not sequential. '
-            'Both open at the same diegetic moment and both end at the exact same narrative threshold: the instant before the two characters meet. '
-            'Confrontation picks up from that threshold. Never advance POV-B past where POV-A ends, and never let POV-A events bleed into POV-B time. '
-            'The viewer sees the same chapter twice — once through each character\'s eyes — and the two lines converge at the confrontation.'
+            f'{temporal_rule}'
         )
         schema = SCREENPLAY_SCHEMA
     else:
