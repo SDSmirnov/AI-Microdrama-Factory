@@ -59,6 +59,8 @@ Core pipeline stages:
 12. `refinement`: manually regenerate a specific panel frame.
 13. `animation`: generate clips with `veo` or `grok`.
 14. `autocut`, `voiceover`, `tts`, `dub`, `duck`: post-production helpers.
+15. `extra-panel`: generate a micro-panel not in the original screenplay → `cinematic_render/extra_panels/`.
+16. `summary`: AI-generated context summary of episode data for the next chapter → `chapter_summary.txt`.
 
 ## Install
 
@@ -142,7 +144,7 @@ Use `make help` to list all targets. Current targets:
 - `styles`, `casting`, `refs`, `screenplay`, `scenes`, `consistency`
 - `storyboard`, `qa`, `apply-qa`, `accept-qa`, `rebuild-storyboard`, `refinement`, `animation`
 - `autocut`, `voiceover`, `imgedit`, `tts`, `dub`, `duck`
-- `webserver`
+- `summary`, `webserver`
 
 Important defaults from `Makefile`:
 
@@ -160,8 +162,10 @@ CUSTOM   ?= --custom-prompts
 
 ```bash
 python cli.py --help
-python cli.py --llm {openrouter|gemini|grok} <command> ...
+python cli.py --llm {openrouter|gemini|grok|debug} <command> ...
 ```
+
+`--llm debug` uses LogDebugLLM — logs all prompts/responses to disk without calling any API (useful for testing prompt structure offline).
 
 Commands:
 
@@ -186,6 +190,8 @@ Commands:
 - `tts sfx "<prompt>" <duration> <output>`
 - `dub <video.mp4> <output.mp3> [context.txt]`
 - `duck <video.mp4> <dubbed.mp3> <output.mp3>`
+- `extra-panel <narrative.txt> --scene N --index N_M [--custom-prompts]`
+- `summary <novel> [--output chapter_summary.txt]`
 
 ## Style Presets (`styles --style`)
 
@@ -212,6 +218,8 @@ Primary generated files:
 - `cinematic_render/clips/clip_*.mp4`
 - `cinematic_render/cut/clip_*_cut.mp4` + JSON reports (after `autocut`)
 - `cinematic_render/voiceover/*.wav` + `voiceover.sh` (after `voiceover`)
+- `cinematic_render/extra_panels/NNN_INDEX_static.png` (after `extra-panel`)
+- `chapter_summary.txt` (after `summary`)
 
 Reference artifacts:
 
@@ -225,7 +233,7 @@ cli.py
 Makefile
 lib/
   core/        # project/env/prompts/schemas
-  llm/         # OpenRouter, Gemini, Grok adapters
+  llm/         # OpenRouter, Gemini, Grok, Debug adapters
   studio/      # stylist/screenwriter/artist/critic/director/editor/cutter/retoucher
   animation/   # Veo and Grok animators
   audio/       # tts/dubbing/ducking
@@ -245,6 +253,8 @@ Manual/iterative flow also exists in `.claude/commands/`:
 - `/generate-keyframes`
 - `/refine-scene`
 - `/reversal-pass`
+
+Note: `extra-panel` and `summary` are Python CLI-only (no slash command equivalent).
 
 ---
 
