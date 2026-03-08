@@ -10,9 +10,12 @@ Steps:
 
 import hashlib
 import json
+import logging
 import os
 import time
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 from pydub import AudioSegment
 
@@ -74,19 +77,19 @@ def transcribe_video(
         try:
             cache = json.loads(Path(cache_path).read_text(encoding="utf-8"))
             if cache.get("video_hash") == video_hash:
-                print(f"  Using cached transcription ({len(cache['segments'])} segments)")
+                logger.info("Using cached transcription (%d segments)", len(cache["segments"]))
                 return cache["segments"], cache["total_duration"]
         except (json.JSONDecodeError, KeyError):
             pass
 
-    print("  Extracting audio from video...")
+    logger.info("Extracting audio from video...")
     clip = VideoFileClip(video_path)
     total_duration = clip.duration
     if not os.path.exists(temp_wav):
         clip.audio.write_audiofile(temp_wav, logger=None)
     clip.close()
 
-    print("  Running Whisper transcription...")
+    logger.info("Running Whisper transcription...")
     if WhisperModel is None:
         raise RuntimeError("faster-whisper not installed; run: pip install faster-whisper")
     model = WhisperModel("medium", device="cpu", compute_type="int8")
@@ -111,7 +114,7 @@ def transcribe_video(
         "timestamp": time.time(),
     }
     Path(cache_path).write_text(json.dumps(cache, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(f"  Transcription cached → {cache_path}")
+    logger.info("Transcription cached → %s", cache_path)
     return segments, total_duration
 
 
@@ -159,7 +162,7 @@ DATA: {json.dumps(input_data, ensure_ascii=False)}"""
         result = llm.make_json(prompt)
         trans_map = {item["id"]: item for item in result}
     except Exception:
-        print("Warning: failed to parse translation response")
+        logger.warning("Failed to parse translation response", exc_info=True)
         return segments
 
     enriched = []
@@ -252,7 +255,7 @@ def assemble_audio(
             continue
 
         out_file = segments_dir / f"seg_{i}_{seg['voice_type']}.wav"
-        print(f"  [{i}] [{seg['voice_type']}] [{seg['tone']}] {text[:50]}...")
+        logger.info("[%d] [%s] [%s] %s...", i, seg["voice_type"], seg["tone"], text[:50])
         ok = generate_audio_segment(text, seg["voice_type"], seg["tone"], out_file, llm=llm)
         if not ok:
             continue
@@ -294,23 +297,21 @@ def run_dubbing(
 
     context = Path(context_path).read_text(encoding="utf-8") if context_path else ""
 
-    print("Step 1: Transcribing...")
+    logger.info("Step 1: Transcribing...")
     segments, duration = transcribe_video(video_path, transcription_cache, temp_wav)
 
     plan_file = Path(plan_cache)
     if plan_file.exists():
-        print(f"Step 2: Loading existing plan from {plan_cache}")
+        logger.info("Step 2: Loading existing plan from %s", plan_cache)
         rich_segments = json.loads(plan_file.read_text(encoding="utf-8"))
     else:
-        print("Step 2: Translating + analyzing emotions...")
+        logger.info("Step 2: Translating + analyzing emotions...")
         rich_segments = analyze_and_translate(segments, context, llm=llm)
         plan_file.write_text(json.dumps(rich_segments, ensure_ascii=False, indent=2), encoding="utf-8")
-        print(f"  Plan saved → {plan_cache}")
+        logger.info("Plan saved → %s", plan_cache)
 
-    print("Step 3-4: Generating TTS + assembling...")
+    logger.info("Step 3-4: Generating TTS + assembling...")
     final_audio = assemble_audio(rich_segments, duration, Path(segments_dir), llm=llm)
 
     final_audio.export(output_path, format="mp3")
-    print(f"\nDone: {output_path}")
-    print(f"  Transcription cache: {transcription_cache}")
-    print(f"  Dubbing plan:        {plan_cache}")
+    logger.info("Done: %s (transcription cache: %s, dubbing plan: %s)", output_path, transcription_cache, plan_cache)
