@@ -16,7 +16,7 @@ from typing import Any
 
 import requests
 
-from lib.llm.base import BaseLLM, RateLimiter, retry_on_errors
+from lib.llm.base import BaseLLM, RateLimiter, parse_json, retry_on_errors
 
 logger = logging.getLogger(__name__)
 
@@ -172,7 +172,7 @@ class OpenRouterLLM(BaseLLM):
             content = self._call_openrouter(messages, schema, max_tokens=max_tokens)
             logger.debug(content)
             try:
-                return json.loads(content)
+                return parse_json(content)
             except json.JSONDecodeError as e:
                 logger.error(f"    ❌ JSON parse error: {e}. Response: {content[:500]}")
                 raise
@@ -306,10 +306,10 @@ class OpenRouterLLM(BaseLLM):
             data = self._post_openrouter(payload, timeout=180)
             text = self._extract_text(data)
             if schema:
-                return json.loads(text)
+                return parse_json(text)
             try:
-                return json.loads(text)
-            except Exception:
+                return parse_json(text)
+            except json.JSONDecodeError:
                 return {"text": text}
 
         return _call()
@@ -463,10 +463,10 @@ class OpenRouterLLM(BaseLLM):
             data = self._post_openrouter(payload, timeout=240)
             text = self._extract_text(data)
             if schema:
-                return json.loads(text)
+                return parse_json(text)
             try:
-                return json.loads(text)
-            except Exception:
+                return parse_json(text)
+            except json.JSONDecodeError:
                 return {"text": text}
 
         return _call()

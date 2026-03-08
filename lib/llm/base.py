@@ -1,8 +1,9 @@
 """
-Shared infrastructure: RateLimiter, retry_on_errors, BaseLLM ABC.
+Shared infrastructure: RateLimiter, retry_on_errors, BaseLLM ABC, parse_json.
 Single definition reused everywhere — no more per-script duplication.
 """
 import functools
+import json
 import logging
 import random
 import re
@@ -37,6 +38,65 @@ except ImportError:
 _TYPED_RETRYABLE = _REQUESTS_RETRYABLE + _GOOGLE_RETRYABLE
 
 logger = logging.getLogger(__name__)
+
+
+def parse_json(text: str) -> dict:
+    """
+    Extract and parse JSON from LLM response text.
+
+    Strategies (in order):
+    1. Direct parse — fastest; works when structured-output mode returns clean JSON.
+    2. Markdown fence extraction — strips ```json ... ``` wrapper.
+    3. Bracket extraction — finds first { or [ and last } or ] to strip preamble/postamble.
+    4. Trailing-comma fix + retry steps 1–3 — handles a common LLM formatting mistake.
+
+    Raises json.JSONDecodeError if all strategies fail.
+    """
+    text = text.strip()
+
+    def _try_parse(s: str):
+        try:
+            return json.loads(s)
+        except json.JSONDecodeError:
+            return None
+
+    def _extract_brackets(s: str):
+        for open_ch, close_ch in [('{', '}'), ('[', ']')]:
+            start = s.find(open_ch)
+            end = s.rfind(close_ch)
+            if start != -1 and end > start:
+                result = _try_parse(s[start:end + 1])
+                if result is not None:
+                    return result
+        return None
+
+    def _try_all(s: str):
+        # 1. Direct
+        r = _try_parse(s)
+        if r is not None:
+            return r
+        # 2. Markdown fence (preserve original newlines — do NOT pre-collapse whitespace)
+        m = re.search(r'```(?:json)?\s*([\[{].*?[}\]])\s*```', s, re.DOTALL)
+        if m:
+            r = _try_parse(m.group(1))
+            if r is not None:
+                return r
+        # 3. Bracket extraction
+        return _extract_brackets(s)
+
+    result = _try_all(text)
+    if result is not None:
+        return result
+
+    # 4. Fix trailing commas and retry all strategies
+    cleaned = re.sub(r',(\s*[}\]])', r'\1', text)
+    if cleaned != text:
+        result = _try_all(cleaned)
+        if result is not None:
+            return result
+
+    logger.error("❌ parse_json: all strategies failed. Response head: %s", text[:300])
+    raise json.JSONDecodeError("Cannot extract JSON from LLM response", text, 0)
 
 
 class RateLimiter:

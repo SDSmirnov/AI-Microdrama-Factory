@@ -14,7 +14,7 @@ from typing import Optional
 
 from PIL import Image
 
-from lib.core.schemas import CHARACTER_SCHEMA, GRID_QA_SCHEMA
+from lib.core.schemas import CHARACTER_SCHEMA, ENRICHMENT_SCHEMA, GRID_QA_SCHEMA
 from lib.core.project import Project
 from lib.core.utils import grid_dims, panel_boxes, safe_name
 from lib.llm.base import BaseLLM
@@ -84,6 +84,70 @@ def _existing_refs_context(project: Project) -> str:
     return "\n".join(lines) if lines else "  (none yet)"
 
 
+def _enrich_refs_pass(text: str, llm: BaseLLM, project: Project):
+    """Pass 2: slow careful re-read for specific prop/set details not caught in pass 1.
+
+    Appends textual findings (e.g. "coffee table has a small drawer",
+    "iron safe is recessed into the left wall") to each ref's visual_desc.
+    Only updates JSONs where non-empty additions are found.
+    """
+    if not project.character_info:
+        return
+
+    refs_block = "\n".join(
+        f"  - {name}: {info.get('visual_desc', '')[:200]}"
+        for name, info in project.character_info.items()
+    )
+
+    prompt = f"""You are a meticulous set designer re-reading a story text to extract specific visual details
+that were missed in a first scan. Your ONLY task is to find concrete, visually actionable details
+about the references listed below.
+
+## EXISTING REFERENCES (name → current visual description excerpt):
+{refs_block}
+
+## INSTRUCTIONS
+1. Re-read the text slowly, word by word.
+2. For each reference, extract ONLY details explicitly stated in the text that are NOT already captured in the existing description.
+   Focus on: specific props, materials, textures, colors, spatial arrangement, labels/inscriptions,
+   relative positions ("clock is below the photo frame"), structural details ("drawer in the coffee table",
+   "iron safe recessed into the wall"), wear/damage, lighting fixtures, brand names, etc.
+3. Return ONLY references where you found new details (non-empty `visual_desc_additions`).
+4. Do NOT invent details not in the text. Do NOT repeat what is already in the existing description.
+
+Text:
+<STORY>{text}</STORY>
+"""
+
+    enrichments = llm.make_json(prompt, ENRICHMENT_SCHEMA)
+    if not enrichments:
+        logger.info("  ℹ️  Enrichment pass: no new details found.")
+        return
+
+    updated = 0
+    for item in enrichments:
+        name = item.get('name', '')
+        additions = item.get('visual_desc_additions', '').strip()
+        if not additions or name not in project.character_info:
+            if name and name not in project.character_info:
+                logger.warning(f"  ⚠️  Enrichment: unknown ref '{name}' — skipping")
+            continue
+
+        sname = safe_name(name)
+        json_path = project.ref_dir / f"{sname}.json"
+        try:
+            char = json.loads(json_path.read_text(encoding='utf-8'))
+            char['visual_desc'] = f"{char['visual_desc'].rstrip('. ')}. {additions}"
+            json_path.write_text(json.dumps(char, indent=2), encoding='utf-8')
+            project.character_info[name] = char
+            logger.info(f"  ✏️  Enriched: {name} (+{len(additions)} chars)")
+            updated += 1
+        except Exception as e:
+            logger.warning(f"  ⚠️  Failed to enrich {name}: {e}")
+
+    logger.info(f"  ✅ Enrichment pass done: {updated}/{len(enrichments)} refs updated.")
+
+
 def auto_cast_characters(
     text: str,
     prompts: dict,
@@ -133,16 +197,22 @@ Text:
 """
 
     new_chars = llm.make_json(prompt, CHARACTER_SCHEMA)
-    if not new_chars:
-        return
+    if new_chars:
+        ctx = f"{casting_prompt_template} {setting_context}"
+        max_workers = project.max_workers
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            list(executor.map(
+                lambda char: generate_single_reference(char, ctx, config, project),
+                new_chars
+            ))
+    else:
+        logger.info("  ℹ️  Pass 1: no new references identified.")
 
-    ctx = f"{casting_prompt_template} {setting_context}"
-    max_workers = project.max_workers
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        list(executor.map(
-            lambda char: generate_single_reference(char, ctx, config, project),
-            new_chars
-        ))
+    logger.info("\n🔍 CASTING PASS 2: Enriching refs with specific prop/set details...")
+    try:
+        _enrich_refs_pass(text, llm, project)
+    except Exception as e:
+        logger.warning(f"  ⚠️  Enrichment pass failed (non-fatal): {e}")
 
 
 # ---------------------------------------------------------------------------

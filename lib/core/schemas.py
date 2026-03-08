@@ -96,6 +96,18 @@ CHARACTER_SCHEMA = {
     }
 }
 
+ENRICHMENT_SCHEMA = {
+    "type": "array",
+    "items": {
+        "type": "object",
+        "properties": {
+            "name": {"type": "string", "description": "Exact name matching an existing reference (letters, digits, hyphens only)."},
+            "visual_desc_additions": {"type": "string", "description": "Specific visual details found in the text that are NOT yet in the existing description. Props, materials, colors, spatial arrangement, textures, inscriptions, etc. Empty string if nothing new found."},
+        },
+        "required": ["name", "visual_desc_additions"]
+    }
+}
+
 REVERSAL_SCHEMA = {
     "type": "array",
     "items": {

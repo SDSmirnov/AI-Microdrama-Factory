@@ -6,6 +6,7 @@ panel refinement, and Veo animation.
 """
 import json
 import logging
+import os
 import time
 import wave
 from io import BytesIO
@@ -17,7 +18,7 @@ from google.api_core import exceptions as gapi_exceptions
 from google.genai import types
 from PIL import Image as PILImage
 
-from lib.llm.base import BaseLLM, RateLimiter, retry_on_errors
+from lib.llm.base import BaseLLM, RateLimiter, parse_json, retry_on_errors
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +80,7 @@ class GeminiLLM(BaseLLM):
                     config=config,
                 )
                 try:
-                    return json.loads(resp.text)
+                    return parse_json(resp.text)
                 except json.JSONDecodeError as e:
                     logger.error(f"❌ Gemini JSON parse error: {e}. Response: {resp.text[:500]}")
                     raise
@@ -236,7 +237,7 @@ class GeminiLLM(BaseLLM):
                     config=config,
                 )
                 if schema:
-                    return json.loads(resp.text)
+                    return parse_json(resp.text)
                 return {"text": resp.text}
             except Exception as e:
                 logger.error(f"❌ Gemini analyze_image error: {e}")
@@ -297,7 +298,7 @@ class GeminiLLM(BaseLLM):
                     config=config,
                 )
                 if schema:
-                    return json.loads(resp.text)
+                    return parse_json(resp.text)
                 return {"text": resp.text}
             except Exception as e:
                 logger.error(f"❌ Gemini analyze_video error: {e}")
