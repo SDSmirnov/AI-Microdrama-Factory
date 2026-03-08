@@ -10,14 +10,21 @@ Parse `$ARGUMENTS` and translate to the appropriate flags:
 |---|---|
 | _(empty)_ | `python cli.py refs` |
 | `--custom-prompts` | `python cli.py refs --custom-prompts` |
+| `--llm gemini` | `python cli.py --llm gemini refs` |
+| `--llm debug` | `python cli.py --llm debug refs` |
+| `--llm debug --custom-prompts` | `python cli.py --llm debug refs --custom-prompts` |
+
+`--llm` is a global flag placed **before** the subcommand. Supported values: `openrouter` (default), `gemini`, `grok`, `debug`.
+`--llm debug` logs all prompts/responses to disk without calling any API — useful for offline testing.
 
 Examples:
 - `/render-references` → `python cli.py refs`
 - `/render-references --custom-prompts` → `python cli.py refs --custom-prompts`
+- `/render-references --llm debug` → `python cli.py --llm debug refs`
 
 ## Prerequisites
 
-- `OPENROUTER_API_KEY` must be set in the environment.
+- API key for the chosen `--llm` backend must be set (`OPENROUTER_API_KEY` for default, `IMG_AI_API_KEY` for gemini, `XAI_API_KEY` for grok). Not required for `--llm debug`.
 - `ref_thriller/*.json` files must exist (created by `/cast-characters`).
 
 ## Execution
