@@ -48,6 +48,7 @@ from lib.audio.ducking import run_ducking
 from lib.audio.tts import OPENROUTER_VOICE_MAP, generate_sfx, generate_speech, parse_speech_input
 from lib.core.project import Project, load_project
 from lib.core.utils import grid_dims
+from lib.llm.debug import LogDebugLLM
 from lib.llm.gemini import GeminiLLM
 from lib.llm.grok import GrokLLM
 from lib.llm.openrouter import OpenRouterLLM
@@ -101,6 +102,8 @@ def _make_llm(llm_type: str, project, system_prompt: str = ""):
             logger.error("❌ XAI_API_KEY not set")
             sys.exit(1)
         return GrokLLM(api_key=project.grok_api_key)
+    elif llm_type == "debug":
+        return LogDebugLLM()
     else:  # openrouter (default)
         if not project.openrouter_api_key:
             logger.error("❌ OPENROUTER_API_KEY not set")
@@ -968,7 +971,7 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument(
-        '--llm', choices=['openrouter', 'gemini', 'grok'], default='openrouter',
+        '--llm', choices=['openrouter', 'gemini', 'grok', 'debug'], default='openrouter',
         help='LLM backend for text/image generation (default: openrouter)'
     )
     sub = parser.add_subparsers(dest='command', required=True)
