@@ -1,10 +1,9 @@
 NOVEL          ?= s01e03.txt
-STYLE          ?= vertical_microdrama
+STYLE          ?= vertical_9_16_microdrama
 SCENE     ?= all
 PANEL     ?= all
 PROVIDER  ?= veo
 LLM       ?= openrouter
-CUSTOM    ?= --custom-prompts
 
 # Post-production defaults
 JSON        ?= cinematic_render/animation_metadata.json
@@ -41,28 +40,28 @@ styles:  ## Generate custom_prompts/ for STYLE preset
 	python cli.py --llm $(LLM) styles $(NOVEL) --style $(STYLE)
 
 casting:  ## Identify characters/locations and save reference JSONs
-	python cli.py --llm $(LLM) casting $(NOVEL) $(CUSTOM)
+	python cli.py --llm $(LLM) --style $(STYLE) casting $(NOVEL)
 
 refs:  ## Render missing character reference portraits from existing JSONs
-	python cli.py --llm $(LLM) refs $(CUSTOM)
+	python cli.py --llm $(LLM) --style $(STYLE) refs
 
 screenplay:  ## Run full screenplay + scene keyframe pipeline
-	python cli.py --llm $(LLM) screenplay $(NOVEL) $(CUSTOM)
+	python cli.py --llm $(LLM) --style $(STYLE) screenplay $(NOVEL)
 
 scenes:  ## Generate keyframes for episode SCENE (or all)
-	python cli.py --llm $(LLM) scenes $(SCENE) $(CUSTOM)
+	python cli.py --llm $(LLM) --style $(STYLE) scenes $(SCENE)
 
 consistency:  ## Run continuity enforcer to sync references (dry-run by default; use RENDER=--no-dry-run to regenerate PNGs)
-	python cli.py --llm $(LLM) consistency $(RENDER)
+	python cli.py --llm $(LLM) --style $(STYLE) consistency $(RENDER)
 
 storyboard:  ## Render scene grid images or individual panels
-	python cli.py --llm $(LLM) storyboard $(SCENE) $(PANEL) $(CUSTOM)
+	python cli.py --llm $(LLM) --style $(STYLE) storyboard $(SCENE) $(PANEL)
 
 qa:  ## Run grid quality gate for SCENE (pass SCENE=N to filter; omit for all)
-	python cli.py --llm $(LLM) qa $(if $(filter-out all,$(SCENE)),--scene $(SCENE),)
+	python cli.py --llm $(LLM) --style $(STYLE) qa $(if $(filter-out all,$(SCENE)),--scene $(SCENE),)
 
 apply-qa:  ## Refine all needs_refinement panels from quality_report.json (SCENE=N FRAME=static|start|end|both)
-	python cli.py --llm $(LLM) apply-qa $(if $(filter-out all,$(SCENE)),--scene $(SCENE),) --frame $(FRAME) $(CUSTOM)
+	python cli.py --llm $(LLM) --style $(STYLE) apply-qa $(if $(filter-out all,$(SCENE)),--scene $(SCENE),) --frame $(FRAME)
 
 accept-qa:  ## Promote refined/ panels into panels/, backup originals to refined/backup-YYYYMMDD
 	python cli.py accept-qa
@@ -71,7 +70,7 @@ rebuild-storyboard:  ## Rebuild scene grid images from current panels/ (backup o
 	python cli.py rebuild-storyboard $(SCENE)
 
 refinement:  ## Refine panel PANEL in scene SCENE (e.g. SCENE=1 PANEL=3 FRAME=static|start|end|both)
-	python cli.py --llm $(LLM) refinement $(SCENE) $(PANEL) --frame $(FRAME) $(CUSTOM)
+	python cli.py --llm $(LLM) --style $(STYLE) refinement $(SCENE) $(PANEL) --frame $(FRAME)
 
 animation:  ## Generate video clips using PROVIDER (veo|grok)
 	python cli.py animation $(PROVIDER) $(SCENE) $(PANEL)

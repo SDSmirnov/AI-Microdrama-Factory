@@ -5,11 +5,11 @@ cli.py — Single entry point for the video-book pipeline.
 Usage:
     python cli.py init
     python cli.py styles s01e01.txt --style realistic_movie
-    python cli.py casting s01e01.txt [--custom-prompts]
-    python cli.py screenplay s01e01.txt [--custom-prompts]
-    python cli.py scenes [SCENE|all] [--custom-prompts]
+    python cli.py casting s01e01.txt [--style vertical_9_16_microdrama]
+    python cli.py screenplay s01e01.txt [--style vertical_9_16_microdrama]
+    python cli.py scenes [SCENE|all] [--style vertical_9_16_microdrama]
     python cli.py consistency
-    python cli.py storyboard [SCENE|all] [--custom-prompts]
+    python cli.py storyboard [SCENE|all] [--style vertical_9_16_microdrama]
     python cli.py qa [--scene N [--panel N ...]] [--threshold N]
     python cli.py apply-qa [--scene N] [--frame start|end|static|both]
     python cli.py accept-qa
@@ -50,6 +50,10 @@ def main():
     parser.add_argument(
         '--llm', choices=['openrouter', 'gemini', 'grok', 'debug'], default='openrouter',
         help='LLM backend for text/image generation (default: openrouter)'
+    )
+    parser.add_argument(
+        '--style', default='vertical_9_16_microdrama',
+        help='Prompting style preset from lib/prompting/ (default: vertical_9_16_microdrama)'
     )
     sub = parser.add_subparsers(dest='command', required=True)
 

@@ -1,0 +1,44 @@
+{
+  "episodes_count": 3,
+  "format": {
+    "type": "single_grid_animation",
+    "panels_per_scene": 9,
+    "frames_per_panel": 2
+  },
+  "image_generation": {
+    "aspect_ratio": "9:16",
+    "resolution": "2K",
+    "image_size": "2K"
+  },
+  "animation": {
+    "enabled": true,
+    "keyframe_type": "start"
+  },
+  "slicing": {
+    "enabled": true,
+    "frame_types": [
+      "start",
+      "end"
+    ]
+  },
+  "dialogue": {
+    "enabled": true,
+    "placement": "metadata_only"
+  },
+  "captions": {
+    "enabled": false
+  },
+  "transitions": {
+    "enabled": true,
+    "gap_threshold": "4h",
+    "style": "visual_rhyme"
+  },
+  "reference_characters": {
+    "enabled": true,
+    "auto_cast": true
+  },
+  "vertical": {
+    "safe_zone_top_pct": 15,
+    "safe_zone_bottom_pct": 20
+  }
+}

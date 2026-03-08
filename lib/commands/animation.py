@@ -82,7 +82,7 @@ def cmd_animation(args):
 
 
 def cmd_autocut(args):
-    project, _, _ = load_project(use_custom=False)
+    project, _, _ = load_project(style=args.style)
     if args.model:
         project.text_model = args.model
     llm = _make_vision_llm(args.llm, project)

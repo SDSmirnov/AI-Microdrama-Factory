@@ -23,13 +23,12 @@ from lib.studio.artist import (
 from lib.studio.critic import print_summary, run_quality_gate
 from lib.studio.editor import load_quality_report, refine_panel
 from lib.studio.retoucher import edit_image as retoucher_edit_image
-from lib.studio.screenwriter import SYSTEM_PROMPT
 
 logger = logging.getLogger(__name__)
 
 
 def cmd_storyboard(args):
-    project, prompts, config = load_project(use_custom=args.custom_prompts)
+    project, prompts, config = load_project(style=args.style)
     llm = _make_llm(args.llm, project)
     load_character_refs(project)
 
@@ -48,7 +47,7 @@ def cmd_storyboard(args):
 
 
 def cmd_qa(args):
-    project = Project()
+    project, prompts, config = load_project(style=args.style)
     llm = _make_vision_llm(args.llm, project)
 
     scene_ids = args.scene if hasattr(args, 'scene') and args.scene else None
@@ -63,6 +62,7 @@ def cmd_qa(args):
         threshold=threshold,
         max_workers=project.max_workers,
         output_dir=project.output_dir,
+        prompts=prompts,
     )
     print_summary(report, threshold)
     if report.get('needs_refinement', 0) > 0:
@@ -70,7 +70,7 @@ def cmd_qa(args):
 
 
 def cmd_apply_qa(args):
-    project, prompts, config = load_project(use_custom=args.custom_prompts)
+    project, prompts, config = load_project(style=args.style)
     llm = _make_vision_llm(args.llm, project)
 
     report_path = project.output_dir / "quality_report.json"
@@ -114,7 +114,7 @@ def cmd_apply_qa(args):
 
 
 def cmd_refinement(args):
-    project, prompts, config = load_project(use_custom=args.custom_prompts)
+    project, prompts, config = load_project(style=args.style)
     llm = _make_vision_llm(args.llm, project)
 
     metadata = load_metadata(project.output_dir / "animation_metadata.json")
@@ -272,7 +272,7 @@ def cmd_rebuild_storyboard(args):
 
 
 def cmd_imgedit(args):
-    project, _, _ = load_project(use_custom=False)
+    project, _, _ = load_project(style=args.style)
     llm = _make_llm(args.llm, project)
     try:
         retoucher_edit_image(
@@ -294,8 +294,8 @@ def cmd_extra_panel(args):
         logger.error(f"❌ --index must be N_M format (e.g. 4_5), got: {args.index!r}")
         sys.exit(1)
 
-    project, prompts, config = load_project(use_custom=args.custom_prompts)
-    llm = _make_llm(args.llm, project, system_prompt=SYSTEM_PROMPT)
+    project, prompts, config = load_project(style=args.style)
+    llm = _make_llm(args.llm, project, system_prompt=prompts['screenplay'])
     load_character_refs(project)
 
     meta_path = project.output_dir / "animation_metadata.json"
@@ -394,7 +394,6 @@ def register(sub):
     p = sub.add_parser('storyboard', help='Render scene grids or panels')
     p.add_argument('scene', nargs='?', default='all', help='Scene number or "all"')
     p.add_argument('panel', nargs='?', default='all', help='Panel number or "all"')
-    p.add_argument('--custom-prompts', action='store_true')
     p.set_defaults(func=cmd_storyboard)
 
     p = sub.add_parser('qa', help='Run grid quality gate')
@@ -407,7 +406,6 @@ def register(sub):
     p.add_argument('--scene', type=int, default=None, help='Filter by scene ID')
     p.add_argument('--frame', choices=['start', 'end', 'static', 'both'], default='both',
                    help='Frame type to refine (default: both)')
-    p.add_argument('--custom-prompts', action='store_true')
     p.set_defaults(func=cmd_apply_qa)
 
     sub.add_parser('accept-qa', help='Promote refined panels into panels/, backup originals').set_defaults(func=cmd_accept_qa)
@@ -420,7 +418,6 @@ def register(sub):
     p.add_argument('scene_id', type=int)
     p.add_argument('panel_id', type=int)
     p.add_argument('--frame', choices=['start', 'end', 'static', 'both'], default='both')
-    p.add_argument('--custom-prompts', action='store_true')
     p.set_defaults(func=cmd_refinement)
 
     p = sub.add_parser('imgedit', help='Edit an image via selected --llm backend')
@@ -436,5 +433,4 @@ def register(sub):
     p.add_argument('--scene', type=int, required=True, help='Scene ID to insert the panel into')
     p.add_argument('--index', required=True,
                    help='Insertion index in N_M format, e.g. 4_5 (between panels 4 and 5)')
-    p.add_argument('--custom-prompts', action='store_true')
     p.set_defaults(func=cmd_extra_panel)

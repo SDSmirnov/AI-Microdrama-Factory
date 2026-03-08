@@ -6,7 +6,6 @@ from pathlib import Path
 from lib.commands.common import _make_llm
 from lib.core.project import Project, load_project
 from lib.studio.artist import auto_cast_characters, render_character_refs
-from lib.studio.screenwriter import SYSTEM_PROMPT
 from lib.studio.stylist import analyze_novel, generate_custom_prompts
 
 logger = logging.getLogger(__name__)
@@ -27,8 +26,8 @@ def cmd_init(args):
 
 
 def cmd_styles(args):
-    project, prompts, config = load_project(use_custom=False)
-    llm = _make_llm(args.llm, project, system_prompt=SYSTEM_PROMPT)
+    project, prompts, config = load_project(style=args.style)
+    llm = _make_llm(args.llm, project, system_prompt=prompts['screenplay'])
     text = Path(args.novel).read_text(encoding='utf-8')
     novel_data = analyze_novel(text, llm)
     if not novel_data:
@@ -39,20 +38,20 @@ def cmd_styles(args):
     logger.info(f"  POV:   {novel_data.get('pov', 'N/A')}")
     logger.info(f"  Lead:  {novel_data.get('main_character', {}).get('name', 'N/A')}")
     generate_custom_prompts(novel_data, args.style, llm)
-    logger.info(f"\n🎬 Done. Run: make casting NOVEL={args.novel} CUSTOM=--custom-prompts")
+    logger.info(f"\n🎬 Done. Run: make casting NOVEL={args.novel}")
 
 
 def cmd_casting(args):
-    project, prompts, config = load_project(use_custom=args.custom_prompts)
-    llm = _make_llm(args.llm, project, system_prompt=SYSTEM_PROMPT)
+    project, prompts, config = load_project(style=args.style)
+    llm = _make_llm(args.llm, project, system_prompt=prompts['screenplay'])
     text = Path(args.novel).read_text(encoding='utf-8')
     auto_cast_characters(text, prompts, config, llm, project)
     logger.info(f"\n✅ Done. Reference JSONs in {project.ref_dir}/")
 
 
 def cmd_refs(args):
-    project, prompts, config = load_project(use_custom=args.custom_prompts)
-    llm = _make_llm(args.llm, project, system_prompt=SYSTEM_PROMPT)
+    project, prompts, config = load_project(style=args.style)
+    llm = _make_llm(args.llm, project, system_prompt=prompts['screenplay'])
     render_character_refs(prompts, config, llm, project)
     logger.info(f"\n✅ Done. Reference PNGs in {project.ref_dir}/")
 
@@ -68,9 +67,7 @@ def register(sub):
 
     p = sub.add_parser('casting', help='Identify characters and save reference JSONs')
     p.add_argument('novel', help='Novel text file')
-    p.add_argument('--custom-prompts', action='store_true')
     p.set_defaults(func=cmd_casting)
 
     p = sub.add_parser('refs', help='Render missing character reference portraits from existing JSONs')
-    p.add_argument('--custom-prompts', action='store_true')
     p.set_defaults(func=cmd_refs)

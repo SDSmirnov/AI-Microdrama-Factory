@@ -79,11 +79,11 @@ class Project:
         return errors
 
 
-def load_project(use_custom: bool = False) -> tuple['Project', dict, dict]:
+def load_project(style: str = 'vertical_9_16_microdrama') -> tuple['Project', dict, dict]:
     """
     Create Project from env vars, load prompts, return (project, prompts, config).
     """
     project = Project()
     project.ensure_dirs()
-    prompts, config = load_prompts(use_custom=use_custom)
+    prompts, config = load_prompts(style=style)
     return project, prompts, config

@@ -10,14 +10,14 @@ from lib.core.project import Project, load_project
 from lib.core.utils import atomic_write, load_metadata
 from lib.studio.artist import export_image_prompt, load_character_refs
 from lib.studio.director import run_continuity_pass
-from lib.studio.screenwriter import SYSTEM_PROMPT, analyze_scenes_master, merge_scenes, run_scenes_pipeline
+from lib.studio.screenwriter import analyze_scenes_master, merge_scenes, run_scenes_pipeline
 
 logger = logging.getLogger(__name__)
 
 
 def cmd_screenplay(args):
-    project, prompts, config = load_project(use_custom=args.custom_prompts)
-    llm = _make_llm(args.llm, project, system_prompt=SYSTEM_PROMPT)
+    project, prompts, config = load_project(style=args.style)
+    llm = _make_llm(args.llm, project, system_prompt=prompts['screenplay'])
     load_character_refs(project)
 
     text = Path(args.novel).read_text(encoding='utf-8')
@@ -40,8 +40,8 @@ def cmd_screenplay(args):
 
 
 def cmd_scenes(args):
-    project, prompts, config = load_project(use_custom=args.custom_prompts)
-    llm = _make_llm(args.llm, project, system_prompt=SYSTEM_PROMPT)
+    project, prompts, config = load_project(style=args.style)
+    llm = _make_llm(args.llm, project, system_prompt=prompts['screenplay'])
     load_character_refs(project)
 
     episodes_path = project.output_dir / "animation_episodes.json"
@@ -101,7 +101,7 @@ def cmd_consistency(args):
 
 
 def cmd_summary(args):
-    project, _, _ = load_project(use_custom=False)
+    project, _, _ = load_project(style=args.style)
     llm = _make_llm(args.llm, project)
 
     novel_text = Path(args.novel).read_text(encoding='utf-8')
@@ -185,12 +185,10 @@ This summary will be injected verbatim into the next chapter prompt.
 def register(sub):
     p = sub.add_parser('screenplay', help='Full screenplay + keyframe pipeline')
     p.add_argument('novel', help='Novel text file')
-    p.add_argument('--custom-prompts', action='store_true')
     p.set_defaults(func=cmd_screenplay)
 
     p = sub.add_parser('scenes', help='Generate keyframes for episode(s)')
     p.add_argument('scene', nargs='?', default='all', help='Episode number or "all"')
-    p.add_argument('--custom-prompts', action='store_true')
     p.set_defaults(func=cmd_scenes)
 
     p = sub.add_parser('consistency', help='Run continuity enforcer')
