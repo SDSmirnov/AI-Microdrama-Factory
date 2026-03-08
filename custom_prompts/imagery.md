@@ -26,7 +26,19 @@ A single vertical 3x3 grid. The panels represent a chronological sequence, read 
 ## Special Instructions
 Render with photorealistic quality. Apply professional, subtle color grading to establish a specific mood. Incorporate a shallow depth of field (bokeh) to isolate subjects and create a cinematic feel. Add a light layer of realistic film grain for texture.
 
+## Extreme Close-Up (ECU) Protocol
+When the panel description calls for ECU, extreme close-up, or a tight shot on eyes/face/hands:
+- Maximum facial resolution: visible skin pores and natural skin texture — photorealistic, NOT plastic or AI-smoothed.
+- Micro-muscle detail: slight jaw tension, lid-weight over pupils, shadow under the lower lip, faint vein at the temple.
+- Eyes: highly detailed irises, one sharp catchlight visible in the pupil per eye — the "soul light". Vibrant gaze, no dead-eye flatness.
+- Hands: visible tendons, knuckle lines, natural skin creasing when gripped.
 
+## Cinematic Beauty Standard (Foreground Characters)
+Apply to all characters visible at CU or closer:
+- **Skin**: dewy, hydrated glow with soft-focus natural pores — the "camera-ready" look without losing realism. No waxy or plastic finish.
+- **Lighting**: volumetric rim light (golden-hour warmth OR cool blue edge) separates the subject from background. Cinematic highlights on cheekbones.
+- **Eyes**: sharp catchlight, detailed iris texture, vibrant and alert — never glassy.
+- **Color grade**: luxury-grade teal-and-orange palette, high contrast ratio. Blacks are true black; highlights retain warmth. Premium studio-production quality.
 
 ## IMPORTANT
 - **NO TEXT CAPTIONS/SUBTITLES**

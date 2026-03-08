@@ -164,6 +164,13 @@ You are given:
 
 ## CRITICAL REQUIREMENTS:
 
+### ENHANCE — CINEMATIC BEAUTY STANDARD (apply to all foreground characters):
+- **Skin**: dewy, hydrated glow, soft-focus natural pores — photorealistic texture, never plastic or AI-smoothed.
+- **Eyes**: sharp catchlight in each pupil, high-detail iris, vibrant gaze — no glassy flatness.
+- **Lighting**: reinforce volumetric rim light (golden-hour warmth or cool blue edge) to separate subject from background.
+- **Color grade**: luxury-grade teal-and-orange palette, high contrast, true blacks with warm highlights.
+Apply these to every character visible at CU or closer. Do NOT apply to pure background elements.
+
 ### PRESERVE FROM ORIGINAL:
 - Camera angle, framing, composition
 - Lighting setup (direction, quality, mood)

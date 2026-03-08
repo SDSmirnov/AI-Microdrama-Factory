@@ -130,16 +130,37 @@ SAFE ZONE RULE: Compose all key subjects within the middle 65% of frame height.
 Top 15% and bottom 20% must be visually clear (sky, wall, floor — no faces, no action).
 Set text_safe_composition: true when this is achieved.
 
-9-PANEL MICRO-ACT STRUCTURE (mandatory rhythm):
-- Panel 1: cold_open — most arresting image, zero context, maximum tension or beauty
-- Panel 2: context — orient viewer: who, where, what's at stake (compressed, no exposition dumps)
+VISUAL DRAMATIC INTENSITY — WHAT GOES IN EVERY NARRATIVE FRAME:
+(Applies to panel_type=narrative only. For atmosphere_insert: skip questions 1–2; fill question 3 with the single environmental element that carries all the drama — scale, texture, or color temperature is the conflict; and fill question 4 with how that element changes state: wave rising or cresting, ember dying or flaring, fog thickening or thinning.)
+
+**visual_start must answer three questions in one image:**
+1. WHO has power right now, and WHO doesn't? — Show it through spatial position (standing over / cornered), posture (open vs. closed), or a prop (who holds the phone, the contract, the weapon).
+2. WHAT specific emotion is visible on the primary face? — Not "he looks angry." Write the physics: "jaw set, lips compressed, eyes tracking her hands rather than her face." The AI renders what you describe.
+3. WHAT detail signals something is at stake? — A door left open, a phone face-down, hands too close together, a glass at the edge of a table. One object carries the threat without naming it.
+
+**visual_end must show a state transition with dramatic weight — not a completed action:**
+- A decision made visible: the hand that finally reaches, eyes that finally meet, fingers releasing a grip that was held for panels.
+- A boundary crossed: physical proximity breached, an object picked up or put down that shifts the power dynamic.
+- A contradiction revealed: the suppressed smile when they should be devastated, the flash of real fear behind a performed confidence.
+- NEVER write visual_end as "the action is done." visual_end is a NEW UNSTABLE STATE — it demands resolution in the next panel.
+
+**motion_prompt DRAMATIC PHYSICS — hesitation and micro-decision carry more drama than the action itself:**
+The moment before the action: the 0.5s of held breath, the hand that moves toward and slows, the eyes that almost look away but don't. Write these as timestamped physical events. The withdrawal IS the drama. The held pause IS the tension.
+WRONG: "He picks up the phone and calls."
+RIGHT: "At 0s phone sits on table, hand rests 10cm to the right. At 1.5s fingers move left, stop 3cm from phone. At 3.0s index finger contacts screen but does not press. At 5.0s hand withdraws into a fist on the table — phone uncalled."
+The physical hesitation tells the viewer everything about the character's internal state without a single word.
+
+9-PANEL MICRO-ACT STRUCTURE (mandatory rhythm for pov_a / pov_b / confrontation episodes):
+(TRANSITION episodes override this entirely — see episode_type block. All 9 panels are atmosphere_insert with no dialogue, no character conflict structure.)
+- Panel 1: cold_open — most arresting image, zero context, maximum tension or beauty [≈0–6s]
+- Panel 2: verbal_hook — a character speaks the episode's central conflict into existence with ≤8 words: an ultimatum, threat, confession, or challenge. Delivery in CU on speaker's face. NOT exposition — the setting orients; the dialogue names the stakes. [≈7s mark]
 - Panel 3: escalation — first pressure or obstacle
-- Panel 4: escalation — complication, stakes raised
-- Panel 5: escalation — point of no return
+- Panel 4: emotional_capture — point of no return: an action, revelation, or commitment the viewer cannot abandon. Must escalate from panel 3 in emotional temperature, not just plot. This is the "21-second lock" — if the viewer is still here, they are captured. [≈21s mark]
+- Panel 5: escalation — complication, stakes raised further; no exit
 - Panel 6: confrontation — peak conflict, ECU on face
 - Panel 7: peak — maximum emotional intensity, the scene's fulcrum
 - Panel 8: twist — one fact changes everything
-- Panel 9: cliffhanger — freeze on maximum unresolved tension
+- Panel 9: cliffhanger — freeze on maximum unresolved tension; end mid-breath [≈60–90s mark, the Button]
 
 MOTION PROMPTS for vertical format:
 - Prefer vertical camera movements: tilt up/down, vertical dolly, snap zoom into eyes
@@ -224,7 +245,7 @@ TRANSITION TO NEXT PANEL (transition_to_next):
 
 PANEL TYPE (panel_type):
 - narrative: standard story panel.
-- atmosphere_insert: MANDATORY — exactly one per episode, at panel 7 or 8 (emotional peak / pre-cliffhanger). A single minimalist WOW shot with no dialogue, no character close-ups. Two subtypes:
+- atmosphere_insert: MANDATORY — exactly one per pov/confrontation episode, at panel 7 or 8 (emotional peak / pre-cliffhanger). Exception: transition episodes use atmosphere_insert for ALL 9 panels — the episode_type block defines their full structure. A single minimalist WOW shot with no dialogue, no character close-ups. Two subtypes:
   * ENVIRONMENTAL: 1–2 macro-scale elements only (crashing wave, wall of flame, fog swallowing a city, storm wall, lone tree in wind). Grand scale, 2–3 color palette. visual_start: "minimalism: [element], [light condition], hyper-realistic. No people, no faces." No character refs needed.
   * TEXTURE/DETAIL: extreme macro of a single physical surface — cracked concrete, condensation on cold glass, a scar, a burning letter, fabric under tension. Reveals what the story is made of. Shallow DOF, single element, fills the frame.
   Duration 3–4s. Transition in via smash_cut or match_cut; transition out via smash_cut or match_cut.
@@ -263,6 +284,10 @@ We film great viral vertical microdramas.
 
 **The 3-Second Law:** Episode opens in medias res — the most visually arresting moment, zero explanation.
 The viewer asks "what is happening?" THAT question keeps them watching.
+
+**The 7-Second Verbal Hook:** By the second panel (≈7s mark), a character must speak a line that crystallizes the episode's entire conflict in ≤8 words — an ultimatum, threat, confession, or challenge. This is NOT exposition. It is a verbal demand the viewer has not yet heard answered. The question hangs in the air. Examples: "You have until midnight." / "I know what you did." / "Choose: her or me."
+
+**The 21-Second Emotional Capture:** By panel 4 (≈21s mark), the viewer must feel they cannot leave without knowing what happens next. Create an irreversible emotional commitment — an action taken, a line crossed, a secret revealed — that makes scrolling away feel like abandonment. If a viewer survives to panel 4, they finish the episode.
 
 **Cold Open = Visual Question Mark:** The cold_open is NOT just an arresting image — it is an unanswered question.
 Show CONSEQUENCE before CAUSE: the reaction before the stimulus, the wound before the weapon, the running before the threat.
@@ -335,6 +360,13 @@ LAUNCH INSTRUCTION: deliver text that makes the cinematographer itch to grab a c
 12. In screenplay_instructions, include the episode sonic arc: name exactly where silence lives, where the sonic hit lands, and what the crescendo moment is.
 13. In visual_continuity_rules, tag any visual motif established in this episode with "MOTIF:" prefix so downstream episodes can call it back deliberately.
 14. Note intended shot scale (ECU / CU / MS / WIDE) for each panel position in screenplay_instructions to enforce scale rhythm.
+15. DRAMATIC CONTENT SPEC — for each narrative panel in pov/confrontation screenplay_instructions, explicitly state (skip entirely for transition episodes — their screenplay_instructions describe visual rhyme and sonic texture only):
+    (a) POWER: who controls this moment and through what physical indicator (spatial position, prop ownership, gaze direction)?
+    (b) EMOTION: what specific physical expression is on the primary face — not a label but a description (e.g. "upper lip barely drawn back, eyes fixed on a point behind her ear, not her eyes").
+    (c) STAKE OBJECT: one prop or environmental detail that carries the scene's subtext without dialogue (a door left ajar, a phone screen lit face-down, hands too close).
+    (d) STATE TRANSITION: what changes between visual_start and visual_end — not the action, but its dramatic meaning (e.g. "she crosses from petitioner to threat").
+    These four elements are the inputs that make visual_start/visual_end score dramatic_intensity ≥7 in QA.
+    For atmosphere_insert panels: skip (a) and (b). For (c) specify the single environmental element and its dramatic quality (scale, texture, color temperature). For (d) specify how the element changes state (wave rising / fog thickening / ember dying).
 
 {setting_context}
 
@@ -377,6 +409,7 @@ This episode bridges a time gap between chapters. It is purely visual and sonic 
 - dialogue: "" (empty string) for ALL panels — absolutely no spoken dialogue.
 - voiceover: "" (empty string) for ALL panels — no narration.
 - VISUAL RHYME: alternate between the two characters' spaces (odd panels = Character A's environment, even panels = Character B's environment, or use parallel montage). Same time of day, mirrored compositions.
+- transition_to_next: use match_cut between panels (matching geometric shape or motion vector — rain on one window mirrors rain on the other; a door closing in one space matches a door opening in another). smash_cut only for the final panel into the next episode.
 - Sound design carries all emotion: ambient atmosphere, silence, distant sounds. No music description.
 - The episode communicates only through visual parallel and sonic texture.
 """

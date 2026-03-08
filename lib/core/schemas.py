@@ -59,7 +59,7 @@ SCENE_SCHEMA = {
                                 "dialogue": {"type": "string", "description": "Dialogue line, in Russian, add names and male/female indicators. E.g. 'Alice (old female): What a lovely cityscape here'. David (male kid): I know."},
                                 "voiceover": {"type": "string", "description": "Off-screen narration / inner monologue in Russian synced to panel action. Reveals subtext — what the viewer CANNOT see (fear, memory, desire). Never describes what is visually obvious. Add Male/Female voice indicator. Voiceover must not overlap dialogs. Use timestamps if needed, e.g. 'at 2.0s mark, after Alice finishes her line, Male Voiceover: Damn it!'"},
                                 "emotional_beat": {"type": "string", "description": "Dominant emotion of this panel (single word): tension, revelation, grief, desire, defiance, dread, relief, rage, longing, shock, shame, triumph"},
-                                "hook_type": {"type": "string", "description": "Role of this panel in episode dramaturgy: cold_open | escalation | confrontation | twist | cliffhanger | backlink | none"},
+                                "hook_type": {"type": "string", "description": "Role of this panel in episode dramaturgy: cold_open | verbal_hook | escalation | emotional_capture | confrontation | twist | cliffhanger | backlink | none. Use verbal_hook for panel 2 (≈7s, spoken conflict statement). Use emotional_capture for panel 4 (≈21s, point of no return)."},
                                 "text_safe_composition": {"type": "boolean", "description": "True when key subjects (faces, hands, action) are composed in the middle 65% of frame height, leaving top 15% and bottom 20% clear for subtitle overlays."},
                                 "panel_type": {"type": "string", "description": "narrative | atmosphere_insert. Use atmosphere_insert for 1–2 element minimalist WOW shots (fire, water, fog, shadow, silhouette) inserted as emotional anchors or rhythm breaks between narrative panels. No character refs needed for atmosphere_insert panels."},
                                 "transition_to_next": {"type": "string", "description": "Edit cut technique to the next panel: match_cut (cut on matching shape/motion — visual_end of this panel mirrors visual_start of next), jump_cut (jarring deliberate cut for pace — allows duration 2–3s), smash_cut (sudden silence-to-action or reverse), j_cut (next panel audio begins audibly in the final 1–2s of this panel — note in sound_design), hard_cut (standard clean cut, default)."},
@@ -134,6 +134,16 @@ PANEL_QA_SCHEMA = {
                 "camera angle, and framing 0-10."
             ),
         },
+        "dramatic_intensity": {
+            "type": "integer",
+            "description": (
+                "How dramatically engaging is this panel 0-10. "
+                "10 = maximum tension, conflict, or emotional shock — viewer cannot look away. "
+                "0 = static, generic, no visible conflict or hook. "
+                "A technically perfect but inert panel (no conflict, generic pose, no tension) scores 0. "
+                "Score as if this frame had to stop a scrolling thumb in 0.3 seconds."
+            ),
+        },
         "artifacts": {
             "type": "array",
             "items": {"type": "string"},
@@ -145,7 +155,12 @@ PANEL_QA_SCHEMA = {
         },
         "needs_refinement": {
             "type": "boolean",
-            "description": "True if the panel should be regenerated or refined.",
+            "description": (
+                "True if the panel should be regenerated or refined. "
+                "Triggers when: fidelity is below threshold, character_consistency is below threshold, "
+                "dramatic_intensity is below threshold (panel is technically correct but dramatically inert), "
+                "or critical visual artifacts exist."
+            ),
         },
         "refinement_prompt": {
             "type": "string",
@@ -167,6 +182,7 @@ PANEL_QA_SCHEMA = {
         "artifacts",
         "needs_refinement",
         "refinement_prompt",
+        "dramatic_intensity",
         "reasoning",
     ],
 }

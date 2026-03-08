@@ -116,6 +116,7 @@ def analyze_panel(
                 logger.warning(f"  ⚠️  Could not load ref {rname}: {e}")
 
     visual_desc = panel_meta.get("visual_start", "") or panel_meta.get("visual_end", "")
+    panel_type = panel_meta.get("panel_type", "narrative")
     prev_panels = [
         {'panel_index': p['panel_index'], 'visual_desc': p['visual_end'], 'lights_and_camera': p.get('lights_and_camera', '')}
         for p in scene_meta.get('panels', [])
@@ -162,13 +163,21 @@ Expected characters/objects: {', '.join(ref_names) if ref_names else 'None speci
   If the same character appears different from their reference, score LOW.
   Score 0 if no character references were expected for this panel.
 - **composition_match** (0-10): Does the shot type, angle, framing match?
+- **dramatic_intensity** (0-10): Is this panel dramatically engaging?
+  Ask: could this frame stop a scrolling thumb in 0.3 seconds?
+  10 = maximum visible tension, conflict, or emotional shock — impossible to look away.
+  0 = static, generic, no visible conflict, inert pose, nothing at stake.
+  A technically perfect but empty panel (no conflict, no hook, no subtext) scores 0 and is DEFECTIVE.
+{"  Panel type is ATMOSPHERE_INSERT: score atmospheric intensity instead — the drama lives in scale, texture, and color, not in faces or conflict. A crashing wave that fills the frame scores 9; a generic sky scores 2. Visible power struggle or faces are NOT expected here." if panel_type == "atmosphere_insert" else "  Evaluate: is there a visible power struggle, physical threat, raw emotion on a face, or a visual secret in the frame?"}
 - **artifacts**: List ALL visual problems (extra limbs, wrong face, melted features,
   text overlays, wrong number of people, missing objects, etc.)
 - **needs_refinement**: True if fidelity < {threshold} OR character_consistency < {threshold}
-  OR critical artifacts exist.
+  OR dramatic_intensity < {threshold} OR critical artifacts exist.
 - **refinement_prompt**: If needs_refinement, describe EXACTLY what to fix.
-  Be specific: "Eckels' face does not match reference — wrong jaw shape, hair should
-  be silver not brown. Helmet has circular viewport but should be fully transparent sphere."
+  For character/fidelity issues: "Eckels' face does not match reference — wrong jaw shape, hair should be silver not brown."
+  For dramatic_intensity failures: specify the concrete visual element to add or change — power indicator, emotional expression, or stake object.
+  Example: "Panel is static and inert. Add visible power imbalance: reframe so character A stands over seated character B. Add character A's hand resting on B's shoulder from above. Insert a prop in foreground (unsigned contract, phone with lit screen) to signal what is at stake. B's face should show jaw clenched, eyes averted downward — not neutral."
+  Never write "panel lacks drama" — write what specific visual element would create it.
 
 ## IMPORTANT
 - Compare character faces CAREFULLY against reference images.
@@ -199,6 +208,7 @@ Expected characters/objects: {', '.join(ref_names) if ref_names else 'None speci
             "fidelity": 0,
             "character_consistency": 0,
             "composition_match": 0,
+            "dramatic_intensity": 0,
             "artifacts": [f"API_ERROR: {str(e)[:200]}"],
             "needs_refinement": True,
             "refinement_prompt": "API call failed, manual review required.",
@@ -294,8 +304,9 @@ def process_scene(
 
         fid = result["fidelity"]
         cc = result["character_consistency"]
+        di = result.get("dramatic_intensity", "?")
         need = "🔴 NEEDS FIX" if result["needs_refinement"] else "🟢 OK"
-        logger.info(f"    → fidelity={fid}/10  char_consistency={cc}/10  {need}")
+        logger.info(f"    → fidelity={fid}/10  char_consistency={cc}/10  drama={di}/10  {need}")
         if result["artifacts"]:
             for art in result["artifacts"][:3]:
                 logger.info(f"       ⚠️  {art}")
@@ -398,6 +409,7 @@ def run_quality_gate(
         "total_panels": len(all_results),
         "needs_refinement": sum(1 for r in all_results if r["needs_refinement"]),
         "avg_fidelity": round(sum(r["fidelity"] for r in all_results) / max(len(all_results), 1), 2),
+        "avg_dramatic_intensity": round(sum(r.get("dramatic_intensity", 0) for r in all_results) / max(len(all_results), 1), 2),
         "panels": all_results,
     }
     atomic_write(output_path, json.dumps(report, ensure_ascii=False, indent=2))
@@ -418,8 +430,10 @@ def print_summary(report: Dict, threshold: int):
     print(f"\n{'=' * 72}")
     print(f"{'QUALITY GATE REPORT':^72}")
     print(f"{'=' * 72}")
+    avg_di = report.get("avg_dramatic_intensity", 0)
     print(f"  Panels analyzed:      {total}")
     print(f"  Average fidelity:     {avg_fid:.1f}/10")
+    print(f"  Avg dramatic intens:  {avg_di:.1f}/10")
     print(f"  Threshold:            {threshold}")
     print(f"  🟢 Passed:            {total - needs_fix}")
     print(f"  🔴 Needs refinement:  {needs_fix}")
