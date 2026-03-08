@@ -3,6 +3,7 @@ Prompt loading utilities — single definition used across all pipeline stages.
 """
 import json
 import logging
+import os
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -49,6 +50,7 @@ def load_prompts(style: str = 'vertical_9_16_microdrama') -> tuple[dict, dict]:
                 prompts[name] = ""
         config_path = source_dir / 'config.json'
         config = json.loads(config_path.read_text(encoding='utf-8')) if config_path.exists() else get_default_config()
+        _apply_env_overrides(config)
         return prompts, config
 
     logger.info(f"📂 Loading prompts from {style_dir}/")
@@ -86,7 +88,21 @@ def load_prompts(style: str = 'vertical_9_16_microdrama') -> tuple[dict, dict]:
         logger.info("  📝 Override: config.json from custom_prompts/")
         config = _deep_merge(config, custom_config)
 
+    _apply_env_overrides(config)
     return prompts, config
+
+
+def _apply_env_overrides(config: dict) -> None:
+    """Apply AI_ASPECT_RATIO / AI_IMAGE_SIZE / AI_REF_ASPECT_RATIO env overrides in-place."""
+    ig = config.setdefault("image_generation", {})
+    if v := os.getenv("AI_ASPECT_RATIO"):
+        ig["aspect_ratio"] = v
+    if v := os.getenv("AI_IMAGE_SIZE"):
+        ig["resolution"] = v
+        ig["image_size"] = v
+    rc = config.setdefault("reference_characters", {})
+    if v := os.getenv("AI_REF_ASPECT_RATIO"):
+        rc["ref_aspect_ratio"] = v
 
 
 def get_default_config() -> dict:

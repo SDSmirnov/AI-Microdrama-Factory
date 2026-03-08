@@ -2,6 +2,7 @@
 import datetime
 import json
 import logging
+import os
 import re
 import shutil
 import sys
@@ -425,7 +426,8 @@ def register(sub):
     p.add_argument('instruction', help='Edit instruction (e.g. "make the sky purple")')
     p.add_argument('images', nargs='+', help='Source image(s); first is target, rest are references')
     p.add_argument('--aspect-ratio', default='16:9', help='Output aspect ratio (default: 16:9)')
-    p.add_argument('--image-size', default='2K', help='Output resolution (default: 2K)')
+    p.add_argument('--image-size', default=os.getenv('AI_IMAGE_SIZE', '2K'),
+                   help='Output resolution (default: AI_IMAGE_SIZE env or 2K)')
     p.set_defaults(func=cmd_imgedit)
 
     p = sub.add_parser('extra-panel', help='Generate an extra micro-panel not in the original screenplay')

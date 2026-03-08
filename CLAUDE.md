@@ -26,6 +26,9 @@ export AI_GEMINI_MODEL="gemini-2.5-flash"              # default (Gemini-specifi
 export AI_CONCURRENCY="10"                             # thread pool workers
 export AI_SEED="42"                                    # image generation seed (openrouter)
 export AI_LOG_LEVEL="DEBUG"                            # logging verbosity
+export AI_ASPECT_RATIO="9:16"                          # image aspect ratio override (default: per config/preset)
+export AI_IMAGE_SIZE="2K"                              # image resolution override (default: per config/preset)
+export AI_REF_ASPECT_RATIO="9:16"                      # reference portrait aspect ratio override
 ```
 
 ## Manual Workflow (Claude Code Skills)

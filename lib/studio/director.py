@@ -5,6 +5,7 @@ Port of 06_continuity_enforcer.py using a BaseLLM backend.
 """
 import json
 import logging
+import os
 import shutil
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
@@ -154,7 +155,9 @@ def enrich_and_regenerate_reference(
             refs.append(img)
 
     try:
-        img_bytes = llm.make_image(ref_prompt, refs=refs, aspect_ratio='9:16', image_size='1K')
+        img_bytes = llm.make_image(ref_prompt, refs=refs,
+                                   aspect_ratio=os.getenv('AI_REF_ASPECT_RATIO', '9:16'),
+                                   image_size='1K')
         if img_bytes:
             png_path.write_bytes(img_bytes)
             logger.info(f"    ✅ PNG saved: {png_path}")

@@ -13,7 +13,7 @@ from threading import Lock
 
 
 from lib.core.schemas import SCREENPLAY_SCHEMA, SCENE_SCHEMA, REVERSAL_SCHEMA
-from lib.core.utils import DEFAULT_OUTPUT_DIR
+from lib.core.utils import DEFAULT_OUTPUT_DIR, is_portrait
 from lib.llm.base import BaseLLM, retry_on_errors
 
 logger = logging.getLogger(__name__)
@@ -194,6 +194,7 @@ def refine_scenes_for_episode(scene: dict, prompts: dict, config: dict, llm: Bas
     logger.info(f"    ✏️  Refinement pass: scene {scene_id}")
 
     base_prompt = base_scene_prompt(prompts, config, character_info)
+    aspect_ratio = config['image_generation'].get('aspect_ratio', '9:16')
     scene_text = json.dumps(scene, ensure_ascii=False, indent=2)
 
     # Build spatial chain: existing panel endpoints for cross-panel anchor
@@ -220,7 +221,7 @@ in which case state that explicitly in panel 1's visual_start (e.g. "CUT TO: new
     prompt = f"""
 {base_prompt}
 
-**IMPORTANT: ADJUST CAMERA AND DYNAMICS TO SCENE NEEDS FOR IMMERSIVE VERTICAL VIEW**
+{"**IMPORTANT: ADJUST CAMERA AND DYNAMICS TO SCENE NEEDS FOR IMMERSIVE VERTICAL VIEW**" if is_portrait(aspect_ratio) else "**IMPORTANT: ADJUST CAMERA AND DYNAMICS TO SCENE NEEDS FOR IMMERSIVE WIDESCREEN VIEW**"}
 
 **Your task: refine the single scene below. Return it with the SAME schema, improving every panel
 according to the rules below. Do NOT change scene_id, panel_index, or structural fields.**

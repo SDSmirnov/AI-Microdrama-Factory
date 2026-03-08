@@ -7,6 +7,7 @@ import asyncio
 import base64
 import json
 import logging
+import os
 from pathlib import Path
 from typing import Optional
 
@@ -19,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_MODEL = "grok-imagine-video"
 DEFAULT_DURATION = 6
-DEFAULT_ASPECT_RATIO = "9:16"
+DEFAULT_ASPECT_RATIO = os.getenv('AI_ASPECT_RATIO', '9:16')
 DEFAULT_RESOLUTION = "720p"
 BATCH_SIZE = 3
 BATCH_SLEEP = 30

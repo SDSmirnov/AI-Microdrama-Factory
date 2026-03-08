@@ -13,6 +13,15 @@ DEFAULT_OUTPUT_DIR = Path("cinematic_render")
 DEFAULT_REF_DIR = Path(os.getenv('AI_REF_DIR', 'ref_thriller'))
 
 
+def is_portrait(aspect_ratio: str) -> bool:
+    """Return True if aspect ratio is portrait (height > width), e.g. '9:16', '2:3'."""
+    try:
+        w, h = (int(x) for x in aspect_ratio.split(':'))
+        return h > w
+    except (ValueError, AttributeError):
+        return True  # assume portrait on parse failure
+
+
 def safe_name(name: str) -> str:
     """Canonical filesystem-safe name: lowercase, underscored, no quotes or slashes."""
     return name.replace("/", "-").replace("'", " ").replace('"', '').replace(" ", "_").lower()

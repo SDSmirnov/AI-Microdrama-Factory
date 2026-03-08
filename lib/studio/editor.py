@@ -229,7 +229,7 @@ No captions or text overlays!
         img_bytes = llm.make_image(
             refinement_prompt,
             refs=refs,
-            aspect_ratio='9:16',
+            aspect_ratio=config['image_generation'].get('aspect_ratio', '9:16'),
             image_size='1K',
         )
         if img_bytes:

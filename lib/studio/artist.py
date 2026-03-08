@@ -16,7 +16,7 @@ from PIL import Image
 
 from lib.core.schemas import CHARACTER_SCHEMA, ENRICHMENT_SCHEMA, GRID_QA_SCHEMA
 from lib.core.project import Project
-from lib.core.utils import grid_dims, panel_boxes, safe_name
+from lib.core.utils import grid_dims, is_portrait, panel_boxes, safe_name
 from lib.llm.base import BaseLLM
 
 logger = logging.getLogger(__name__)
@@ -533,7 +533,7 @@ def render_scene_grids(
 # Panel-by-panel rendering
 # ---------------------------------------------------------------------------
 
-def _build_panel_prompt(scene: dict, panel: dict, frame_type: str, prompts: dict) -> str:
+def _build_panel_prompt(scene: dict, panel: dict, frame_type: str, prompts: dict, aspect_ratio: str = '9:16') -> str:
     """Build a focused single-panel image generation prompt."""
     style_prompt = prompts.get('style', '')
     imagery_prompt = prompts.get('imagery', '')
@@ -571,13 +571,13 @@ Scene setup: {scene.get('pre_action_description', '')}
 CONSISTENCY RULE: Maintain IDENTICAL face, hair, clothing, and body proportions as shown in the reference images.
 NO CAPTIONS. NO TEXT OVERLAYS. NO WATERMARKS.
 
-Generate a SINGLE portrait image (9:16) for:
+Generate a SINGLE portrait image ({aspect_ratio}) for:
 Panel {panel['panel_index']} — {frame_type.upper()} frame{tag_str}
 
 Visual: {visual}
 Camera / Lighting: {panel.get('lights_and_camera', '')}
 
-**IMPORTANT: THIS IS VERTICAL PORTRAIT IMAGE, IT SHOULD BE VIEWED NORMALLY, WITHOUT ROTATION**
+{"**IMPORTANT: THIS IS VERTICAL PORTRAIT IMAGE, IT SHOULD BE VIEWED NORMALLY, WITHOUT ROTATION**" if is_portrait(aspect_ratio) else ""}
 """
     if active_motion:
         prompt += f"Motion context: {active_motion}\n"
@@ -639,7 +639,7 @@ def _render_single_panel(
     logger.info(f"  🎨 Rendering {out_path.name} ...")
 
     refs, opened_imgs = _build_ref_contents(panel, project)
-    prompt_text = _build_panel_prompt(scene, panel, frame_type, prompts)
+    prompt_text = _build_panel_prompt(scene, panel, frame_type, prompts, aspect_ratio)
 
     try:
         img_bytes = llm.make_image(prompt_text, refs=refs, aspect_ratio=aspect_ratio, image_size='1K')
@@ -766,14 +766,17 @@ def _build_image_prompt(scene: dict, prompts: dict, config: dict) -> str:
     aspect_ratio = config['image_generation']['aspect_ratio']
     resolution = config['image_generation']['image_size']
 
+    portrait = is_portrait(aspect_ratio)
     prompt = _build_prompt_header(scene, prompts)
     prompt += (
-        "**CRITICAL FORMAT:** Single image containing 9 portrait panels (9:16 each) arranged in a 3×3 grid.\n"
-        "Each cell is a VERTICAL frame designed for mobile viewing.\n"
-        "SAFE ZONE per panel: compose key subjects (faces, hands, focal action) within the middle 65% of panel height.\n"
-        "Top 15% and bottom 20% of each panel must remain visually uncluttered (background only — sky, wall, floor).\n"
-        "Faces and close-ups are the primary dramatic instrument — this is vertical microdrama, not widescreen cinema.\n"
-        "Shallow depth of field. Subjects sharp, backgrounds contextual only.\n"
+        f"**CRITICAL FORMAT:** Single image containing 9 panels ({aspect_ratio} each) arranged in a 3×3 grid.\n"
+        + ("Each cell is a VERTICAL frame designed for mobile viewing.\n" if portrait else
+           "Each cell is a HORIZONTAL frame designed for widescreen viewing.\n")
+        + "SAFE ZONE per panel: compose key subjects (faces, hands, focal action) within the middle 65% of panel height.\n"
+          "Top 15% and bottom 20% of each panel must remain visually uncluttered (background only — sky, wall, floor).\n"
+        + ("Faces and close-ups are the primary dramatic instrument — this is vertical microdrama, not widescreen cinema.\n" if portrait else
+           "Wide compositions and environmental context are the primary dramatic instrument.\n")
+        + "Shallow depth of field. Subjects sharp, backgrounds contextual only.\n"
     )
     prompt += f"\nIMPORTANT: Generate SINGLE {resolution} {aspect_ratio} image with 9 panels in 3x3 grid layout.\n"
 
