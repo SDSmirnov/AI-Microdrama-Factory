@@ -16,13 +16,15 @@ SCREENPLAY_SCHEMA = {
                 "type": "object",
                 "properties": {
                     "episode_id": {"type": "integer"},
+                    "episode_type": {"type": "string", "description": "Structural role: pov_a (first protagonist's perspective only), pov_b (second protagonist's perspective only), confrontation (both characters, direct interaction), transition (time-gap bridge — no dialogue, visual rhyme, short panel durations)"},
+                    "pov_character": {"type": "string", "description": "Name of the POV character for pov_a/pov_b episodes. Empty string for confrontation and transition."},
                     "location": {"type": "string"},
                     "daytime": {"type": "string"},
                     "raw_narrative": {"type": "string", "description": "Full narative from the original text which was used for this episode, do not shorted used text, it will be used for the context"},
                     "visual_continuity_rules": {"type": "string", "description": "Visual continunity enforcement for the next episode to avoid discrepancies throughout the movie. Never tell 'same', instead pass full details for the visual state."},
                     "screenplay_instructions": {"type": "string", "description": "Very detailed instructions"},
                 },
-                "required": ["episode_id", "location", "daytime", "raw_narrative", "screenplay_instructions", "visual_continuity_rules"],
+                "required": ["episode_id", "episode_type", "pov_character", "location", "daytime", "raw_narrative", "screenplay_instructions", "visual_continuity_rules"],
             }
         }
     },
@@ -57,7 +59,7 @@ SCENE_SCHEMA = {
                                 "dialogue": {"type": "string", "description": "Dialogue line, in Russian, add names and male/female indicators. E.g. 'Alice (old female): What a lovely cityscape here'. David (male kid): I know."},
                                 "voiceover": {"type": "string", "description": "Off-screen narration / inner monologue in Russian synced to panel action. Reveals subtext — what the viewer CANNOT see (fear, memory, desire). Never describes what is visually obvious. Add Male/Female voice indicator. Voiceover must not overlap dialogs. Use timestamps if needed, e.g. 'at 2.0s mark, after Alice finishes her line, Male Voiceover: Damn it!'"},
                                 "emotional_beat": {"type": "string", "description": "Dominant emotion of this panel (single word): tension, revelation, grief, desire, defiance, dread, relief, rage, longing, shock, shame, triumph"},
-                                "hook_type": {"type": "string", "description": "Role of this panel in episode dramaturgy: cold_open | escalation | confrontation | twist | cliffhanger | none"},
+                                "hook_type": {"type": "string", "description": "Role of this panel in episode dramaturgy: cold_open | escalation | confrontation | twist | cliffhanger | backlink | none"},
                                 "text_safe_composition": {"type": "boolean", "description": "True when key subjects (faces, hands, action) are composed in the middle 65% of frame height, leaving top 15% and bottom 20% clear for subtitle overlays."},
                                 "panel_type": {"type": "string", "description": "narrative | atmosphere_insert. Use atmosphere_insert for 1–2 element minimalist WOW shots (fire, water, fog, shadow, silhouette) inserted as emotional anchors or rhythm breaks between narrative panels. No character refs needed for atmosphere_insert panels."},
                                 "transition_to_next": {"type": "string", "description": "Edit cut technique to the next panel: match_cut (cut on matching shape/motion — visual_end of this panel mirrors visual_start of next), jump_cut (jarring deliberate cut for pace — allows duration 2–3s), smash_cut (sudden silence-to-action or reverse), j_cut (next panel audio begins audibly in the final 1–2s of this panel — note in sound_design), hard_cut (standard clean cut, default)."},

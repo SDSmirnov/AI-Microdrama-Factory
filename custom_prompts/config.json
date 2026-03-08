@@ -28,6 +28,11 @@
   "captions": {
     "enabled": false
   },
+  "transitions": {
+    "enabled": true,
+    "gap_threshold": "4h",
+    "style": "visual_rhyme"
+  },
   "reference_characters": {
     "enabled": true,
     "auto_cast": true

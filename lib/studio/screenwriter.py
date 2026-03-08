@@ -246,7 +246,10 @@ For every scene, generate:
 def analyze_episodes_master(text: str, prompts: dict, config: dict, llm: BaseLLM) -> dict:
     logger.info("\n🎥 MASTER SCREENWRITER: Preparing screenplay...")
     setting_context = prompts.get('setting', '')
-    episodes_count = config.get('episodes_count', 3)
+    transitions_cfg = config.get('transitions', {})
+    transitions_enabled = transitions_cfg.get('enabled', True)
+    gap_threshold = transitions_cfg.get('gap_threshold', '4h')
+    transition_style = transitions_cfg.get('style', 'visual_rhyme')
     prompt = f"""
 # Role: MASTER SCREENWRITER — VERTICAL MICRODRAMA (PROD-SPEC)
 
@@ -319,13 +322,19 @@ LAUNCH INSTRUCTION: deliver text that makes the cinematographer itch to grab a c
 3. Each episode should cover from 30 to 50 seconds of real-time action.
 4. Add continuity rules for episodes, e.g. if in episode 3 hero puts on spacesuit, it should be noted in next episodes (4, 5, etc) until he takes it off.
 5. Episodes will be split for animation independently, so should have enough context.
-6. Cover the full story from beginning to end. Use exactly {episodes_count} episodes of 30–50 seconds, so that the final cut version will fit 2 minute Shorts format.
-7. Episode 1 panel 1 MUST be a cold_open — consequence before cause, visual question mark, no exposition.
-8. Mark hook_type for the cold_open panel, emotional peak panel, and cliffhanger panel in screenplay_instructions.
-9. Every episode MUST end on a cliffhanger or revelation — never on resolution.
-10. In screenplay_instructions, include the episode sonic arc: name exactly where silence lives, where the sonic hit lands, and what the crescendo moment is.
-11. In visual_continuity_rules, tag any visual motif established in this episode with "MOTIF:" prefix so downstream episodes can call it back deliberately.
-12. Note intended shot scale (ECU / CU / MS / WIDE) for each panel position in screenplay_instructions to enforce scale rhythm.
+6. MULTI-POV DECOMPOSITION: Decompose each chapter into exactly 3 sub-episodes in this fixed order:
+   a. POV-A (episode_type: "pov_a"): First protagonist's perspective exclusively. Their actions, thoughts, observations. Other character absent or peripheral. Set pov_character to their name.
+   b. POV-B (episode_type: "pov_b"): Second protagonist's perspective exclusively. Their reaction to the same events, internal world. Set pov_character to their name.
+   c. Confrontation (episode_type: "confrontation"): Both characters present, direct interaction, peak conflict of the chapter. pov_character: "".
+   Cover the full story from beginning to end. Each sub-episode covers 30–50 seconds of real-time action.
+{f'''7. TRANSITION EPISODES (episode_type: "transition"): When a significant time gap (>{gap_threshold}) exists between chapters, insert one Transition episode BEFORE the POV-A episode of the next chapter. Transitions bridge the gap using {transition_style} technique — parallel images from each character's space during the time gap (e.g. both characters' environments at dawn, rain on two different windows). Rules: no dialogue, no voiceover, all panels are atmosphere_insert, panel durations 2–3s. pov_character: "". Episode must still have 9 panels.''' if transitions_enabled else '7. Do not generate transition episodes.'}
+8. Every pov_a and pov_b episode MUST have panel 2 or 3 with hook_type: "backlink" — a brief visual callback (duration 2–3s, no dialogue) to the most emotionally charged moment from the PREVIOUS chapter, as remembered or triggered in this character's mind. The voiceover reveals the inner echo of that memory.
+9. Episode 1 (first pov_a) panel 1 MUST be a cold_open — consequence before cause, visual question mark, no exposition.
+10. Mark hook_type for the cold_open panel, emotional peak panel, and cliffhanger panel in screenplay_instructions.
+11. Every episode MUST end on a cliffhanger or revelation — never on resolution.
+12. In screenplay_instructions, include the episode sonic arc: name exactly where silence lives, where the sonic hit lands, and what the crescendo moment is.
+13. In visual_continuity_rules, tag any visual motif established in this episode with "MOTIF:" prefix so downstream episodes can call it back deliberately.
+14. Note intended shot scale (ECU / CU / MS / WIDE) for each panel position in screenplay_instructions to enforce scale rhythm.
 
 {setting_context}
 
@@ -335,6 +344,43 @@ TEXT TO ADAPT:
 <STORY>{text}</STORY>
 """
     return llm.make_json(prompt, SCREENPLAY_SCHEMA)
+
+
+# ---------------------------------------------------------------------------
+# Episode-type-specific prompt block
+# ---------------------------------------------------------------------------
+def _episode_type_block(episode_type: str, pov_character: str) -> str:
+    """Return episode-type-specific cinematic constraints for the scene generation prompt."""
+    if episode_type in ('pov_a', 'pov_b'):
+        label = 'A' if episode_type == 'pov_a' else 'B'
+        char = pov_character or f'POV-{label} character'
+        return f"""
+## EPISODE TYPE: POV-{label} — SINGLE CHARACTER PERSPECTIVE
+This episode shows events exclusively from {char}'s point of view.
+- Only {char}'s actions, thoughts, and observations are depicted.
+- The other character is absent, peripheral, or seen from a distance — never given equal screen weight.
+- BACKLINK RULE (MANDATORY): Panel 2 or 3 MUST use hook_type: "backlink". This is a brief visual callback (duration 2–3s, no spoken dialogue) to the most emotionally charged moment from the PREVIOUS chapter, as triggered in {char}'s memory. The voiceover carries the inner echo of that memory — what {char} cannot stop thinking about. Treat this as a flash memory cut: ECU on {char}'s face → memory image → back to present.
+"""
+    if episode_type == 'confrontation':
+        return """
+## EPISODE TYPE: CONFRONTATION — DUAL CHARACTER PRESENCE
+Both characters are present and in direct interaction throughout this episode.
+- Early panels establish spatial tension between the two characters.
+- Middle panels escalate to peak conflict — ECU alternating between faces.
+- Final panel is the unresolved cliffhanger. No backlink needed.
+"""
+    if episode_type == 'transition':
+        return """
+## EPISODE TYPE: TRANSITION — TIME GAP BRIDGE
+This episode bridges a time gap between chapters. It is purely visual and sonic — no narrative action.
+- ALL panels: panel_type = "atmosphere_insert", duration 2–3s (NOT 6s).
+- dialogue: "" (empty string) for ALL panels — absolutely no spoken dialogue.
+- voiceover: "" (empty string) for ALL panels — no narration.
+- VISUAL RHYME: alternate between the two characters' spaces (odd panels = Character A's environment, even panels = Character B's environment, or use parallel montage). Same time of day, mirrored compositions.
+- Sound design carries all emotion: ambient atmosphere, silence, distant sounds. No music description.
+- The episode communicates only through visual parallel and sonic texture.
+"""
+    return ""
 
 
 # ---------------------------------------------------------------------------
@@ -353,12 +399,16 @@ def analyze_scenes_for_episode(
     logger.info(f"\n🎥 MASTER CINEMATOGRAPHER: Preparing Keyframes for episode {episode_counter}...")
     base_prompt = base_scene_prompt(prompts, config, character_info)
 
-    # Extract current episode's own continuity rules (for downstream episodes) and surface prev ones
+    # Extract episode metadata
     try:
         episode_data = json.loads(text)
         current_continuity = episode_data.get('visual_continuity_rules', '')
+        episode_type = episode_data.get('episode_type', '')
+        pov_character = episode_data.get('pov_character', '')
     except (json.JSONDecodeError, AttributeError):
         current_continuity = ''
+        episode_type = ''
+        pov_character = ''
 
     continuity_block = ""
     if prev_continuity_rules:
@@ -366,9 +416,12 @@ def analyze_scenes_for_episode(
     if current_continuity:
         continuity_block += f"\n## THIS EPISODE'S VISUAL STATE (carry forward to future scenes)\n{current_continuity}\n"
 
+    episode_type_block = _episode_type_block(episode_type, pov_character)
+
     prompt = f"""
     {base_prompt}
     {continuity_block}
+    {episode_type_block}
     TEXT TO ADAPT:
     {text}
 """

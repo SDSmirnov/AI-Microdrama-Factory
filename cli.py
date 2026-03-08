@@ -25,6 +25,7 @@ Usage:
     python cli.py voiceover [--out-dir cinematic_render/voiceover] [--output voiceover.sh]
     python cli.py dub video.mp4 output.mp3 [context.txt]
     python cli.py duck video.mp4 dubbed.mp3 output.mp3
+    python cli.py summary s01e01.txt [--output summary.txt]
 """
 import argparse
 import datetime

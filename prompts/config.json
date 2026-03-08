@@ -36,6 +36,11 @@
     "enabled": false,
     "placement": "none"
   },
+  "transitions": {
+    "enabled": true,
+    "gap_threshold": "4h",
+    "style": "visual_rhyme"
+  },
   "content_moderation": {
     "apply_guidelines": true,
     "level": "moderate"
