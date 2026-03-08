@@ -15,7 +15,9 @@ CUSTOM_PROMPTS_DIR = _PROJECT_ROOT / "custom_prompts"
 PROMPTING_DIR = _PROJECT_ROOT / "lib" / "prompting"
 
 PROMPT_FILES = ['style', 'casting', 'scenery', 'imagery', 'setting',
-                'screenplay', 'screenplay_scene', 'screenplay_episodes', 'qa']
+                'screenplay', 'screenplay_scene', 'screenplay_episodes', 'qa',
+                'episode_type_pov', 'episode_type_confrontation', 'episode_type_transition',
+                'refinement_arc_rule']
 
 
 def _deep_merge(base: dict, override: dict) -> dict:

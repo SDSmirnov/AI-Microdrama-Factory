@@ -52,7 +52,7 @@ Panels per scene: {panels_per_scene}
 Animation mode: {is_animation}
 
 {"Include visual_start and visual_end for START/END keyframes." if is_animation else "Include single key visual moment per panel."}
-{"Include dialogue (≤8 words per line) and voiceover (inner monologue, Russian) for each panel." if config['dialogue']['enabled'] else ""}
+{f"Include dialogue (≤{config['dialogue'].get('max_words_per_line', 8)} words per line) and voiceover for each panel." if config['dialogue']['enabled'] else ""}
 {"Include caption for narrative text." if config['captions']['enabled'] else ""}
 Important: all dialogues, voiceovers and texts MUST be in Russian as in original text for the consistency.
 
@@ -71,9 +71,10 @@ def analyze_episodes_master(text: str, prompts: dict, config: dict, llm: BaseLLM
     transitions_enabled = transitions_cfg.get('enabled', True)
     gap_threshold = transitions_cfg.get('gap_threshold', '4h')
     transition_style = transitions_cfg.get('style', 'visual_rhyme')
+    panels_per_scene = config['format'].get('panels_per_scene', 9)
 
     transitions_instruction = (
-        f'7. TRANSITION EPISODES (episode_type: "transition"): When a significant time gap (>{gap_threshold}) exists between chapters, insert one Transition episode BEFORE the POV-A episode of the next chapter. Transitions bridge the gap using {transition_style} technique — parallel images from each character\'s space during the time gap (e.g. both characters\' environments at dawn, rain on two different windows). Rules: no dialogue, no voiceover, all panels are atmosphere_insert, panel durations 2–3s. pov_character: "". Episode must still have 9 panels.'
+        f'7. TRANSITION EPISODES (episode_type: "transition"): When a significant time gap (>{gap_threshold}) exists between chapters, insert one Transition episode BEFORE the POV-A episode of the next chapter. Transitions bridge the gap using {transition_style} technique — parallel images from each character\'s space during the time gap (e.g. both characters\' environments at dawn, rain on two different windows). Rules: no dialogue, no voiceover, all panels are atmosphere_insert, panel durations 2–3s. pov_character: "". Episode must still have {panels_per_scene} panels.'
         if transitions_enabled else
         '7. Do not generate transition episodes.'
     )
@@ -88,39 +89,20 @@ def analyze_episodes_master(text: str, prompts: dict, config: dict, llm: BaseLLM
 # ---------------------------------------------------------------------------
 # Episode-type-specific prompt block
 # ---------------------------------------------------------------------------
-def _episode_type_block(episode_type: str, pov_character: str) -> str:
-    """Return episode-type-specific cinematic constraints for the scene generation prompt."""
+def _episode_type_block(episode_type: str, pov_character: str, prompts: dict, config: dict) -> str:
+    """Return episode-type-specific cinematic constraints loaded from prompts."""
     if episode_type in ('pov_a', 'pov_b'):
         label = 'A' if episode_type == 'pov_a' else 'B'
         char = pov_character or f'POV-{label} character'
-        return f"""
-## EPISODE TYPE: POV-{label} — SINGLE CHARACTER PERSPECTIVE
-This episode shows events exclusively from {char}'s point of view.
-- Only {char}'s actions, thoughts, and observations are depicted.
-- The other character is absent, peripheral, or seen from a distance — never given equal screen weight.
-- BACKLINK RULE (MANDATORY): Panel 2 or 3 MUST use hook_type: "backlink". This is a brief visual callback (duration 2–3s, no spoken dialogue) to the most emotionally charged moment from the PREVIOUS chapter, as triggered in {char}'s memory. The voiceover carries the inner echo of that memory — what {char} cannot stop thinking about. Treat this as a flash memory cut: ECU on {char}'s face → memory image → back to present.
-"""
+        tmpl = prompts.get('episode_type_pov', '')
+        return tmpl.replace('{{LABEL}}', label).replace('{{CHAR}}', char)
     if episode_type == 'confrontation':
-        return """
-## EPISODE TYPE: CONFRONTATION — DUAL CHARACTER PRESENCE
-Both characters are present and in direct interaction throughout this episode.
-- Early panels establish spatial tension between the two characters.
-- Middle panels escalate to peak conflict — ECU alternating between faces.
-- Final panel is the unresolved cliffhanger. No backlink needed.
-"""
+        return prompts.get('episode_type_confrontation', '')
     if episode_type == 'transition':
-        return """
-## EPISODE TYPE: TRANSITION — TIME GAP BRIDGE
-This episode bridges a time gap between chapters. It is purely visual and sonic — no narrative action.
-- ALL panels: panel_type = "atmosphere_insert", duration 2–3s (NOT 6s).
-- dialogue: "" (empty string) for ALL panels — absolutely no spoken dialogue.
-- voiceover: "" (empty string) for ALL panels — no narration.
-- VISUAL RHYME: alternate between the two characters' spaces (odd panels = Character A's environment, even panels = Character B's environment, or use parallel montage). Same time of day, mirrored compositions.
-- transition_to_next: use match_cut between panels (matching geometric shape or motion vector — rain on one window mirrors rain on the other; a door closing in one space matches a door opening in another). smash_cut only for the final panel into the next episode.
-- Sound design carries all emotion: ambient atmosphere, silence, distant sounds. No music description.
-- The episode communicates only through visual parallel and sonic texture.
-"""
-    return ""
+        panel_duration = str(config['format'].get('panel_duration_s', 6))
+        tmpl = prompts.get('episode_type_transition', '')
+        return tmpl.replace('{{PANEL_DURATION}}', panel_duration)
+    return ''
 
 
 # ---------------------------------------------------------------------------
@@ -156,7 +138,7 @@ def analyze_scenes_for_episode(
     if current_continuity:
         continuity_block += f"\n## THIS EPISODE'S VISUAL STATE (carry forward to future scenes)\n{current_continuity}\n"
 
-    episode_type_block = _episode_type_block(episode_type, pov_character)
+    episode_type_block = _episode_type_block(episode_type, pov_character, prompts, config)
 
     prompt = f"""
     {base_prompt}
@@ -185,9 +167,9 @@ def refine_scenes_for_episode(scene: dict, prompts: dict, config: dict, llm: Bas
     1. Makes every panel self-contained — all character/location details inline.
     2. Ensures visual_start explicitly describes spatial disposition.
     3. Flags is_reversed=true when a character/object appears in visual_end/motion_prompt
-       without being present in visual_start (Grok Imagine has no image-reference support).
+       without being present in visual_start (animation backend has no image-reference support).
     4. Enforces cross-panel spatial continuity and cross-scene entry state.
-    5. Verifies 9-panel emotional arc integrity.
+    5. Verifies emotional arc integrity (rules loaded from prompts).
     6. Enforces camera_master/lighting_master compliance across all panels.
     """
     scene_id = scene.get('scene_id', '?')
@@ -247,8 +229,8 @@ visual_start must explicitly state the spatial arrangement at t=0:
 Example: "MEDIUM SHOT. Ivan (30s, dark stubble, grey hoodie) stands LEFT of frame, facing RIGHT toward
 camera at 45°, arms crossed, jaw tight. Behind him: rain-streaked window, blurred city lights bokeh."
 
-### RULE 3 — is_reversed FLAG FOR GROK IMAGINE
-Panels will be animated as 6-second clips by Grok Imagine, which does NOT support image references.
+### RULE 3 — is_reversed FLAG FOR ANIMATION
+Panels will be animated as {config['format'].get('panel_duration_s', 6)}-second clips by the AI video model, which does NOT support image references.
 The only way to show a character or object ENTERING the frame is reverse playback:
 render the character LEAVING, then play the clip reversed.
 
@@ -269,11 +251,7 @@ Current panel endpoint chain (use as spatial anchor when refining):
 {panels_spatial_chain}
 </PANEL_SPATIAL_CHAIN>
 
-### RULE 6 — EMOTIONAL ARC INTEGRITY
-Verify and enforce the 9-panel arc structure. Do NOT allow resolution before panel 9:
-  Panel 1: cold_open | Panel 2: context | Panels 3–5: escalation
-  Panel 6: confrontation | Panel 7: peak | Panel 8: twist | Panel 9: cliffhanger
-Each panel's emotional_beat and hook_type must align with its position in the arc.
+{prompts.get('refinement_arc_rule', '')}
 
 ### RULE 7 — CAMERA AND LIGHTING MASTER COMPLIANCE
 Every panel's lights_and_camera must stay within the scene's camera_master and lighting_master DNA.
