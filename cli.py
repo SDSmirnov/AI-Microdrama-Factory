@@ -511,6 +511,92 @@ def cmd_voiceover(args):
     logger.info(f"✅ {script_path} written: {count} voiceover(s)")
 
 
+def cmd_summary(args):
+    """Generate a context summary for the next chapter from current episode data."""
+    project, _, _ = load_project(use_custom=False)
+    llm = _make_llm(args.llm, project)
+
+    novel_text = Path(args.novel).read_text(encoding='utf-8')
+
+    # Load produced scenes if available
+    meta_path = project.output_dir / "animation_metadata.json"
+    scenes_block = ""
+    if meta_path.exists():
+        metadata = json.loads(meta_path.read_text(encoding='utf-8'))
+        scenes = metadata.get('scenes', [])
+        scene_summaries = []
+        for scene in scenes:
+            panels = scene.get('panels', [])
+            panel_texts = []
+            for p in panels:
+                parts = [p.get('visual_start', ''), p.get('visual_end', '')]
+                dlg = p.get('dialogue', '') or p.get('voiceover', '') or p.get('caption', '')
+                if dlg:
+                    parts.append(f"[{dlg}]")
+                panel_texts.append(" → ".join(t for t in parts if t))
+            scene_summaries.append(
+                f"Scene {scene['scene_id']} [{scene.get('location', '')}]:\n"
+                + "\n".join(f"  {i+1}. {t}" for i, t in enumerate(panel_texts))
+            )
+        scenes_block = "\n\n".join(scene_summaries)
+
+    # Load character refs if available
+    refs_block = ""
+    ref_dir = project.ref_dir
+    if ref_dir.exists():
+        ref_jsons = sorted(ref_dir.glob("*.json"))
+        refs = []
+        for rj in ref_jsons:
+            try:
+                d = json.loads(rj.read_text(encoding='utf-8'))
+                name = d.get('name') or rj.stem
+                desc = d.get('visual_description') or d.get('description') or ''
+                state = d.get('state') or d.get('current_state') or ''
+                refs.append(f"- {name}: {desc}" + (f" [{state}]" if state else ""))
+            except Exception:
+                pass
+        refs_block = "\n".join(refs)
+
+    prompt = f"""You are a production continuity writer.
+Given the source text of the current chapter and the visual scenes produced for it,
+write a **Chapter Summary** that will be used as context when generating the NEXT chapter.
+
+The summary must cover:
+1. **Plot state** — what happened, key events, unresolved conflicts
+2. **Character states** — who is where, what changed for each character, emotional arc
+3. **Visual continuity** — established looks, key locations, lighting/color palette, camera style
+4. **Narrative thread** — the cliffhanger or setup that carries into the next chapter
+5. **Production notes** — any visual motifs, recurring symbols, tone to maintain
+
+Be precise, concise, and production-ready. Write in English.
+This summary will be injected verbatim into the next chapter prompt.
+
+---
+## SOURCE TEXT (current chapter)
+
+{novel_text}
+
+---
+## PRODUCED SCENES
+
+{scenes_block or "(no scenes data available)"}
+
+---
+## CHARACTER REFERENCES
+
+{refs_block or "(no character refs available)"}
+"""
+
+    result = llm.generate(prompt)
+    if not result:
+        logger.error("❌ LLM returned empty summary")
+        sys.exit(1)
+
+    out_path = Path(args.output)
+    out_path.write_text(result, encoding='utf-8')
+    logger.info(f"✅ Summary written to {out_path}")
+
+
 def cmd_duck(args):
     """Auto-duck original audio during dubbed speech segments."""
     run_ducking(
@@ -1021,6 +1107,12 @@ def main():
     p.add_argument('--padding', type=int, default=100, help='Padding around speech ms (default: 100)')
     p.add_argument('--normalize', action='store_true', help='Normalize output volume')
 
+    # summary
+    p = sub.add_parser('summary', help='Generate context summary for the next chapter')
+    p.add_argument('novel', help='Path to the current chapter text file (e.g. s01e01.txt)')
+    p.add_argument('--output', default='chapter_summary.txt',
+                   help='Output path for the summary (default: chapter_summary.txt)')
+
     args = parser.parse_args()
 
     dispatch = {
@@ -1045,6 +1137,7 @@ def main():
         'voiceover': cmd_voiceover,
         'dub': cmd_dub,
         'duck': cmd_duck,
+        'summary': cmd_summary,
     }
 
     def _log_command(event: str):

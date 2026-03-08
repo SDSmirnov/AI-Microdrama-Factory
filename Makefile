@@ -26,7 +26,7 @@ VOICEOVER_DIR  ?= cinematic_render/voiceover
 VOICEOVER_SH   ?= voiceover.sh
 
 .PHONY: help init workdirs styles casting refs screenplay scenes consistency storyboard qa apply-qa accept-qa rebuild-storyboard refinement animation \
-        autocut imgedit tts voiceover dub duck
+        autocut imgedit tts voiceover dub duck summary
 
 help:  ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-16s %s\n", $$1, $$2}'
@@ -97,6 +97,9 @@ dub:  ## Smart-dub VIDEO → OUTPUT mp3 (optionally guided by CONTEXT file)
 
 duck:  ## Duck original audio in VIDEO wherever DUBBED track speaks → OUTPUT mp3
 	python cli.py duck $(VIDEO) $(DUBBED) $(OUTPUT)
+
+summary:  ## Generate chapter_summary.txt context for the next chapter
+	python cli.py --llm $(LLM) summary $(NOVEL) --output chapter_summary.txt
 
 webserver:  ## Start static web server on :5005 and open Chrome at web/index.html
 	@python3 web/gen_server_info.py
