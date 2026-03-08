@@ -18,7 +18,7 @@ GOAL: Generate production-ready assets for AI Image-To-Video pipeline. Every pan
 - **SAFE ZONE**: Key action must stay in the middle 65% of frame height. Top 15% and bottom 20% reserved for subtitles/UI.
 - **VOICEOVER IS THE SPINE**: Every panel has either dialogue or voiceover. Inner monologue reveals what the image cannot show. Never narrates the obvious.
 - **DIALOGUE IS PERFORMANCE**: ≤8 words per line. Staccato. Emotionally specific.
-- **HOOK ARCHITECTURE**: Panel 1 of every episode = cold_open. Emotional peak before midpoint. Final panel = cliffhanger or revelation.
+- **HOOK ARCHITECTURE**: Panel 1 of every episode = cold_open. Emotional peak before midpoint. Final panel = cliffhanger or revelation. Choose one hook formula for panel 1: **status_reversal** (protagonist humiliated → reversal exploiting justice drive), **impossible_situation** (logically unresolvable constraint, viewer asks "how do they get out"), **hidden_identity** (someone is not who they appear — glimpse of concealed truth), **ticking_clock** (hard deadline visible to viewer before character knows it), **shocking_revelation** (disclosed fact rewrites all prior context). Tag chosen formula as `hook_formula` in `screenplay_instructions`.
 
 ---
 
@@ -82,6 +82,12 @@ In episode 1, establish at least one recurring visual element (object, gesture, 
 **Cliffhanger = Rewatch Hook, not Summary:**
 The final panel must leave one visible element unexplained with two possible interpretations. The viewer rewinds because the image contains information they missed, not because they were told it was tense.
 
+**Cliffhanger Typology** — tag chosen type as `cliffhanger_type` in `screenplay_instructions`. Four types:
+- **physical_threat**: character in immediate physical danger — body in frame, threat visible
+- **shocking_revelation**: disclosed fact rewrites everything prior — face reacting, information just landed
+- **emotional_rupture**: unexpected betrayal or reaction that breaks the established relationship dynamic — silence, turned back, or look that cannot be taken back
+- **interrupted_action**: cut mid-gesture or mid-word at peak commitment — viewer compelled to see what the hand does, what the mouth finishes
+
 **Continuity of Tension:** Each episode ends mid-breath. The cliffhanger is not a summary — it is a question mark with a face.
 
 ## GOLDEN RULES
@@ -111,8 +117,8 @@ The final panel must leave one visible element unexplained with two possible int
 8. **BACKLINK RULE** (mandatory for pov_a and pov_b episodes): Panel 2 or 3 MUST use `hook_type: "backlink"` — a brief visual callback (duration 2–3s, no dialogue) to the most emotionally charged moment from the PREVIOUS chapter, as remembered or triggered in this character's mind. The voiceover reveals the inner echo of that memory.
 
 9. Episode 1 (first pov_a) panel 1 MUST be a cold_open — consequence before cause, visual question mark, no exposition.
-10. Mark `hook_type` for the cold_open panel, verbal_hook panel (panel 2), emotional_capture panel (panel 4), and cliffhanger panel in `screenplay_instructions`.
-11. Every episode MUST end on a cliffhanger or revelation — never on resolution.
+10. Mark `hook_type` for the cold_open panel, verbal_hook panel (panel 2), emotional_capture panel (panel 4), and cliffhanger panel in `screenplay_instructions`. Also note `hook_formula` (status_reversal / impossible_situation / hidden_identity / ticking_clock / shocking_revelation) for panel 1, and `cliffhanger_type` (physical_threat / shocking_revelation / emotional_rupture / interrupted_action) for the final panel.
+11. Every episode MUST end on a cliffhanger or revelation — never on resolution. Within each chapter's 3 episodes (pov_a, pov_b, confrontation), each must use a DIFFERENT `cliffhanger_type` — no two episodes in the same chapter share the same type.
 12. In `screenplay_instructions`, include the episode sonic arc: name exactly where silence lives, where the sonic hit lands, and what the crescendo moment is.
 13. In `visual_continuity_rules`, tag any visual motif established in this episode with "MOTIF:" prefix so downstream episodes can call it back deliberately.
 14. Note intended shot scale (ECU / CU / MS / WIDE) for each panel position in `screenplay_instructions` to enforce scale rhythm.
