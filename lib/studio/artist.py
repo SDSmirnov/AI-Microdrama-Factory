@@ -331,7 +331,7 @@ def _build_grid_prompt(scene: dict, prompts: dict, config: dict) -> str:
 _MAX_GRID_RETRIES = 3
 # Slightly increase temperature on each retry to vary output.
 # Range 0.35–0.45 is intentionally narrow: enough to diversify without breaking prompt-following.
-_GRID_BASE_TEMP = 0.35
+_GRID_BASE_TEMP = 0.55
 _GRID_TEMP_STEP = 0.05
 
 
