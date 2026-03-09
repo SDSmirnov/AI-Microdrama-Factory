@@ -1,4 +1,4 @@
-"""Screenplay commands: screenplay, scenes, consistency, summary."""
+"""Screenplay commands: screenplay, scenes, consistency, summary, split-book."""
 import argparse
 import json
 import logging
@@ -7,6 +7,7 @@ from pathlib import Path
 
 from lib.commands.common import _make_llm, _make_vision_llm
 from lib.core.project import Project, load_project
+from lib.core.prompts import PROMPTING_DIR
 from lib.core.utils import atomic_write, load_metadata
 from lib.studio.artist import export_image_prompt, load_character_refs
 from lib.studio.director import run_continuity_pass
@@ -182,6 +183,31 @@ This summary will be injected verbatim into the next chapter prompt.
     logger.info(f"✅ Summary written to {out_path}")
 
 
+def cmd_split_book(args):
+    from lib.studio.bookbinder import split_book
+
+    project, _, _ = load_project(style=args.style)
+
+    prompt_path = PROMPTING_DIR / args.style / "book-shrinker.md"
+    if not prompt_path.exists():
+        logger.error(
+            f"❌ book-shrinker.md not found for style '{args.style}' at {prompt_path}"
+        )
+        sys.exit(1)
+    shrinker_prompt = prompt_path.read_text(encoding="utf-8")
+
+    llm = _make_llm(args.llm, project)
+    text = Path(args.novel).read_text(encoding="utf-8")
+    out_dir = Path(args.output_dir)
+
+    try:
+        files = split_book(text, llm, shrinker_prompt, out_dir, season=args.season)
+    except RuntimeError as e:
+        logger.error(f"❌ {e}")
+        sys.exit(1)
+    logger.info(f"✅ Split into {len(files)} episode file(s) in {out_dir}/")
+
+
 def register(sub):
     p = sub.add_parser('screenplay', help='Full screenplay + keyframe pipeline')
     p.add_argument('novel', help='Novel text file')
@@ -201,3 +227,18 @@ def register(sub):
     p.add_argument('--output', default='chapter_summary.txt',
                    help='Output path for the summary (default: chapter_summary.txt)')
     p.set_defaults(func=cmd_summary)
+
+    p = sub.add_parser(
+        'split-book',
+        help='Split a full novel into filmable episode chunks for 3-POV vertical microdrama',
+    )
+    p.add_argument('novel', help='Path to the full novel text file')
+    p.add_argument(
+        '--output-dir', default='book-split',
+        help='Output directory for episode files (default: book-split)',
+    )
+    p.add_argument(
+        '--season', type=int, default=1,
+        help='Season number for output filename prefix, e.g. 1 → s01eNNN.txt (default: 1)',
+    )
+    p.set_defaults(func=cmd_split_book)

@@ -26,6 +26,7 @@ Usage:
     python cli.py dub video.mp4 output.mp3 [context.txt]
     python cli.py duck video.mp4 dubbed.mp3 output.mp3
     python cli.py summary s01e01.txt [--output summary.txt]
+    python cli.py --llm openrouter --style vertical_9_16_dark_romance split-book fullbook.txt [--output-dir book-split] [--season 1]
 """
 import argparse
 import datetime
