@@ -27,7 +27,7 @@ REFS           ?=
 VOICEOVER_DIR  ?= cinematic_render/voiceover
 VOICEOVER_SH   ?= voiceover.sh
 
-.PHONY: help init workdirs styles casting refs screenplay scenes consistency storyboard qa apply-qa accept-qa rebuild-storyboard refinement animation \
+.PHONY: help init workdirs styles casting refs screenplay scenes reverse-refine consistency storyboard qa apply-qa accept-qa rebuild-storyboard refinement animation \
         autocut imgedit tts voiceover dub duck summary split-book
 
 help:  ## Show this help
@@ -53,6 +53,9 @@ screenplay:  ## Run full screenplay + scene keyframe pipeline
 
 scenes:  ## Generate keyframes for episode SCENE (or all)
 	python cli.py --llm $(LLM) --style $(STYLE) scenes $(SCENE)
+
+reverse-refine:  ## Refinement + reversal pass on existing raw episode JSON (SCENE=N required)
+	python cli.py --llm $(LLM) --style $(STYLE) reverse-refine $(SCENE)
 
 consistency:  ## Run continuity enforcer to sync references (dry-run by default; use RENDER=--no-dry-run to regenerate PNGs)
 	python cli.py --llm $(LLM) --style $(STYLE) consistency $(RENDER)

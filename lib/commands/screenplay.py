@@ -11,7 +11,10 @@ from lib.core.prompts import PROMPTING_DIR
 from lib.core.utils import atomic_write, load_metadata
 from lib.studio.artist import export_image_prompt, load_character_refs
 from lib.studio.director import run_continuity_pass
-from lib.studio.screenwriter import analyze_scenes_master, merge_scenes, run_scenes_pipeline
+from lib.studio.screenwriter import (
+    analyze_scenes_master, merge_scenes, process_single_scene, run_scenes_pipeline,
+    _write_episode_checkpoint,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -183,6 +186,67 @@ This summary will be injected verbatim into the next chapter prompt.
     logger.info(f"✅ Summary written to {out_path}")
 
 
+def cmd_reverse_refine(args):
+    """Refine + reversal pass on an already-generated raw episode JSON, then upsert into metadata."""
+    try:
+        ep_num = int(args.scene)
+    except (ValueError, TypeError):
+        logger.error("❌ SCENE must be an integer episode number.")
+        sys.exit(1)
+
+    project, prompts, config = load_project(style=args.style)
+    llm = _make_llm(args.llm, project, system_prompt=prompts['screenplay'])
+    load_character_refs(project)
+
+    raw_path = project.output_dir / f"animation_episode_scenes_{ep_num:03d}.json"
+    if not raw_path.exists():
+        logger.error(f"❌ {raw_path} not found. Run 'make scenes SCENE={ep_num}' first.")
+        sys.exit(1)
+
+    raw = json.loads(raw_path.read_text(encoding='utf-8'))
+    scenes = raw.get('scenes', [])
+    if not scenes:
+        logger.error(f"❌ No scenes found in {raw_path}.")
+        sys.exit(1)
+
+    all_scenes: list = []
+    prev_terminal: str | None = None
+    for idx, scene in enumerate(scenes, 1):
+        refined = process_single_scene(
+            ep_num, idx, scene, prompts, config, llm, all_scenes,
+            output_dir=project.output_dir,
+            character_info=project.character_info,
+            prev_scene_terminal=prev_terminal,
+        )
+        if refined:
+            last_panel = max(
+                refined.get('panels', []),
+                key=lambda p: p.get('panel_index', 0),
+                default=None,
+            )
+            if last_panel:
+                prev_terminal = last_panel.get('visual_end', '')
+
+    _write_episode_checkpoint(ep_num, all_scenes, project.output_dir)
+    logger.info(f"✅ Wrote animation_episode_scenes_{ep_num:03d}_refined.json")
+
+    meta_path = project.output_dir / "animation_metadata.json"
+    if meta_path.exists():
+        try:
+            metadata = json.loads(meta_path.read_text(encoding='utf-8'))
+        except json.JSONDecodeError as e:
+            logger.error(f"❌ Corrupt animation_metadata.json: {e}.")
+            sys.exit(1)
+    else:
+        metadata = {}
+
+    new_ep_ids = {s.get('episode_id') for s in all_scenes if s.get('episode_id')}
+    metadata['scenes'] = merge_scenes(metadata, all_scenes, new_ep_ids, project.panels_dir)
+    metadata.setdefault('config', config)
+    atomic_write(meta_path, json.dumps(metadata, ensure_ascii=False, indent=2))
+    logger.info(f"✅ animation_metadata.json updated: {len(metadata['scenes'])} total scene(s)")
+
+
 def cmd_split_book(args):
     from lib.studio.bookbinder import split_book
 
@@ -216,6 +280,10 @@ def register(sub):
     p = sub.add_parser('scenes', help='Generate keyframes for episode(s)')
     p.add_argument('scene', nargs='?', default='all', help='Episode number or "all"')
     p.set_defaults(func=cmd_scenes)
+
+    p = sub.add_parser('reverse-refine', help='Refinement + reversal pass on existing raw episode JSON')
+    p.add_argument('scene', type=int, help='Episode number (e.g. 2 → reads animation_episode_scenes_002.json)')
+    p.set_defaults(func=cmd_reverse_refine)
 
     p = sub.add_parser('consistency', help='Run continuity enforcer')
     p.add_argument('--dry-run', action=argparse.BooleanOptionalAction, default=True,

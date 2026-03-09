@@ -8,6 +8,7 @@ Usage:
     python cli.py casting s01e01.txt [--style vertical_9_16_microdrama]
     python cli.py screenplay s01e01.txt [--style vertical_9_16_microdrama]
     python cli.py scenes [SCENE|all] [--style vertical_9_16_microdrama]
+    python cli.py reverse-refine N [--style vertical_9_16_microdrama]
     python cli.py consistency
     python cli.py storyboard [SCENE|all] [--style vertical_9_16_microdrama]
     python cli.py qa [--scene N [--panel N ...]] [--threshold N]
