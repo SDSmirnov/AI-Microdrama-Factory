@@ -1,10 +1,8 @@
 """
 Stylist — Novel analysis and custom prompt generation.
 
-Port of 00_style_master.py, migrated from legacy google.generativeai SDK
-to OpenRouterLLM (configurable backend via cli.py --llm flag).
-
-STYLE_PRESETS dict preserved verbatim from 00_style_master.py:38-106.
+Reads templates from lib/prompting/<style>/ (with legacy prompts/ fallback),
+generates custom_prompts/ overlay files for the selected style.
 """
 import json
 import logging
@@ -15,14 +13,16 @@ from lib.llm.base import BaseLLM
 
 logger = logging.getLogger(__name__)
 
-PROMPTS_DIR = Path("prompts")
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+PROMPTING_DIR = _PROJECT_ROOT / "lib" / "prompting"
+PROMPTS_DIR = _PROJECT_ROOT / "prompts"   # legacy fallback
 CUSTOM_DIR = Path("custom_prompts")
 
 # ---------------------------------------------------------------------------
-# Style presets — verbatim from 00_style_master.py:38-106
+# Style presets — keyed by lib/prompting/ directory name
 # ---------------------------------------------------------------------------
 STYLE_PRESETS: Dict[str, Dict] = {
-    "vertical_microdrama": {
+    "vertical_9_16_microdrama": {
         "name": "Vertical MicroDrama - Realistic Cinematic",
         "format": "single_grid_animation",
         "panels_per_scene": 9,
@@ -33,77 +33,52 @@ STYLE_PRESETS: Dict[str, Dict] = {
         "needs_captions": False,
         "camera_style": "cinematic_fpov"
     },
-    "realistic_movie": {
-        "name": "Realistic Cinematic",
+    "vertical_9_16_dark_romance": {
+        "name": "Vertical Dark Romance - Realistic Cinematic",
         "format": "single_grid_animation",
         "panels_per_scene": 9,
-        "aspect_ratio": "16:9",
+        "aspect_ratio": "9:16",
         "resolution": "2K",
         "needs_start_end": True,
         "needs_dialogue": True,
         "needs_captions": False,
         "camera_style": "cinematic_fpov"
     },
-    "anime": {
-        "name": "Anime Style",
-        "format": "single_grid",
-        "panels_per_scene": 6,
-        "aspect_ratio": "16:9",
+    "vertical_9_16_long_arc": {
+        "name": "Vertical Long Arc - Realistic Cinematic",
+        "format": "single_grid_animation",
+        "panels_per_scene": 9,
+        "aspect_ratio": "9:16",
         "resolution": "2K",
-        "needs_start_end": False,
+        "needs_start_end": True,
         "needs_dialogue": True,
         "needs_captions": False,
-        "camera_style": "dynamic_angles"
+        "camera_style": "cinematic_fpov"
     },
-    "comic_book": {
-        "name": "Comic Book",
-        "format": "single_grid",
-        "panels_per_scene": 9,
-        "aspect_ratio": "2:3",
-        "resolution": "2K",
-        "needs_start_end": False,
-        "needs_dialogue": True,
-        "needs_captions": False,
-        "camera_style": "comic_dramatic"
-    },
-    "graphic_novel": {
-        "name": "Graphic Novel",
-        "format": "single_grid",
-        "panels_per_scene": 6,
-        "aspect_ratio": "2:3",
-        "resolution": "2K",
-        "needs_start_end": False,
-        "needs_dialogue": False,
-        "needs_captions": True,
-        "camera_style": "artistic_composition"
-    },
-    "watchmen_style": {
-        "name": "The Watchmen Comic",
-        "format": "single_grid",
-        "panels_per_scene": 9,
-        "aspect_ratio": "2:3",
-        "resolution": "2K",
-        "needs_start_end": False,
-        "needs_dialogue": True,
-        "needs_captions": True,
-        "camera_style": "symmetrical_grounded"
-    }
 }
 
+_DEFAULT_STYLE = "vertical_9_16_microdrama"
 
-def _load_template(filename: str) -> str:
-    path = PROMPTS_DIR / filename
+
+def _style_dir(style: str) -> Path:
+    """Return the prompting dir for style, falling back to legacy prompts/."""
+    d = PROMPTING_DIR / style
+    return d if d.exists() else PROMPTS_DIR
+
+
+def _load_template(filename: str, style: str) -> str:
+    path = _style_dir(style) / filename
     return path.read_text(encoding='utf-8') if path.exists() else ""
 
 
 def _normalize_style_key(style_name: str) -> str:
+    if style_name in STYLE_PRESETS:
+        return style_name
     key = style_name.lower().replace(" ", "_").replace("the_", "")
-    if key in STYLE_PRESETS:
-        return key
     for k in STYLE_PRESETS:
         if k in key or key in k:
             return k
-    return "realistic_movie"
+    return _DEFAULT_STYLE
 
 
 def analyze_novel(text: str, llm: BaseLLM) -> dict:
@@ -160,7 +135,7 @@ Novel excerpt:
 
 
 def generate_custom_prompts(novel_data: dict, style_name: str, llm: BaseLLM):
-    """Generate custom prompts adapted to the given style."""
+    """Generate custom_prompts/ overlay files adapted to the given style."""
     logger.info(f"\n🎨 Generating prompts for style: {style_name}")
 
     style_key = _normalize_style_key(style_name)
@@ -173,7 +148,7 @@ def generate_custom_prompts(novel_data: dict, style_name: str, llm: BaseLLM):
 
     # --- style.md ---
     logger.info("  📝 Generating style.md...")
-    style_template = _load_template("style.md")
+    style_template = _load_template("style.md", style_key)
     style_prompt = f"""
 Based on this novel metadata: {novel_json}
 And target visual style: {preset['name']}
@@ -197,7 +172,7 @@ Return ONLY the filled markdown content, no explanations.
 
     # --- casting.md ---
     logger.info("  📝 Generating casting.md...")
-    casting_template = _load_template("casting.md")
+    casting_template = _load_template("casting.md", style_key)
     casting_prompt = f"""
 Based on novel: {novel_json}
 Visual style: {preset['name']}
@@ -206,12 +181,10 @@ Generate casting.md following template:
 {casting_template}
 
 Adjust character description format for {preset['name']}:
-- Realistic movie: photorealistic actor descriptions
+- Realistic cinematic: photorealistic actor descriptions
 - Anime: anime character design (hair style, eye shape, costume details)
 - Comic: bold features, distinctive visual traits, iconic costume
 - Graphic novel: artistic, expressive features
-
-Reference shot should match style ({preset.get('ref_aspect_ratio', '3:4')}).
 
 Return filled markdown.
 """
@@ -219,7 +192,7 @@ Return filled markdown.
 
     # --- scenery.md ---
     logger.info("  📝 Generating scenery.md...")
-    scenery_template = _load_template("scenery.md")
+    scenery_template = _load_template("scenery.md", style_key)
     scenery_prompt = f"""
 Novel metadata: {novel_json}
 Style: {preset['name']}
@@ -242,7 +215,7 @@ Return filled markdown.
 
     # --- imagery.md ---
     logger.info("  📝 Generating imagery.md...")
-    imagery_template = _load_template("imagery.md")
+    imagery_template = _load_template("imagery.md", style_key)
     imagery_prompt = f"""
 Style: {preset['name']}
 Format: {preset['format']}
@@ -266,7 +239,7 @@ Return filled markdown.
 
     # --- setting.md ---
     logger.info("  📝 Generating setting.md...")
-    setting_template = _load_template("setting.md")
+    setting_template = _load_template("setting.md", style_key)
     replacements = {
         "{{genre_description}}": ", ".join(novel_data.get('genre', [])),
         "{{setting_description}}": json.dumps(novel_data.get('setting', {}), ensure_ascii=False),
@@ -285,38 +258,44 @@ Return filled markdown.
     (CUSTOM_DIR / "setting.md").write_text(content, encoding='utf-8')
 
     # --- config.json ---
+    # Copy base style config.json into custom_prompts/ as a deep-merge override
+    # starting point. This preserves all fields (transitions, multi_pov, vertical, etc.)
+    # that would otherwise be lost if we reconstruct from the preset dict alone.
     logger.info("  📝 Generating config.json...")
-    config = {
-        "format": {
-            "type": preset['format'],
-            "panels_per_scene": preset['panels_per_scene']
-        },
-        "episodes_count": 3,
-        "image_generation": {
-            "aspect_ratio": preset['aspect_ratio'],
-            "resolution": preset['resolution'],
-            "image_size": preset['resolution']
-        },
-        "animation": {
-            "enabled": preset['needs_start_end'],
-            "keyframe_type": "start_end" if preset['needs_start_end'] else "static"
-        },
-        "slicing": {
-            "enabled": True,
-            "frame_types": ["start", "end"] if preset['needs_start_end'] else ["static"]
-        },
-        "dialogue": {
-            "enabled": preset['needs_dialogue'],
-            "placement": "metadata_only" if not preset['needs_captions'] else "captions"
-        },
-        "captions": {
-            "enabled": preset['needs_captions']
-        },
-        "reference_characters": {
-            "enabled": True,
-            "auto_cast": True
+    base_config_path = _style_dir(style_key) / "config.json"
+    if base_config_path.exists():
+        config = json.loads(base_config_path.read_text(encoding='utf-8'))
+    else:
+        config = {
+            "format": {
+                "type": preset['format'],
+                "panels_per_scene": preset['panels_per_scene']
+            },
+            "image_generation": {
+                "aspect_ratio": preset['aspect_ratio'],
+                "resolution": preset['resolution'],
+                "image_size": preset['resolution']
+            },
+            "animation": {
+                "enabled": preset['needs_start_end'],
+                "keyframe_type": "start_end" if preset['needs_start_end'] else "static"
+            },
+            "slicing": {
+                "enabled": True,
+                "frame_types": ["start", "end"] if preset['needs_start_end'] else ["static"]
+            },
+            "dialogue": {
+                "enabled": preset['needs_dialogue'],
+                "placement": "captions" if preset['needs_captions'] else "metadata_only"
+            },
+            "captions": {
+                "enabled": preset['needs_captions']
+            },
+            "reference_characters": {
+                "enabled": True,
+                "auto_cast": True
+            }
         }
-    }
     (CUSTOM_DIR / "config.json").write_text(json.dumps(config, indent=2, ensure_ascii=False), encoding='utf-8')
 
     logger.info(f"\n✅ Custom prompts created in {CUSTOM_DIR}/")
