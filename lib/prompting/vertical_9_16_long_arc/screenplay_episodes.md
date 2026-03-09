@@ -9,113 +9,162 @@ We film great viral vertical microdramas.
 
 ## LONG ARC FORMAT — CORE CONCEPT
 
-**Every 2 consecutive episodes form ONE dramatic unit (18 panels total = ~60s of finished edit).**
+**Each dramatic unit spans N consecutive episodes (configurable: 2 or 3). Together they form one continuous arc of 18 or 27 panels.**
 
-The dramatic arc — from cold_open hook to cliffhanger — spans BOTH episodes. No episode is self-contained.
-Episode 1 (ARC PART 1) builds the setup and ends on a suspended action called an `arc_bridge`.
-Episode 2 (ARC PART 2) picks up exactly from that bridge and carries through to the true cliffhanger.
+The dramatic arc — from cold_open hook to cliffhanger — runs across ALL episodes in the unit. No episode is self-contained.
+Every intermediate episode ends on an `arc_bridge` (suspended action, not a cliffhanger).
+Only the final episode ends on the true `cliffhanger`.
 
-This exists because each AI-generated clip (~6s raw) is trimmed to 2–4s in editing.
-9 panels × ~3s = ~27s per episode after edit. Two episodes back-to-back = ~54s continuous.
-A single hook-to-cliffhanger arc across 18 panels feels like a complete 1-minute chapter, not two disconnected micro-episodes.
+**Why this format exists:** Each AI-generated clip (~6s raw) is trimmed to 2–4s in editing.
+9 panels × ~3s = ~27s per episode after edit. N episodes back-to-back = ~54s (N=2) or ~81s (N=3) continuous.
+A single hook-to-cliffhanger arc across N episodes feels like a complete chapter, not disconnected micro-episodes.
 
-**Episode types:**
-- `arc_part1` — first half of the dramatic unit (panels 1–9, setup through mid-arc)
-- `arc_part2` — second half of the dramatic unit (panels 10–18 in the arc, continuation through cliffhanger)
-- `transition` — atmosphere-only bridge episode (between two dramatic units, no character conflict)
+**Episode types (set per episode in the screenplay):**
+- `arc_open` — first episode of the unit. Panels: cold_open → … → arc_bridge.
+- `arc_mid` — middle episode(s) only in N=3 arcs. Panels: arc_pickup → … → arc_bridge.
+- `arc_close` — final episode of the unit. Panels: arc_pickup → … → cliffhanger.
+- `transition` — atmosphere-only bridge between two arc units, no character conflict.
 
-## 18-PANEL MACRO ARC STRUCTURE
+## ARC UNIT CONFIGURATIONS
 
-### ARC PART 1 — "Setup" (Episode 1, Panels 1–9)
+### 2-EPISODE ARC (N=2, 18 panels, ~54s finished edit)
 
-**The 3-Second Law:** Episode opens in medias res — the most visually arresting moment, zero explanation.
+```
+arc_open  (Ep1, P1–9):  cold_open → verbal_hook → context → escalation →
+                         emotional_capture → rising_action → atm_insert →
+                         mid_revelation → arc_bridge
+arc_close (Ep2, P1–9):  arc_pickup → escalation_return → confrontation_build →
+                         confrontation_peak → atm_insert → twist → reversal →
+                         consequence → cliffhanger
+```
 
-**The 7-Second Verbal Hook:** By panel 2 (≈7s mark), a character must speak the episode's entire conflict in ≤8 words — an ultimatum, threat, confession, or challenge. This hangs in the air unanswered through both episodes.
+### 3-EPISODE ARC (N=3, 27 panels, ~81s finished edit)
 
-**The 21-Second Emotional Capture:** By panel 5 (≈30s mark of episode 1), the viewer must be emotionally committed. Create an irreversible action, line crossed, or secret revealed.
+```
+arc_open  (Ep1, P1–9):  cold_open → verbal_hook → context → first_escalation →
+                         emotional_capture → rising_action → atm_insert →
+                         mid_revelation → arc_bridge
+arc_mid   (Ep2, P1–9):  arc_pickup → escalation_return → complication →
+                         rising_pressure → atm_insert → new_revelation →
+                         stakes_raised → pre_confrontation → arc_bridge
+arc_close (Ep3, P1–9):  arc_pickup → confrontation_build → confrontation_peak →
+                         peak_intensity → atm_insert → twist → reversal →
+                         consequence → cliffhanger
+```
 
-**Cold Open = Visual Question Mark:** Show consequence before cause: the reaction before the stimulus, the wound before the weapon. Never open on exposition.
+## PANEL POSITION REFERENCE
 
-**Arc Bridge (Panel 9 of Episode 1):**
-The episode 1 finale is NOT a cliffhanger. It is an `arc_bridge`: a moment of suspended action — a decision not yet made, a word not yet spoken, a hand raised but not yet descended. The viewer cannot not watch episode 2. But unlike a cliffhanger (which freezes on maximum tension), the arc_bridge freezes on a moment of *chosen suspension* — the character is at the threshold, not over it. The drama belongs to the next episode.
-Example: character's hand hovers over a send button, finger 1cm from screen; their face shows the decision forming but not yet made. Episode ends.
+### arc_open (always identical regardless of N)
 
-### ARC PART 2 — "Payoff" (Episode 2, Panels 1–9)
+| Panel | Role | Hook Type |
+|-------|------|-----------|
+| P1 | cold_open | cold_open |
+| P2 | verbal_hook | verbal_hook |
+| P3 | context | — |
+| P4 | first_escalation | — |
+| P5 | emotional_capture | emotional_capture |
+| P6 | rising_action | — |
+| P7 | atmosphere_insert | — |
+| P8 | mid_revelation | — |
+| P9 | arc_bridge | arc_bridge |
 
-**Arc Pickup (Panel 1 of Episode 2):**
-NOT a cold_open. The arc_pickup continues seamlessly from the bridge — same location, same moment, 1–2 seconds later. The viewer who scrolled to episode 2 must feel zero gap. The viewer who found episode 2 first must immediately understand the stakes through action, not exposition.
+### arc_mid (only in N=3 arcs)
 
-**Mid-arc Confrontation:** By panel 4 of episode 2 (panel 13 of the arc), maximum conflict must erupt — the confrontation that the entire episode 1 was building toward.
+| Panel | Role | Hook Type |
+|-------|------|-----------|
+| P1 | arc_pickup | arc_pickup |
+| P2 | escalation_return | — |
+| P3 | complication | — |
+| P4 | rising_pressure | — |
+| P5 | atmosphere_insert | — |
+| P6 | new_revelation | — |
+| P7 | stakes_raised | — |
+| P8 | pre_confrontation | — |
+| P9 | arc_bridge | arc_bridge |
 
-**True Cliffhanger (Panel 9 of Episode 2):**
-Freeze on maximum unresolved tension. One visible element with two possible interpretations. The viewer rewinds because the image contains information they missed. Never resolve. Never summarize. End mid-breath.
+### arc_close (always identical regardless of N)
 
-## DRAMATIC ARCHITECTURE — SUMMARY
+| Panel | Role | Hook Type |
+|-------|------|-----------|
+| P1 | arc_pickup | arc_pickup |
+| P2 | escalation_return (N=2) / confrontation_build (N=3) | — |
+| P3 | confrontation_build (N=2) / confrontation_peak (N=3) | — |
+| P4 | confrontation_peak (N=2) / peak_intensity (N=3) | — |
+| P5 | atmosphere_insert | — |
+| P6 | twist | — |
+| P7 | reversal | — |
+| P8 | consequence | — |
+| P9 | cliffhanger | cliffhanger |
 
-| Panel | Arc Position | Role | Hook Type |
-|-------|-------------|------|-----------|
-| Ep1.P1 | 1/18 | cold_open | cold_open |
-| Ep1.P2 | 2/18 | verbal_hook | verbal_hook |
-| Ep1.P3 | 3/18 | context | — |
-| Ep1.P4 | 4/18 | first_escalation | — |
-| Ep1.P5 | 5/18 | emotional_capture | emotional_capture |
-| Ep1.P6 | 6/18 | rising_action | — |
-| Ep1.P7 | 7/18 | atmosphere_insert | — |
-| Ep1.P8 | 8/18 | mid_revelation | — |
-| Ep1.P9 | 9/18 | arc_bridge | arc_bridge |
-| Ep2.P1 | 10/18 | arc_pickup | arc_pickup |
-| Ep2.P2 | 11/18 | escalation_return | — |
-| Ep2.P3 | 12/18 | confrontation_build | — |
-| Ep2.P4 | 13/18 | confrontation_peak | — |
-| Ep2.P5 | 14/18 | atmosphere_insert | — |
-| Ep2.P6 | 15/18 | twist | — |
-| Ep2.P7 | 16/18 | reversal | — |
-| Ep2.P8 | 17/18 | consequence | — |
-| Ep2.P9 | 18/18 | cliffhanger | cliffhanger |
+*Note for arc_close:* In a N=2 arc the confrontation must build across panels 2–4 (no arc_mid to warm it up). In a N=3 arc the confrontation is already boiling from arc_mid, so panels 2–4 are immediate collision and peak intensity.
+
+## KEY DRAMATIC MECHANICS
+
+**The 3-Second Law:** arc_open opens in medias res — most visually arresting moment, zero explanation.
+
+**The 7-Second Verbal Hook:** By arc_open.p2, a character crystallises the entire arc's conflict in ≤8 words — an ultimatum, threat, confession, or challenge. This question hangs unanswered until arc_close.
+
+**The 21-Second Emotional Capture:** By arc_open.p5, the viewer must be emotionally committed. An irreversible action, line crossed, or secret revealed.
+
+**Arc Bridge (every intermediate episode's final panel):**
+NOT a cliffhanger. The arc_bridge is a moment of *chosen suspension* — the character is at the threshold, not over it.
+A decision not yet made, a word not yet spoken, a hand raised but not yet descended.
+The drama belongs to the next episode, not this one.
+- sound_design: silence (always — the episode boundary is a sonic reset)
+- motion_prompt ends before the action completes
+- visual_end: the hand is 1cm from the target, the mouth open but the word unspoken
+- Must plan a match_cut shape in visual_end that connects to the next episode's arc_pickup visual_start
+
+**Arc Pickup (every non-open episode's first panel):**
+NOT a cold_open. Same location, same moment, 1–2 seconds later in narrative time.
+- Viewer who came from the previous episode feels zero gap
+- Viewer who starts here must read stakes through action and image, never exposition
+- Voiceover carries the character's inner decision at the moment of crossing
+
+**True Cliffhanger (arc_close.p9 only):**
+Freeze on maximum unresolved tension. One visible element with two possible interpretations.
+The viewer rewinds because the image contains information they missed. End mid-breath. Never resolve.
 
 ## GOLDEN RULES
 
-**Shot Scale Rhythm:** Prevent monotony by alternating scale across panels.
-After 2–3 consecutive ECU/CU panels, insert one MS or WIDE to re-establish spatial context before the next escalation.
-Note intended shot scale (ECU / CU / MS / WIDE) for each panel position in screenplay_instructions.
+**Shot Scale Rhythm:** After 2–3 consecutive ECU/CU panels, insert MS or WIDE to re-establish spatial context.
+Note intended shot scale (ECU / CU / MS / WIDE) for each panel in screenplay_instructions.
 
-**Dialogue Contract:** Max 8 words per line. People interrupt. People go silent. Silence is dialogue.
-**Voiceover Contract:** Inner monologue. Synced to visual. Reveals subtext (fear, memory, desire) — never describes what we see.
+**Dialogue Contract:** Max 8 words per line. Interruptions. Silence.
+**Voiceover Contract:** Inner monologue. Reveals subtext — never narrates the visible.
 
-**Sonic Arc — plan the 18-panel sound journey in screenplay_instructions:**
-Map explicitly where silence lives, where the sonic hit lands, where the crescendo peaks across BOTH episodes.
-The arc_bridge panel (ep1.p9) must end on held silence — the cut to episode 2 is a sonic reset.
-The arc_pickup (ep2.p1) begins into that silence, then rebuilds tension from scratch.
+**Sonic Arc — plan across all N episodes in screenplay_instructions:**
+- Every arc_bridge panel: sound_design=silence (the episode cut is a sonic reset)
+- Every arc_pickup panel: begins into silence, then rebuilds
+- Name exactly where the crescendo lives (must be in arc_close.p3–p4)
 
-**Visual Motif — seed in Episode 1, pay off in Episode 2:**
-In arc_part1, establish at least one recurring visual element: a specific object, gesture, framing, or color.
-Record it in visual_continuity_rules as "MOTIF: [description]" — it must return in the cliffhanger panel of arc_part2, same framing, transformed meaning.
+**Visual Motif — seed in arc_open, pay off in arc_close:**
+Establish one visual motif (object, gesture, framing, color) in arc_open.
+Tag in visual_continuity_rules as "MOTIF: [description]".
+Call it back in arc_close.p9 (cliffhanger) — same framing, transformed meaning.
+In N=3 arcs: echo the motif briefly in arc_mid as well (without payoff — just recognition).
 
-**Cliffhanger = Rewatch Hook, not Summary:**
-The final panel (arc_part2.p9) must leave one visible element unexplained with two possible interpretations.
-Example: a face in ECU showing an emotion that contradicts what just happened.
-
-**Continuity of Tension:** The arc_bridge ends mid-decision. The cliffhanger ends mid-breath. Both cut before resolution.
+**Continuity:** Every state change (location, costume, prop, injury) in one episode must propagate into the next episode's visual_continuity_rules.
 
 ## PRODUCTION INSTRUCTIONS
 
 1. Quote raw narrative text verbatim for context — do not shorten.
-2. Screenplay instructions will drive AI image generation and animation. Be very direct and verbose.
-3. Each 2-episode arc unit covers 60–90 seconds of real-time action across the finished edit.
-4. Add continuity rules for episodes: if in arc_part1 a character takes an action (picks up a weapon, changes location), it must propagate into arc_part2's visual_continuity_rules.
-5. Episodes within one arc are processed as a pair — but arc_part2 must be intelligible to a viewer who starts from episode 2. Establish location, character, and stakes through visible action in arc_pickup.
-6. Mark hook_type for: cold_open, verbal_hook, emotional_capture, arc_bridge, arc_pickup, cliffhanger panels.
-7. Every arc_part1 and arc_part2 episode MUST include exactly one atmosphere_insert panel (ep1.p7 and ep2.p5 by default).
-8. In screenplay_instructions, include the sonic arc across the full 18-panel unit. Name exactly where silence lives, where the sonic hit lands, and what the crescendo moment is.
-9. In visual_continuity_rules, tag any visual motif established in arc_part1 with "MOTIF:" prefix so arc_part2 can call it back deliberately.
-10. Note intended shot scale (ECU / CU / MS / WIDE) for each panel in screenplay_instructions.
-11. DRAMATIC CONTENT SPEC — for each narrative panel in screenplay_instructions, explicitly state:
-    (a) POWER: who controls this moment and through what physical indicator (spatial position, prop ownership, gaze direction)?
-    (b) EMOTION: what specific physical expression is on the primary face — not a label but a description.
-    (c) STAKE OBJECT: one prop or environmental detail that carries the scene's subtext without dialogue.
+2. Screenplay instructions drive AI image generation and animation. Be very direct and verbose.
+3. Each arc unit covers ~54s (N=2) or ~81s (N=3) of real-time action in the finished edit.
+4. Mark hook_type for: cold_open, verbal_hook, emotional_capture, arc_bridge, arc_pickup, cliffhanger panels.
+5. Every episode MUST include exactly one atmosphere_insert panel (arc_open.p7, arc_mid.p5, arc_close.p5).
+6. In screenplay_instructions, include the full sonic arc across the unit. Name where silence lives, where the sonic hit lands, and what the crescendo moment is.
+7. In visual_continuity_rules, tag any visual motif with "MOTIF:" prefix.
+8. Note intended shot scale (ECU / CU / MS / WIDE) for each panel in screenplay_instructions.
+9. DRAMATIC CONTENT SPEC — for each narrative panel explicitly state:
+    (a) POWER: who controls this moment and through what physical indicator?
+    (b) EMOTION: specific physical expression on the primary face — not a label, a description.
+    (c) STAKE OBJECT: one prop or detail carrying subtext without dialogue.
     (d) STATE TRANSITION: what changes between visual_start and visual_end — its dramatic meaning.
-    For atmosphere_insert panels: skip (a) and (b). For (c) specify the single environmental element and its dramatic quality. For (d) specify how the element changes state.
-12. arc_bridge panel (ep1.p9) MUST end on held silence in sound_design. The action must be physically suspended: motion_prompt ends before the action completes.
-13. arc_pickup panel (ep2.p1) MUST begin in the same physical space and moment as arc_bridge, continuing the suspended action. The voiceover carries the inner decision.
+    For atmosphere_insert: skip (a)+(b); specify (c) environmental element and (d) how it changes state.
+10. arc_bridge panel (any episode): sound_design=silence; motion_prompt ends before action completes.
+11. arc_pickup panel (any episode): visual_start continues from previous arc_bridge visual_end — same location, same physical moment.
+12. arc_close in N=2: confrontation must accelerate across panels 2–4 since no arc_mid pre-warmed it. Start arc_close.p2 with immediate escalation, not a slow pickup.
+13. arc_mid (N=3 only): must introduce at least one new narrative element (revelation, character, location, information) that reframes arc_open's events and makes arc_close's confrontation inevitable.
 
 Respond in specified JSON format.

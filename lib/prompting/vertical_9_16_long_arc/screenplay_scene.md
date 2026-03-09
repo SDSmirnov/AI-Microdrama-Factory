@@ -20,140 +20,164 @@ Top 15% and bottom 20% must be visually clear (sky, wall, floor — no faces, no
 Set text_safe_composition: true when this is achieved.
 
 VISUAL DRAMATIC INTENSITY — WHAT GOES IN EVERY NARRATIVE FRAME:
-(Applies to panel_type=narrative only. For atmosphere_insert: skip questions 1–2; fill question 3 with the single environmental element that carries all the drama — scale, texture, or color temperature is the conflict; and fill question 4 with how that element changes state.)
+(Applies to panel_type=narrative only. For atmosphere_insert: fill question 3 with the single environmental element that carries all the drama; fill question 4 with how that element changes state. Skip questions 1–2.)
 
 **visual_start must answer three questions in one image:**
-1. WHO has power right now, and WHO doesn't? — Show it through spatial position (standing over / cornered), posture (open vs. closed), or a prop (who holds the phone, the contract, the weapon).
-2. WHAT specific emotion is visible on the primary face? — Not "he looks angry." Write the physics: "jaw set, lips compressed, eyes tracking her hands rather than her face." The AI renders what you describe.
-3. WHAT detail signals something is at stake? — A door left open, a phone face-down, hands too close together, a glass at the edge of a table. One object carries the threat without naming it.
+1. WHO has power right now, and WHO doesn't? — Show it through spatial position, posture, or a prop.
+2. WHAT specific emotion is visible on the primary face? — Write the physics: "jaw set, lips compressed, eyes tracking her hands." The AI renders what you describe.
+3. WHAT detail signals something is at stake? — A door left open, a phone face-down, hands too close, a glass at the edge of a table.
 
 **visual_end must show a state transition with dramatic weight — not a completed action:**
-- A decision made visible: the hand that finally reaches, eyes that finally meet, fingers releasing a grip that was held for panels.
-- A boundary crossed: physical proximity breached, an object picked up or put down that shifts the power dynamic.
-- A contradiction revealed: the suppressed smile when they should be devastated, the flash of real fear behind a performed confidence.
-- NEVER write visual_end as "the action is done." visual_end is a NEW UNSTABLE STATE — it demands resolution in the next panel.
+- A decision made visible, a boundary crossed, a contradiction revealed.
+- NEVER write visual_end as "the action is done." visual_end is a NEW UNSTABLE STATE.
 
-**ARC BRIDGE EXCEPTION — ep1.p9 only:**
-visual_end must show physical suspension: the action is mid-motion and frozen. The hand is raised, the finger is 1cm from the target, the mouth is open and the word is not spoken. The drama has not crossed its threshold. The cut happens before the action completes.
-motion_prompt MUST end before the action resolves: describe the approach to the action, the last frame before completion, and then stop. The video clip ends there.
+**ARC BRIDGE EXCEPTION — any episode's final panel (arc_bridge):**
+visual_end must show physical suspension: the action is mid-motion and frozen.
+The hand is raised, the finger is 1cm from the target, the mouth open and the word unspoken.
+The drama has not crossed its threshold. The cut happens before the action completes.
+motion_prompt MUST end before the action resolves — describe the approach and the last frame before completion, then stop.
+Plan a match_cut shape in visual_end that will connect to the next episode's arc_pickup visual_start.
 
-**ARC PICKUP — ep2.p1 only:**
-visual_start picks up from the arc_bridge visual_end: same location, same character, same physical position, 1–2 seconds later in narrative time. The motion_prompt begins from where the bridge ended. The voiceover carries the character's inner decision — what they are about to do and why.
+**ARC PICKUP EXCEPTION — any episode's first panel (arc_pickup):**
+visual_start continues from the previous episode's arc_bridge visual_end: same location, same character, same physical position, 1–2 seconds later.
+motion_prompt begins from where the bridge ended — the action now completes.
+Voiceover carries the character's inner decision at the moment of crossing.
 
 **motion_prompt DRAMATIC PHYSICS — hesitation and micro-decision carry more drama than the action itself:**
-The moment before the action: the 0.5s of held breath, the hand that moves toward and slows, the eyes that almost look away but don't. Write these as timestamped physical events.
 WRONG: "He picks up the phone and calls."
-RIGHT: "At 0s phone sits on table, hand rests 10cm to the right. At 1.5s fingers move left, stop 3cm from phone. At 3.0s index finger contacts screen but does not press. At 5.0s hand withdraws into a fist on the table — phone uncalled."
+RIGHT: "At 0s phone sits on table, hand rests 10cm to the right. At 1.5s fingers move left, stop 3cm from phone. At 3.0s index finger contacts screen but does not press. At 5.0s hand withdraws into a fist — phone uncalled."
 
 ## 9-PANEL STRUCTURE BY EPISODE TYPE
 
-### ARC PART 1 (arc_part1) — Setup, Panels 1–9
+### arc_open — First Episode of the Arc Unit
 
-Panel structure is mandatory:
-- Panel 1: cold_open — most arresting image, zero context, maximum visual tension. hook_type: cold_open. [≈0–6s]
-- Panel 2: verbal_hook — character speaks the arc's central conflict in ≤8 words: ultimatum, threat, confession, or challenge. CU on speaker's face. NOT exposition — the conflict naming the stakes. hook_type: verbal_hook. [≈7s mark]
-- Panel 3: context — orient the viewer. Who is this, where are they, what world is this. Delivered through action, not exposition. One MS or WIDE shot for spatial grounding.
-- Panel 4: first_escalation — first obstacle, complication, or pressure arrives.
-- Panel 5: emotional_capture — point of no return: an action taken, a line crossed, a secret revealed. The viewer is locked in. hook_type: emotional_capture. [≈30s mark]
-- Panel 6: rising_action — stakes raised further. A new obstacle or revelation that makes escape impossible.
-- Panel 7: atmosphere_insert — mandatory abstract panel. panel_type: atmosphere_insert. No character close-ups. Amplifies the emotional tone without explaining it. Duration 3–4s.
-- Panel 8: mid_revelation — new information changes the context of everything shown so far. Not the twist (which comes in part 2) — this is the information that makes the twist possible.
-- Panel 9: arc_bridge — hook_type: arc_bridge. Physical suspension: action frozen mid-motion, decision at the threshold but not crossed. sound_design: silence. motion_prompt ends before the action resolves. NEVER a resolution. NEVER a full cliffhanger — the drama has not peaked yet.
+Mandatory panel structure:
+- P1: cold_open — most arresting image, zero context, maximum visual tension. hook_type: cold_open. [≈0–6s]
+- P2: verbal_hook — character speaks the arc's central conflict in ≤8 words: ultimatum, threat, confession, or challenge. CU on speaker's face. hook_type: verbal_hook. [≈7s mark]
+- P3: context — orient the viewer through action, not exposition. One MS or WIDE shot.
+- P4: first_escalation — first obstacle, complication, or pressure arrives.
+- P5: emotional_capture — point of no return: an action taken, a line crossed, a secret revealed. hook_type: emotional_capture. [≈30s mark]
+- P6: rising_action — stakes raised further. A new obstacle or revelation that makes escape impossible.
+- P7: atmosphere_insert — panel_type: atmosphere_insert. No dialogue, no character close-ups. Duration 3–4s.
+- P8: mid_revelation — new information changes the context of everything shown so far. Sets up what follows.
+- P9: arc_bridge — hook_type: arc_bridge. Physical suspension: action frozen mid-motion at the threshold. sound_design: silence. motion_prompt ends before the action resolves.
 
-### ARC PART 2 (arc_part2) — Payoff, Panels 1–9
+### arc_mid — Middle Episode (only in N=3 arcs)
 
-Panel structure is mandatory:
-- Panel 1: arc_pickup — hook_type: arc_pickup. Same location, same moment as arc_bridge, 1–2 seconds later. Continuation, not a new cold_open. Voiceover carries the inner decision. [≈0–6s of ep2]
-- Panel 2: escalation_return — pressure from part 1 returns with increased force. The stakes of the mid_revelation are now active.
-- Panel 3: confrontation_build — the confrontation that part 1 was building toward is now inevitable. Characters approach the collision point.
-- Panel 4: confrontation_peak — maximum conflict. ECU on face. This is the scene's fulcrum — the moment everything depends on.
-- Panel 5: atmosphere_insert — mandatory abstract panel. panel_type: atmosphere_insert. Duration 3–4s. Transition in via smash_cut; transition out via smash_cut or match_cut.
-- Panel 6: twist — one fact changes everything. What the viewer thought was happening was wrong. The information arrives visually — a prop, a reflection, a door opening.
-- Panel 7: reversal — power dynamic inverts. Whoever was in control is now not. Delivered through a physical action or discovery, not dialogue.
-- Panel 8: consequence — the visible cost of the reversal. An irreversible action taken. A state that cannot be undone. Not a resolution — the aftermath is still open.
-- Panel 9: cliffhanger — hook_type: cliffhanger. Freeze on maximum unresolved tension. One visible element with two possible interpretations. End mid-breath. Never resolve. Never summarize. [The Button]
+Mandatory panel structure:
+- P1: arc_pickup — hook_type: arc_pickup. Same location/moment as previous arc_bridge, 1–2 seconds later. Voiceover carries the inner decision.
+- P2: escalation_return — pressure from arc_open returns with increased force.
+- P3: complication — a new obstacle, dimension, or character reframes the situation.
+- P4: rising_pressure — the complication compounds; no clear exit visible.
+- P5: atmosphere_insert — panel_type: atmosphere_insert. Duration 3–4s.
+- P6: new_revelation — information that reframes arc_open's events and makes arc_close's confrontation inevitable.
+- P7: stakes_raised — the cost of the new revelation becomes visible and irreversible.
+- P8: pre_confrontation — the collision between forces is now inevitable; characters are on the collision course, closing distance.
+- P9: arc_bridge — hook_type: arc_bridge. Physical suspension. sound_design: silence. motion_prompt ends before action resolves.
 
-### TRANSITION episode (transition)
+### arc_close — Final Episode of the Arc Unit
+
+arc_close behavior differs slightly by arc length (N):
+
+**N=2 arc (arc_close follows arc_open directly):**
+Confrontation must build fast — no arc_mid pre-warmed it. P2 is immediate escalation, not a slow pickup.
+- P1: arc_pickup — hook_type: arc_pickup.
+- P2: escalation_return — immediate return of full arc_open pressure plus new weight from mid_revelation.
+- P3: confrontation_build — collision now inevitable; characters accelerate toward it.
+- P4: confrontation_peak — maximum conflict. ECU on face. The fulcrum.
+
+**N=3 arc (arc_close follows arc_mid):**
+The confrontation is already boiling. Arrive at it immediately.
+- P1: arc_pickup — hook_type: arc_pickup.
+- P2: confrontation_build — collision is already in motion from arc_mid.pre_confrontation.
+- P3: confrontation_peak — maximum conflict. ECU on face. The fulcrum.
+- P4: peak_intensity — the confrontation at its absolute summit before it breaks.
+
+**Panels P5–P9 are identical regardless of N:**
+- P5: atmosphere_insert — panel_type: atmosphere_insert. Duration 3–4s. Transition in via smash_cut.
+- P6: twist — one fact changes everything. Arrives visually: a prop, a reflection, a door opening.
+- P7: reversal — power dynamic inverts. Delivered through physical action or discovery.
+- P8: consequence — the visible, irreversible cost of the reversal. Not resolution — the aftermath is still open.
+- P9: cliffhanger — hook_type: cliffhanger. Freeze on maximum unresolved tension. One visible element, two possible interpretations. End mid-breath. Never resolve. Never summarize. [The Button]
+
+### transition episode
 Atmosphere-only. ALL 9 panels are atmosphere_insert. No dialogue, no character conflict, no close-ups.
-Serves as visual bridge between two 18-panel arc units. See episode_type_transition.md for full spec.
+Serves as visual bridge between two arc units. See episode_type_transition.md for full spec.
 
 ## MOTION PROMPTS
 
-MOTION_PROMPT PHYSICAL REALISM — the video model renders every word literally, with zero narrative context:
-1. Physical movements only, no emotional language. Emotions go in voiceover/emotional_beat. Use joint angles, degrees, distances.
+MOTION_PROMPT PHYSICAL REALISM — the video model renders every word literally:
+1. Physical movements only, no emotional language. Use joint angles, degrees, distances.
    WRONG: "he recoils in horror"  RIGHT: "at 1.5s his eyes open wide, jaw drops ~2 cm, upper body leans back 10°"
-2. No spectacle verbs for human actions: erupts/sprays/fountains/explodes/bursts → describe the minimal physical event.
-3. No speed metaphors: "blurring speed", "in an instant" → use explicit timestamps and distances.
-4. Anatomically correct scale: a tear is a 2–3 mm bead on the cheek, not "rivers" or "streams".
-5. Before writing any phrase: ask — could the AI render this as a grotesque artifact? If yes, rewrite as plain physical movement.
+2. No spectacle verbs: erupts/sprays/fountains/explodes → describe the minimal physical event.
+3. No speed metaphors: "blurring speed" → use explicit timestamps and distances.
+4. Anatomically correct scale: a tear is a 2–3 mm bead, not "rivers".
+5. Ask before writing: could the AI render this as a grotesque artifact? If yes, rewrite.
 
 MOTION PROMPTS for vertical format:
 - Prefer vertical camera movements: tilt up/down, vertical dolly, snap zoom into eyes
 - Match motion intensity to emotional_beat (dread = slow creep, shock = snap cut energy, rage = handheld shake)
-- For shock/revelation panels: specify fast zoom-in on face in lights_and_camera and motion_prompt — "camera snap-zooms into subject's eyes over 0.5s"
-- For static-camera + dynamic-subject contrast: note "camera locked on tripod, subject moves through frame"
+- For shock/revelation panels: "camera snap-zooms into subject's eyes over 0.5s"
 - Duration ~6s per panel; motion should resolve visually but not narratively
 
 ## CINEMATOGRAPHY TECHNIQUES
 
 TILT REVEAL — vertical-format signature:
-Use tilt in motion_prompt to reveal information progressively top-to-bottom or bottom-to-top.
+Reveal information progressively top-to-bottom or bottom-to-top.
 Mandatory for at least one confrontation or twist panel per arc unit.
-Example: "camera starts on hands gripping a phone, slow tilt upward over 4s, arrives at subject's face."
 
 MICRO-EXPRESSION CLUSTER — rapid escalation:
-Plan 2–3 consecutive ECU panels (panels 3–5 escalation zone of arc_part1) at duration 1–2s each with transition_to_next=jump_cut.
+2–3 consecutive ECU panels (arc_open.p3–p5 or arc_mid.p2–p4) at 1–2s each with transition_to_next=jump_cut.
 Each shows the same face in a different emotion: calm → surprise → fear.
-In motion_prompt, describe only the face: micro-muscle shifts, eye movement, lip compression. No camera movement.
+Locked ECU, no camera movement — only face micro-muscle shifts.
 
 BOKEH / SELECTIVE FOCUS — attention direction:
-In escalation and twist panels, compose with shallow DOF to isolate a single foreground object.
-Specify in lights_and_camera: "shallow DOF, [object] sharp in foreground, subject/background as bokeh."
+In escalation and twist panels, shallow DOF isolates a single foreground object.
+lights_and_camera: "shallow DOF, [object] sharp in foreground, subject/background as bokeh."
 
-SHADOW & SILHOUETTE — indirect reveal (use in escalation/confrontation):
-Show the threat, emotion, or subject through its shadow or silhouette — never directly.
+SHADOW & SILHOUETTE — indirect reveal (escalation/confrontation):
+Show threat, emotion, or subject through shadow or silhouette — never directly.
 
-REFLECTION REVEAL — hidden truth (use in twist panels):
-Show a character's real internal state in a reflective surface while their face performs the opposite.
+REFLECTION REVEAL — hidden truth (twist panels):
+Character's real state in a reflective surface while their face performs the opposite.
 
-RACK FOCUS — prop-to-face revelation (use in escalation/confrontation):
-Camera static. Start with foreground object in sharp focus, subject's face as background bokeh. At peak, pull focus to the face.
+RACK FOCUS — prop-to-face revelation (escalation/confrontation):
+Camera static. Foreground object sharp, face as bokeh. At peak, pull focus to face.
 
-MATCH CUT — visual shape continuity (use in escalation transitions):
+MATCH CUT — visual shape continuity:
 Plan visual_end of one panel to share a geometric shape or motion vector with visual_start of the next.
-MANDATORY: plan at least one match_cut per arc unit in the escalation zone (ep1.p3–p6).
-Also use a match_cut at the arc_bridge → arc_pickup transition to make the join feel seamless.
+MANDATORY: at least one match_cut per episode in the escalation zone.
+MANDATORY: plan the arc_bridge → arc_pickup seam as a match_cut across the episode boundary.
 
 ## SOUND
 
-DIALOGUE: ≤8 words, delivered in CU on speaker's face. Populate both `dialogue` and sync `voiceover` for inner counterpoint.
+DIALOGUE: ≤8 words, CU on speaker's face. Populate both `dialogue` and `voiceover` for inner counterpoint.
 VOICEOVER: inner monologue revealing what the image cannot show. Russian language.
 
 SOUND DESIGN (sound_design) — required for EVERY panel:
-- Plan sonic contrast deliberately: sustained silence broken by a sharp sound is more powerful than continuous noise.
-- MANDATORY: at least one panel per arc_part1 scene must have sound_design="silence" as setup for the next panel's sonic event.
-- arc_bridge panel (ep1.p9) MUST have sound_design="silence" — the cut to episode 2 is a sonic reset.
-- arc_pickup panel (ep2.p1) begins into silence, then rebuilds.
-- For j_cut transitions: describe the next scene's audio that bleeds in.
+- Deliberate sonic contrast: sustained silence broken by a sharp sound > continuous noise.
+- MANDATORY: at least one panel per episode must have sound_design="silence" as setup for the next panel's sonic event.
+- arc_bridge (any): sound_design=silence — the episode cut is a sonic reset.
+- arc_pickup (any): begins into silence, then rebuilds.
+- For j_cut: describe the next panel's audio that bleeds in.
 
 TRANSITION TO NEXT PANEL (transition_to_next):
-- match_cut: share geometric shape or motion vector with visual_start of next. Name the match explicitly in motion_prompt.
+- match_cut: share geometric shape or motion vector with next visual_start. Name the match explicitly in motion_prompt.
 - jump_cut: jarring cut, reduce duration to 2–3s. Use in escalation bursts and micro-expression clusters.
 - smash_cut: maximum contrast — silence cuts to noise, stillness cuts to chaos.
 - j_cut: next panel's audio begins 1–2s before the visual cut.
 - hard_cut: standard clean cut (default).
-- For arc_bridge → arc_pickup (the episode boundary): plan this as match_cut in visual_end of arc_bridge and visual_start of arc_pickup.
+- arc_bridge → arc_pickup (episode boundary): plan as match_cut in both visual_end of bridge and visual_start of pickup.
 
 PANEL TYPE (panel_type):
 - narrative: standard story panel.
-- atmosphere_insert: MANDATORY — exactly one per arc_part1 (at ep1.p7) and one per arc_part2 (at ep2.p5). Duration 3–4s. No dialogue, no character close-ups. Two subtypes:
-  * ENVIRONMENTAL: 1–2 macro-scale elements only (crashing wave, storm wall, lone tree in wind). Grand scale, 2–3 color palette. visual_start: "minimalism: [element], [light condition], hyper-realistic. No people, no faces."
-  * TEXTURE/DETAIL: extreme macro of a single physical surface — cracked concrete, condensation on cold glass, a scar, a burning letter. Shallow DOF, single element, fills the frame.
-  Transition in via smash_cut or match_cut; transition out via smash_cut or match_cut.
+- atmosphere_insert: exactly one per episode (arc_open.p7 / arc_mid.p5 / arc_close.p5). Duration 3–4s. No dialogue, no character close-ups.
+  * ENVIRONMENTAL: 1–2 macro-scale elements. visual_start: "minimalism: [element], [light condition], hyper-realistic. No people, no faces."
+  * TEXTURE/DETAIL: extreme macro of a single physical surface. Shallow DOF, fills the frame.
+  Transition in/out via smash_cut or match_cut.
 
 **IMPORTANT: EACH SCENE MUST HAVE EXACTLY 9 PANELS following the structure above.**
 
 SCENE-LEVEL CAMERA AND LIGHTING MASTER:
-For every scene, generate:
-- camera_master: one sentence capturing the dominant lens (mm), angle, and primary lighting condition shared by all panels in this scene.
-- lighting_master: one sentence capturing key light direction/color/quality, fill ratio, and any visible practicals.
+- camera_master: dominant lens (mm), angle, primary lighting condition — shared by all panels in this scene.
+- lighting_master: key light direction/color/quality, fill ratio, visible practicals.
