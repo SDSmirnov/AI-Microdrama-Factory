@@ -23,7 +23,8 @@ Optional overrides:
 export AI_TEXT_MODEL="gemini-2.5-pro"                  # default
 export AI_IMAGE_MODEL="google/gemini-3-pro-image-preview"  # default
 export AI_GEMINI_MODEL="gemini-2.5-flash"              # default (Gemini-specific tasks)
-export AI_CONCURRENCY="10"                             # thread pool workers
+export AI_CONCURRENCY="10"                             # text/LLM thread pool workers
+export AI_IMAGE_CONCURRENCY="5"                        # image generation thread pool workers
 export AI_SEED="42"                                    # image generation seed (openrouter)
 export AI_LOG_LEVEL="DEBUG"                            # logging verbosity
 export AI_ASPECT_RATIO="9:16"                          # image aspect ratio override (default: per config/preset)
@@ -36,14 +37,18 @@ export AI_REF_ASPECT_RATIO="9:16"                      # reference portrait aspe
 The full pipeline is available as Claude Code slash commands in `.claude/commands/`. Run these in sequence instead of (or alongside) the Python scripts:
 
 ```bash
+# Step 0 (optional): Split a full novel into filmable episode chunks
+# → writes book-split/s01eNNN.txt
+make split-book BOOK=fullbook.txt STYLE=vertical_9_16_microdrama SEASON=1
+
 # Step 1: Analyze the novel — extracts metadata, recommends a visual style
 /analyze-novel s01e01.txt
 
-# Step 1b (optional): Generate style-adapted custom_prompts/ for a chosen preset
-# Presets: vertical_microdrama | realistic_movie | anime | comic_book | graphic_novel | watchmen_style
-/customize-style s01e01.txt realistic_movie
-# → writes all 6 files to custom_prompts/ (style, casting, scenery, imagery, setting, config)
-# → subsequent skills automatically prefer custom_prompts/ over prompts/
+# Step 1b (optional): Generate custom_prompts/ overrides for a chosen style
+# Active styles: vertical_9_16_microdrama | vertical_9_16_dark_romance
+/customize-style s01e01.txt vertical_9_16_microdrama
+# → writes override files to custom_prompts/ (style, casting, scenery, imagery, setting, config)
+# → these overlay on top of lib/prompting/<style>/ at runtime
 
 # Step 2: Generate character/location reference descriptions + image gen prompts
 /cast-characters s01e01.txt
@@ -66,9 +71,13 @@ The full pipeline is available as Claude Code slash commands in `.claude/command
 # Step 6: Generate reversed motion prompts for is_reversed panels
 /reversal-pass cinematic_render/animation_episode_scenes_001_refined.json
 # → updates the file in-place
+
+# Step 7 (optional): Generate chapter summary for continuity into next episode
+/make-summary s01e01.txt
+# → writes chapter_summary.txt
 ```
 
-Each skill reads `custom_prompts/` if available, falls back to `prompts/`. Steps 4–6 repeat per episode. Steps 4–6 are what the Python script automates in parallel; running them manually gives full control over individual episodes.
+Each skill reads `lib/prompting/<style>/` as the primary source, then applies `custom_prompts/` overrides if present. Steps 4–6 repeat per episode. Steps 4–6 are what the Python script automates in parallel; running them manually gives full control over individual episodes.
 
 **Note**: Actual image/grid rendering still requires the Python script — Claude cannot generate images directly.
 
@@ -85,8 +94,11 @@ Uses `--llm {openrouter|gemini|grok|debug}` to select the backend. The `debug` b
 lib/
   core/        # Project config, path constants, prompts loader, JSON schemas, grid utils
   llm/         # BaseLLM ABC + backends: GeminiLLM, OpenRouterLLM, GrokLLM, LogDebugLLM
+  prompting/   # Style preset directories (each: *.md prompts + config.json + book-shrinker.md)
+    vertical_9_16_microdrama/
+    vertical_9_16_dark_romance/
   studio/      # Production pipeline modules:
-    stylist.py      — novel analysis + custom_prompts/ generation
+    stylist.py      — novel analysis + custom_prompts/ overlay generation
     screenwriter.py — episode/scene/reversal AI passes
     artist.py       — casting, reference rendering, grid/panel image generation, slicing
     critic.py       — QA gate: fidelity/consistency scoring per panel
@@ -94,13 +106,18 @@ lib/
     editor.py       — panel refinement using original + reference images
     cutter.py       — autocut: AI-trim animation clips
     retoucher.py    — image editing via LLM
+    bookbinder.py   — split full novel into filmable episode chunks (sliding-window, anchor-based)
+  commands/    # argparse command registration modules (setup, screenplay, storyboard, animation, audio)
   animation/   # Veo (Google) and Grok animators
   audio/       # TTS (Gemini/OpenRouter), SFX (ElevenLabs), dubbing (Whisper→TTS), ducking
 ```
 
 ### Pipeline Stages (via `cli.py` subcommands)
 
-1. **`styles`** (`stylist.analyze_novel` + `generate_custom_prompts`): Extracts genre/tone/characters; writes style-adapted prompts to `custom_prompts/`
+All commands that load prompts accept the global `--style <preset>` flag (default: `vertical_9_16_microdrama`).
+
+0. **`split-book`** (`bookbinder.split_book`): Splits a full novel into filmable episode chunks using a sliding-window, verbatim-anchor strategy. Reads `lib/prompting/<style>/book-shrinker.md`. Writes `book-split/s<SS>eNNN.txt`.
+1. **`styles`** (`stylist.analyze_novel` + `generate_custom_prompts`): Extracts genre/tone/characters; writes `custom_prompts/` overlay files on top of `lib/prompting/<style>/`
 2. **`casting`** (`artist.auto_cast_characters`): Identifies characters/locations/objects from text; saves reference JSONs to `ref_thriller/`
 3. **`refs`** (`artist.render_character_refs`): Generates missing reference portrait PNGs
 4. **`screenplay`** (`screenwriter.analyze_scenes_master`): Episodes → scenes → refinement → reversal pass; writes `animation_metadata.json`
@@ -120,10 +137,13 @@ lib/
 
 | Directory | Purpose |
 |-----------|---------|
-| `prompts/` | Base templates with `{{placeholder}}` syntax |
-| `custom_prompts/` | Style-adapted versions, generated by `cli.py styles` |
+| `lib/prompting/<style>/` | Primary style-specific prompts + `config.json` (shipped with codebase) |
+| `custom_prompts/` | User override files; deep-merged on top of `lib/prompting/<style>/` at runtime |
+| `prompts/` | Legacy fallback only (used if `lib/prompting/<style>/` dir is missing) |
 
-Each directory contains: `style.md`, `casting.md`, `scenery.md`, `imagery.md`, `setting.md`, `config.json`
+`lib/prompting/<style>/` contains: `style.md`, `casting.md`, `scenery.md`, `imagery.md`, `screenplay.md`, `screenplay_scene.md`, `screenplay_episodes.md`, `qa.md`, `episode_type_pov.md`, `episode_type_confrontation.md`, `episode_type_transition.md`, `refinement_arc_rule.md`, `config.json`, `book-shrinker.md`
+
+Available built-in styles: `vertical_9_16_microdrama`, `vertical_9_16_dark_romance`
 
 `config.json` controls format type (`single_grid_animation` or `single_grid`), panels per scene, aspect ratio, resolution, animation mode, slicing, dialogue, and captions.
 
@@ -152,11 +172,12 @@ Built-in token-bucket rate limiters: 25 RPM for refinement calls, 20 RPM for ima
 
 ### JSON Schemas
 
-Four structured output schemas enforce the AI response format:
-- `SCREENPLAY_SCHEMA` — episode-level breakdown with continuity rules
+Structured output schemas in `lib/core/schemas.py` enforce the AI response format:
+- `SCREENPLAY_SCHEMA` — episode-level breakdown with 3-POV fields (`episode_type`, `chapter_id`, `pov_character`, `visual_continuity_rules`)
 - `SCENE_SCHEMA` — scene-level keyframes including `camera_master` / `lighting_master` per scene and full panel fields (motion, reversal, sound, transitions)
 - `CHARACTER_SCHEMA` — reference character/location/object descriptions
 - `SCENE_REWRITE_SCHEMA` — used by the continuity enforcer to align `visual_start`, `visual_end`, and `lights_and_camera` to approved refs
+- `bookbinder._WINDOW_SCHEMA` — split-point anchors returned by `split-book` LLM call
 
 ### Code Style Guidelines
 

@@ -66,7 +66,7 @@ class LogDebugLLM(BaseLLM):
                    aspect_ratio: str = "9:16", image_size: str = "2K",
                    temperature: float = None) -> bytes:
         caller = _caller_name()
-        self._write(caller, prompt, extra=f"aspect_ratio={aspect_ratio}, image_size={image_size}")
+        self._write(caller, prompt + f"REFS: {refs}", extra=f"aspect_ratio={aspect_ratio}, image_size={image_size}")
         raise NotImplementedError("LogDebugLLM: image generation not supported — prompt saved to disk")
 
     def analyze_image(self, image, prompt: str, refs=None, schema: dict = None) -> dict:

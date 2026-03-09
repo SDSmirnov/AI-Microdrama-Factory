@@ -39,13 +39,14 @@ Novel -> screenplay JSON -> scene keyframes -> grid/panel renders -> clips -> au
 ## What This Repository Contains
 
 - End-to-end CLI pipeline in `cli.py` with Makefile wrappers.
-- Prompt system with base templates in `prompts/` and generated style variants in `custom_prompts/`.
+- Style-specific prompt system in `lib/prompting/<style>/`, with optional `custom_prompts/` overlay.
 - Rendering and production outputs in `cinematic_render/`.
 - Character/location/object reference cards and portraits in `ref_thriller/`.
 
 Core pipeline stages:
 
-1. `styles`: analyze novel + generate style-adapted prompts.
+0. `split-book`: split a full novel into filmable episode chunks → `book-split/s<SS>eNNN.txt`.
+1. `styles`: analyze novel + generate `custom_prompts/` overlay on top of `lib/prompting/<style>/`.
 2. `casting`: detect references and write `ref_thriller/*.json`.
 3. `refs`: render missing reference portraits `ref_thriller/*.png`.
 4. `screenplay`: generate episodes/scenes/reversal pass and `animation_metadata.json`.
@@ -88,40 +89,47 @@ Optional overrides:
 - `AI_TEXT_MODEL` (default: `gemini-2.5-pro`)
 - `AI_IMAGE_MODEL` (default: `google/gemini-3-pro-image-preview`)
 - `AI_GEMINI_MODEL` (default: `gemini-2.5-flash`)
-- `AI_CONCURRENCY` (default: `10`)
+- `AI_CONCURRENCY` (default: `10`) — text/LLM thread pool workers
+- `AI_IMAGE_CONCURRENCY` (default: `5`) — image generation thread pool workers
 - `AI_LOG_LEVEL` (default: `INFO`)
+- `AI_ASPECT_RATIO` — override image aspect ratio (e.g. `9:16`)
+- `AI_IMAGE_SIZE` — override image resolution (e.g. `2K`)
+- `AI_REF_ASPECT_RATIO` — override reference portrait aspect ratio
 
 Note: `make init` validates `OPENROUTER_API_KEY`.
 
 ## Quick Start
 
 ```bash
+# 0) (optional) Split full novel into episode chunks
+make split-book BOOK=fullbook.txt STYLE=vertical_9_16_microdrama SEASON=1
+
 # 1) Validate env and create output directories
 make init
 
-# 2) Generate style-adapted prompts (writes custom_prompts/)
-make styles NOVEL=s01e01.txt STYLE=vertical_microdrama
+# 2) (optional) Generate custom_prompts/ overrides for the chosen style
+make styles NOVEL=s01e01.txt STYLE=vertical_9_16_microdrama
 
 # 3) Create/update reference cards
-make casting NOVEL=s01e01.txt CUSTOM=--custom-prompts
+make casting NOVEL=s01e01.txt
 
 # 4) Render missing reference portraits
-make refs CUSTOM=--custom-prompts
+make refs
 
 # 5) Build screenplay + scene keyframes + metadata
-make screenplay NOVEL=s01e01.txt CUSTOM=--custom-prompts
+make screenplay NOVEL=s01e01.txt
 
 # 6) Optional continuity pass (updates animation_metadata.json in-place)
 make consistency
 
 # 7) Render scene grids (or panel images via PANEL=<n>)
-make storyboard SCENE=all PANEL=all CUSTOM=--custom-prompts
+make storyboard SCENE=all PANEL=all
 
 # 8) Run QA
 make qa SCENE=all
 
 # 9) Auto-refine all panels flagged by QA
-make apply-qa SCENE=all CUSTOM=--custom-prompts
+make apply-qa SCENE=all
 
 # 10) Accept refined panels (promotes to panels/, backs up originals)
 make accept-qa
@@ -141,7 +149,7 @@ make animation PROVIDER=veo SCENE=all PANEL=all
 Use `make help` to list all targets. Current targets:
 
 - `init`, `workdirs`
-- `styles`, `casting`, `refs`, `screenplay`, `scenes`, `consistency`
+- `split-book`, `styles`, `casting`, `refs`, `screenplay`, `scenes`, `consistency`
 - `storyboard`, `qa`, `apply-qa`, `accept-qa`, `rebuild-storyboard`, `refinement`, `animation`
 - `autocut`, `voiceover`, `imgedit`, `tts`, `dub`, `duck`
 - `summary`, `webserver`
@@ -150,12 +158,15 @@ Important defaults from `Makefile`:
 
 ```makefile
 NOVEL    ?= s01e03.txt
-STYLE    ?= vertical_microdrama
+BOOK     ?= $(NOVEL)
+BOOK_OUT ?= book-split
+SEASON   ?= 1
+STYLE    ?= vertical_9_16_microdrama
 SCENE    ?= all
 PANEL    ?= all
 PROVIDER ?= veo
 LLM      ?= openrouter
-CUSTOM   ?= --custom-prompts
+FRAME    ?= both
 ```
 
 ## CLI Reference
@@ -167,21 +178,22 @@ python cli.py --llm {openrouter|gemini|grok|debug} <command> ...
 
 `--llm debug` uses LogDebugLLM — logs all prompts/responses to disk without calling any API (useful for testing prompt structure offline).
 
-Commands:
+Commands (all accept `--style <preset>` where relevant; default: `vertical_9_16_microdrama`):
 
 - `init`
+- `split-book <novel> [--output-dir book-split] [--season 1]`
 - `styles <novel> --style <preset>`
-- `casting <novel> [--custom-prompts]`
-- `refs [--custom-prompts]`
-- `screenplay <novel> [--custom-prompts]`
-- `scenes [scene|all] [--custom-prompts]`
-- `consistency`
-- `storyboard [scene|all] [panel|all] [--custom-prompts]`
+- `casting <novel>`
+- `refs`
+- `screenplay <novel>`
+- `scenes [scene|all]`
+- `consistency [--dry-run|--no-dry-run]`
+- `storyboard [scene|all] [panel|all]`
 - `qa [--scene N ...] [--panel N ...] [--threshold N]`
-- `apply-qa [--scene N] [--frame start|end|static|both] [--custom-prompts]`
+- `apply-qa [--scene N] [--frame start|end|static|both]`
 - `accept-qa`
 - `rebuild-storyboard [scene|all]`
-- `refinement <scene_id> <panel_id> [--frame start|end|static|both] [--custom-prompts]`
+- `refinement <scene_id> <panel_id> [--frame start|end|static|both]`
 - `animation <veo|grok> [scene|all] [panel|all]`
 - `autocut --json <metadata.json> --clips-dir <dir> --out-dir <dir> [--min-fidelity N]`
 - `voiceover [--out-dir <dir>] [--output <script.sh>]`
@@ -190,17 +202,17 @@ Commands:
 - `tts sfx "<prompt>" <duration> <output>`
 - `dub <video.mp4> <output.mp3> [context.txt]`
 - `duck <video.mp4> <dubbed.mp3> <output.mp3>`
-- `extra-panel <narrative.txt> --scene N --index N_M [--custom-prompts]`
+- `extra-panel <narrative.txt> --scene N --index N_M`
 - `summary <novel> [--output chapter_summary.txt]`
 
-## Style Presets (`styles --style`)
+## Style Presets (`--style`)
 
-- `vertical_microdrama` (single_grid_animation, 9 panels, 9:16)
-- `realistic_movie` (single_grid_animation, 9 panels, 16:9)
-- `anime` (single_grid, 6 panels, 16:9)
-- `comic_book` (single_grid, 9 panels, 2:3)
-- `graphic_novel` (single_grid, 6 panels, 2:3)
-- `watchmen_style` (single_grid, 9 panels, 2:3)
+Built-in styles in `lib/prompting/`:
+
+- `vertical_9_16_microdrama` (single_grid_animation, 9 panels, 9:16) — default
+- `vertical_9_16_dark_romance` (single_grid_animation, 9 panels, 9:16) — dark romance / billionaire drama variant
+
+The `--style` flag is a global CLI option, not a subcommand argument. It selects the prompt directory and config. `custom_prompts/` files (if present) overlay on top.
 
 ## Outputs
 
@@ -232,13 +244,18 @@ Reference artifacts:
 cli.py
 Makefile
 lib/
-  core/        # project/env/prompts/schemas
+  core/        # project/env/prompts loader/schemas
   llm/         # OpenRouter, Gemini, Grok, Debug adapters
-  studio/      # stylist/screenwriter/artist/critic/director/editor/cutter/retoucher
+  prompting/   # style preset directories (vertical_9_16_microdrama/, vertical_9_16_dark_romance/)
+  studio/      # stylist/screenwriter/artist/critic/director/editor/cutter/retoucher/bookbinder
+  commands/    # argparse command registration (setup/screenplay/storyboard/animation/audio)
   animation/   # Veo and Grok animators
   audio/       # tts/dubbing/ducking
-prompts/
-custom_prompts/
+prompts/       # legacy fallback prompts (used only if lib/prompting/<style>/ is missing)
+custom_prompts/ # optional user override files (overlay on top of lib/prompting/<style>/)
+book-split/    # episode chunks written by split-book
+cinematic_render/ # all pipeline outputs
+ref_thriller/  # character/location reference cards (*.json + *.png)
 ```
 
 ## Claude Slash Commands
@@ -253,8 +270,9 @@ Manual/iterative flow also exists in `.claude/commands/`:
 - `/generate-keyframes`
 - `/refine-scene`
 - `/reversal-pass`
+- `/make-summary`
 
-Note: `extra-panel` and `summary` are Python CLI-only (no slash command equivalent).
+Note: `split-book`, `extra-panel` are Python CLI-only (no slash command equivalent).
 
 ---
 
