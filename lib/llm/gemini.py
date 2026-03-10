@@ -150,23 +150,40 @@ class GeminiLLM(BaseLLM):
 
         return _call()
 
-    def edit_image(self, src_img, prompt: str, refs=None) -> bytes:
+    def edit_image(self, src_img, prompt: str, refs=None,
+                   aspect_ratio: str = None, image_size: str = None) -> bytes:
         """
         Edit an existing image with optional reference images/text.
 
+        Content order: character/scene refs first (visual context), then source image,
+        then instruction — this gives the model appearance anchors before it sees the
+        source, matching recommended Imagen/Nano Banana multimodal ordering.
+
         src_img: path, Path, PIL.Image-like object, or bytes.
-        refs: optional list of paths/PIL images/text blocks.
+        refs: optional list of paths/PIL images/text blocks — prepended before source.
+        aspect_ratio/image_size: optional output size override (preserves source if omitted).
         Returns raw PNG bytes.
         """
         def _as_content(item):
             if isinstance(item, Path):
                 return PILImage.open(item)
-            return item  # str treated as text, passed through to SDK
+            return item
 
-        target = _as_content(src_img)
-        contents = [f"Edit the first image, apply the following changes: {prompt}", target]
+        # Refs (character/scene appearance context) come first, then source image, then instruction
+        contents = []
         for ref in refs or []:
             contents.append(_as_content(ref))
+        contents.append(_as_content(src_img))
+        contents.append(types.Part.from_text(text=f"Edit the last image above: {prompt}"))
+
+        gen_config: dict = {"response_modalities": ["Image"], "safety_settings": SAFETY}
+        img_cfg = {}
+        if aspect_ratio:
+            img_cfg['aspect_ratio'] = aspect_ratio
+        if image_size:
+            img_cfg['image_size'] = image_size
+        if img_cfg:
+            gen_config['image_config'] = img_cfg
 
         @retry_on_errors(max_retries=3, backoff_factor=2)
         def _call():
@@ -175,10 +192,7 @@ class GeminiLLM(BaseLLM):
                 resp = self.client.models.generate_content(
                     model=self.image_model,
                     contents=contents,
-                    config={
-                        "response_modalities": ["Image"],
-                        "safety_settings": SAFETY,
-                    },
+                    config=gen_config,
                 )
                 if resp.parts and resp.parts[0].inline_data:
                     with BytesIO() as buf:

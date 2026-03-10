@@ -184,7 +184,8 @@ class BaseLLM(ABC):
     def make_video(self, prompt: str, start_image=None, refs=None, config=None) -> bytes:
         raise NotImplementedError(f"{self.__class__.__name__} does not support make_video")
 
-    def edit_image(self, src_img, prompt: str, refs=None) -> bytes:
+    def edit_image(self, src_img, prompt: str, refs=None,
+                   aspect_ratio: str = None, image_size: str = None) -> bytes:
         raise NotImplementedError(f"{self.__class__.__name__} does not support edit_image")
 
     def analyze_image(self, image, prompt: str, refs=None, schema: dict = None) -> dict:

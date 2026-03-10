@@ -202,7 +202,7 @@ class OpenRouterLLM(BaseLLM):
         """
         contents = [self._normalize_multimodal_part(item) for item in (refs or [])]
         contents.append({"type": "text", "text": prompt})
-        _temperature = temperature if temperature is not None else 0.35
+        _temperature = temperature if temperature is not None else 0.45
 
         @retry_on_errors(max_retries=3, backoff_factor=2)
         def _call():

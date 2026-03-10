@@ -60,15 +60,23 @@ def load_character_references(references: List[str], ref_dir: Path = DEFAULT_REF
                 img = Image.open(img_path)
                 opened_imgs.append(img)
                 desc = ""
+                ref_type = "Character"
                 if json_path.exists():
                     try:
                         data = json.loads(json_path.read_text(encoding='utf-8'))
                         desc = data.get('visual_desc', '')
+                        ref_type = data.get('type', 'Character')
                     except Exception:
                         pass
 
-                ref_content.append(f"## Visual Reference: \"{ref_name}\"\n{desc}\n")
+                # Image before annotation — model sees visual before reading label
                 ref_content.append(img)
+                if ref_type in ('Location', 'Room'):
+                    ref_content.append(f"↑ SCENE ENVIRONMENT: \"{ref_name}\" — match this background/location.\n{desc}\n")
+                elif ref_type in ('Object', 'Vehicle', 'Interface'):
+                    ref_content.append(f"↑ PROP: \"{ref_name}\" — match this object's appearance exactly.\n{desc}\n")
+                else:
+                    ref_content.append(f"↑ CHARACTER: \"{ref_name}\" — match face, hair, clothing exactly.\n{desc}\n")
                 loaded_refs.append(ref_name)
                 logger.info(f"  ✓ Loaded ref: {ref_name}")
             except Exception as e:
@@ -84,7 +92,6 @@ def refine_panel(
     panel_id: int,
     frame_type: str,
     metadata: Dict,
-    prompts: Dict,
     config: Dict,
     llm: BaseLLM,
     quality_prompts: Dict[str, str] = None,
@@ -134,9 +141,6 @@ def refine_panel(
 
     original_img = Image.open(original_path)
 
-    style_prompt = prompts.get('style', '')
-    imagery_prompt = prompts.get('imagery', '')
-    setting_context = prompts.get('setting', '')
     if frame_type == 'end':
         visual_desc = panel.get('visual_end', '')
     elif frame_type == 'start':
@@ -148,65 +152,7 @@ def refine_panel(
     if quality_prompts:
         key = f"{scene_id}_{panel_id}"
         if key in quality_prompts:
-            panel_specific = f"\n## IMPORTANT PANEL-SPECIFIC INSTRUCTIONS\n{quality_prompts[key]}\n"
-
-    refinement_prompt = f"""{style_prompt}
-
-{imagery_prompt}
-
-{setting_context}
-
-# REFINEMENT TASK
-
-You are given:
-1. ORIGINAL IMAGE - current panel that serves as COMPOSITION REFERENCE
-2. CHARACTER/LOCATION VISUAL REFERENCES - for accurate appearance details
-
-## CRITICAL REQUIREMENTS:
-
-### ENHANCE — CINEMATIC BEAUTY STANDARD (apply to all foreground characters):
-- **Skin**: dewy, hydrated glow, soft-focus natural pores — photorealistic texture, never plastic or AI-smoothed.
-- **Eyes**: sharp catchlight in each pupil, high-detail iris, vibrant gaze — no glassy flatness.
-- **Lighting**: reinforce volumetric rim light (golden-hour warmth or cool blue edge) to separate subject from background.
-- **Color grade**: luxury-grade teal-and-orange palette, high contrast, true blacks with warm highlights.
-Apply these to every character visible at CU or closer. Do NOT apply to pure background elements.
-
-### PRESERVE FROM ORIGINAL:
-- Camera angle, framing, composition
-- Lighting setup (direction, quality, mood)
-- Character positions and poses
-- Overall scene layout and depth
-- Motion and dynamics (if any)
-
-### REFINE/CORRECT:
-- Character facial features (use reference images)
-- Character clothing and accessories (use reference images)
-- Character hair, build, and physical traits (use reference images)
-- Location/environment details (use reference images)
-- Object appearances (use reference images)
-- Fine details consistency with references
-
-## SCENE CONTEXT:
-Location: {scene.get('location', 'Unknown')}
-Setup: {scene.get('pre_action_description', '')}
-
-## PANEL DESCRIPTION:
-{visual_desc}
-
-## INSTRUCTIONS:
-Generate a refined version of the original image that:
-1. Keeps EXACT same composition, framing, camera angle
-2. Keeps EXACT same lighting setup and mood
-3. Keeps EXACT same character positions and poses
-4. CORRECTS character appearances to match reference images
-5. CORRECTS location/object details to match reference images
-6. Maintains visual quality and cinematic feel
-
-{panel_specific}
-
-DO NOT change the composition or layout - only refine the visual details!
-No captions or text overlays!
-"""
+            panel_specific = quality_prompts[key]
 
     refined_filename = f"{scene_id:03d}_{panel_id:02d}_{frame_type}_refined.png"
     refined_path = refined_dir / refined_filename
@@ -216,19 +162,35 @@ No captions or text overlays!
         logger.info(f"⏭  Refined version already exists: {refined_path}")
         return True
 
-    logger.info(f"🎨 Generating refined version (using {len(loaded_refs)} refs)...")
+    logger.info(f"🎨 Generating refined version via I2I edit (using {len(loaded_refs)} refs)...")
 
-    refs = []
+    # Build a focused correction prompt: QA failure reason if available, else generic fix
+    correction = panel_specific.strip()
+    if not correction:
+        correction = (
+            f"Refine character appearances to match the provided references. "
+            f"Fix face, hair, clothing, accessories, and location details. "
+            f"Panel description: {visual_desc}"
+        )
+
+    # Prepend cinematic enhancement instructions to the correction
+    correction = (
+        "Apply cinematic beauty standard: dewy skin, sharp catchlights, volumetric rim light, "
+        "luxury teal-and-orange grade. "
+        + correction
+        + " Preserve composition, framing, camera angle, lighting mood, and character poses exactly."
+    )
+
+    char_refs = []
     if ref_content:
-        refs.append("# CHARACTER/LOCATION REFERENCE LIBRARY\nUse these for accurate visual details:\n")
-        refs.extend(ref_content)
-    refs.append("\n# ORIGINAL COMPOSITION REFERENCE\nPreserve this exact composition, lighting, and layout:\n")
-    refs.append(original_img)
+        char_refs.append("# CHARACTER/LOCATION REFERENCE LIBRARY\nUse these for accurate visual details:\n")
+        char_refs.extend(ref_content)
 
     try:
-        img_bytes = llm.make_image(
-            refinement_prompt,
-            refs=refs,
+        img_bytes = llm.edit_image(
+            src_img=original_img,
+            prompt=correction,
+            refs=char_refs,
             aspect_ratio=config['image_generation'].get('aspect_ratio', '9:16'),
             image_size='1K',
         )

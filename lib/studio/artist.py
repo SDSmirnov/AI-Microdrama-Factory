@@ -236,10 +236,10 @@ def _render_single_ref(char: dict, config: dict, project: Project, llm: BaseLLM)
     if style_ref and style_ref != name:
         ref_png = project.ref_dir / f"{safe_name(style_ref)}.png"
         if ref_png.exists():
-            refs.append(f"## Visual Style reference for {style_ref}")
             img = Image.open(ref_png)
             opened_imgs.append(img)
             refs.append(img)
+            refs.append(f"↑ Visual style reference for \"{style_ref}\" — match this aesthetic.\n")
 
     ref_aspect = config.get('reference_characters', {}).get('ref_aspect_ratio', '3:4')
     prompt_text = (
@@ -299,15 +299,22 @@ def render_character_refs(prompts: dict, config: dict, llm: BaseLLM, project: Pr
 
 def _build_prompt_header(scene: dict, prompts: dict) -> str:
     """Build the shared prompt header for scene image generation."""
-    return (
+    header = (
         f"{prompts.get('style', '')}\n\n"
         f"{prompts.get('imagery', '')}\n\n"
         f"{prompts.get('setting', '')}\n\n"
         f"Location: {scene['location']}\n"
         f"Setup: {scene.get('pre_action_description', '')}\n"
+    )
+    if scene.get('camera_master'):
+        header += f"Scene camera master: {scene['camera_master']}\n"
+    if scene.get('lighting_master'):
+        header += f"Scene lighting master: {scene['lighting_master']}\n"
+    header += (
         "CONSISTENCY RULE: All instances of the same character across all panels must have IDENTICAL face, hair, clothing, body proportions.\n"
         "NO CAPTIONS!\n"
     )
+    return header
 
 
 def _build_grid_prompt(scene: dict, prompts: dict, config: dict) -> str:
@@ -329,10 +336,6 @@ def _build_grid_prompt(scene: dict, prompts: dict, config: dict) -> str:
 
 
 _MAX_GRID_RETRIES = 3
-# Slightly increase temperature on each retry to vary output.
-# Range 0.35–0.45 is intentionally narrow: enough to diversify without breaking prompt-following.
-_GRID_BASE_TEMP = 0.55
-_GRID_TEMP_STEP = 0.05
 
 
 def _quick_grid_check(img_bytes: bytes, scene: dict, project: Project, llm: BaseLLM) -> tuple[bool, str]:
@@ -352,7 +355,7 @@ def _quick_grid_check(img_bytes: bytes, scene: dict, project: Project, llm: Base
 
     contents = ["# VISUAL REFERENCES (characters, locations, objects)\n"]
     opened = []
-    for name in loadable[:4]:
+    for name in loadable[:8]:
         try:
             img = Image.open(project.character_images[name])
             opened.append(img)
@@ -413,22 +416,38 @@ def _render_single_grid(scene: dict, scene_id: int, prompts: dict, config: dict,
     if ref_chars:
         refs.append(
             "# Visual Reference Library\n"
-            "## IMPORTANT:\n"
-            "Always prioritize the visual design of characters/objects "
-            "from the provided images over your internal concepts."
+            "IMPORTANT: Always prioritize the visual design from the provided images "
+            "over your internal concepts."
         )
         for name in ref_chars:
             png_path = project.character_images[name]
             info = ""
+            ref_type = "Character"
             try:
                 meta = json.loads(Path(png_path).with_suffix('.json').read_text(encoding='utf-8'))
-                info = meta.get('video_visual_desc', '')
+                info = meta.get('visual_desc') or meta.get('video_visual_desc', '')
+                ref_type = meta.get('type', 'Character')
             except Exception:
                 pass
-            refs.append(f"## Visual Reference for: \"{name}\"\nUse it for appearances\n{info}\n")
             img = Image.open(png_path)
             opened_imgs.append(img)
             refs.append(img)
+            refs.append(_ref_label(name, ref_type, info))
+
+    # Cross-scene continuity anchor: last rendered panel of previous scene
+    if scene_id > 1:
+        prev_panels = sorted(project.panels_dir.glob(f"{scene_id - 1:03d}_*_static.png"))
+        if prev_panels:
+            try:
+                anchor_img = Image.open(prev_panels[-1])
+                opened_imgs.append(anchor_img)
+                refs.append(anchor_img)
+                refs.append(
+                    "↑ PREVIOUS SCENE TERMINAL FRAME — match character appearance "
+                    "continuity (clothing, hair, build) from this frame.\n"
+                )
+            except Exception as e:
+                logger.warning(f"  ⚠️  Could not load cross-scene anchor: {e}")
 
     prompt_text = _build_grid_prompt(scene, prompts, config)
     aspect_ratio = config['image_generation']['aspect_ratio']
@@ -438,12 +457,10 @@ def _render_single_grid(scene: dict, scene_id: int, prompts: dict, config: dict,
     img_bytes = None
     try:
         for attempt in range(_MAX_GRID_RETRIES):
-            temp = _GRID_BASE_TEMP + attempt * _GRID_TEMP_STEP
             try:
                 candidate = llm.make_image(
                     prompt_text, refs=refs,
                     aspect_ratio=aspect_ratio, image_size=resolution,
-                    temperature=temp,
                 )
             except Exception as e:
                 logger.error(f"    ❌ Render error scene {scene_id} attempt {attempt + 1}: {e}")
@@ -584,9 +601,19 @@ Camera / Lighting: {panel.get('lights_and_camera', '')}
     return prompt
 
 
+def _ref_label(name: str, ref_type: str, info: str) -> str:
+    """Return a type-aware annotation label that follows its reference image."""
+    if ref_type in ('Location', 'Room'):
+        return f"↑ SCENE ENVIRONMENT: \"{name}\" — match this background/location.\n{info}\n"
+    if ref_type in ('Object', 'Vehicle', 'Interface'):
+        return f"↑ PROP: \"{name}\" — match this object's appearance exactly.\n{info}\n"
+    return f"↑ CHARACTER: \"{name}\" — match face, hair, clothing exactly.\n{info}\n"
+
+
 def _build_ref_contents(panel: dict, project: Project) -> tuple[list, list]:
     """Build reference image content parts for a panel.
 
+    Image comes before its text annotation so the model sees the visual first.
     Returns (contents, opened_imgs) — caller must close opened_imgs after use.
     """
     chars = list(set(panel.get('references', []) + panel.get('location_references', [])))
@@ -596,23 +623,24 @@ def _build_ref_contents(panel: dict, project: Project) -> tuple[list, list]:
 
     contents = [
         "# Visual Reference Library\n"
-        "## IMPORTANT:\n"
-        "Always prioritize the visual design of characters/objects "
-        "from the provided images over your internal concepts."
+        "IMPORTANT: Always prioritize the visual design from the provided images "
+        "over your internal concepts."
     ]
     opened_imgs = []
     for name in ref_chars:
         png_path = project.character_images[name]
         info = ""
+        ref_type = "Character"
         try:
             meta = json.loads(Path(png_path).with_suffix('.json').read_text(encoding='utf-8'))
-            info = meta.get('video_visual_desc', '')
+            info = meta.get('visual_desc') or meta.get('video_visual_desc', '')
+            ref_type = meta.get('type', 'Character')
         except Exception:
             pass
-        contents.append(f"## Visual Reference for: \"{name}\"\n{info}\n")
         img = Image.open(png_path)
         opened_imgs.append(img)
         contents.append(img)
+        contents.append(_ref_label(name, ref_type, info))
     return contents, opened_imgs
 
 
@@ -639,6 +667,22 @@ def _render_single_panel(
     logger.info(f"  🎨 Rendering {out_path.name} ...")
 
     refs, opened_imgs = _build_ref_contents(panel, project)
+
+    # Cross-scene continuity anchor for the first panel of each scene
+    if panel['panel_index'] == 1 and scene_id > 1:
+        prev_panels = sorted(project.panels_dir.glob(f"{scene_id - 1:03d}_*_static.png"))
+        if prev_panels:
+            try:
+                anchor_img = Image.open(prev_panels[-1])
+                opened_imgs.append(anchor_img)
+                refs.append(anchor_img)
+                refs.append(
+                    "↑ PREVIOUS SCENE TERMINAL FRAME — match character appearance "
+                    "continuity (clothing, hair, build) from this frame.\n"
+                )
+            except Exception as e:
+                logger.warning(f"  ⚠️  Could not load cross-scene anchor: {e}")
+
     prompt_text = _build_panel_prompt(scene, panel, frame_type, prompts, aspect_ratio)
 
     try:
