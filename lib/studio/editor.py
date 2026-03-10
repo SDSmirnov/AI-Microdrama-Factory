@@ -19,8 +19,11 @@ logger = logging.getLogger(__name__)
 
 
 
-def load_quality_report(report_path: Path = DEFAULT_OUTPUT_DIR / "quality_report.json") -> Dict[str, str]:
-    """Load refinement prompts keyed by 'scene_id_panel_id'."""
+def load_quality_report(report_path: Path = DEFAULT_OUTPUT_DIR / "quality_report.json") -> Dict[str, dict]:
+    """Load QA data keyed by 'scene_id_panel_id'.
+
+    Each value: {'refinement_prompt': str, 'fidelity': int, 'composition_match': int}
+    """
     if not report_path.exists():
         logger.warning(f"⚠️  Quality report not found: {report_path}")
         return {}
@@ -29,7 +32,11 @@ def load_quality_report(report_path: Path = DEFAULT_OUTPUT_DIR / "quality_report
     quality_prompts = {}
     for item in data.get('panels', []):
         key = f"{item['scene_id']}_{item['panel_id']}"
-        quality_prompts[key] = item.get('refinement_prompt', '')
+        quality_prompts[key] = {
+            'refinement_prompt': item.get('refinement_prompt', ''),
+            'fidelity': item.get('fidelity', 10),
+            'composition_match': item.get('composition_match', 10),
+        }
     return quality_prompts
 
 
@@ -87,6 +94,30 @@ def load_character_references(references: List[str], ref_dir: Path = DEFAULT_REF
     return ref_content, loaded_refs, opened_imgs
 
 
+# Panels with fidelity below this score are too broken for I2I — use full T2I regeneration instead.
+_REGEN_FIDELITY_THRESHOLD = 3
+
+
+def _regenerate_t2i(
+    llm: BaseLLM,
+    scene: dict,
+    panel: dict,
+    visual_desc: str,
+    char_refs: list,
+    aspect_ratio: str,
+) -> bytes:
+    """Full T2I regeneration for panels too broken for I2I editing."""
+    prompt = (
+        f"Generate a SINGLE portrait {aspect_ratio} cinematic panel. "
+        f"Location: {scene.get('location', '')}. "
+        f"Scene: {scene.get('pre_action_description', '')}. "
+        f"Visual: {visual_desc}. "
+        f"Camera/Lighting: {panel.get('lights_and_camera', '')}. "
+        "Photorealistic, cinematic quality. NO CAPTIONS. NO TEXT OVERLAYS."
+    )
+    return llm.make_image(prompt, refs=char_refs, aspect_ratio=aspect_ratio, image_size='1K')
+
+
 def refine_panel(
     scene_id: int,
     panel_id: int,
@@ -94,7 +125,7 @@ def refine_panel(
     metadata: Dict,
     config: Dict,
     llm: BaseLLM,
-    quality_prompts: Dict[str, str] = None,
+    quality_prompts: Dict[str, dict] = None,
     project: Project = None,
 ) -> bool:
     panels_dir = project.panels_dir if project else DEFAULT_OUTPUT_DIR / "panels"
@@ -148,11 +179,12 @@ def refine_panel(
     else:  # static
         visual_desc = panel.get('visual_start', panel.get('visual_end', ''))
 
-    panel_specific = ""
-    if quality_prompts:
-        key = f"{scene_id}_{panel_id}"
-        if key in quality_prompts:
-            panel_specific = quality_prompts[key]
+    qa_data = (quality_prompts or {}).get(f"{scene_id}_{panel_id}", {})
+    panel_specific = qa_data.get('refinement_prompt', '') if isinstance(qa_data, dict) else str(qa_data)
+    fidelity = qa_data.get('fidelity', 10) if isinstance(qa_data, dict) else 10
+
+    # Panels with very low fidelity are too broken for I2I to fix — regenerate from scratch
+    force_regen = fidelity < _REGEN_FIDELITY_THRESHOLD
 
     refined_filename = f"{scene_id:03d}_{panel_id:02d}_{frame_type}_refined.png"
     refined_path = refined_dir / refined_filename
@@ -162,38 +194,53 @@ def refine_panel(
         logger.info(f"⏭  Refined version already exists: {refined_path}")
         return True
 
-    logger.info(f"🎨 Generating refined version via I2I edit (using {len(loaded_refs)} refs)...")
-
-    # Build a focused correction prompt: QA failure reason if available, else generic fix
-    correction = panel_specific.strip()
-    if not correction:
-        correction = (
-            f"Refine character appearances to match the provided references. "
-            f"Fix face, hair, clothing, accessories, and location details. "
-            f"Panel description: {visual_desc}"
-        )
-
-    # Prepend cinematic enhancement instructions to the correction
-    correction = (
-        "Apply cinematic beauty standard: dewy skin, sharp catchlights, volumetric rim light, "
-        "luxury teal-and-orange grade. "
-        + correction
-        + " Preserve composition, framing, camera angle, lighting mood, and character poses exactly."
-    )
-
+    aspect_ratio = config['image_generation'].get('aspect_ratio', '9:16')
     char_refs = []
     if ref_content:
         char_refs.append("# CHARACTER/LOCATION REFERENCE LIBRARY\nUse these for accurate visual details:\n")
         char_refs.extend(ref_content)
 
+    img_bytes = None
     try:
-        img_bytes = llm.edit_image(
-            src_img=original_img,
-            prompt=correction,
-            refs=char_refs,
-            aspect_ratio=config['image_generation'].get('aspect_ratio', '9:16'),
-            image_size='1K',
-        )
+        if force_regen:
+            logger.info(
+                f"🔄 Fidelity={fidelity} < {_REGEN_FIDELITY_THRESHOLD} — full T2I regeneration "
+                f"(using {len(loaded_refs)} refs)..."
+            )
+            img_bytes = _regenerate_t2i(llm, scene, panel, visual_desc, char_refs, aspect_ratio)
+        else:
+            logger.info(f"🎨 I2I refinement (fidelity={fidelity}, using {len(loaded_refs)} refs)...")
+            correction = panel_specific.strip() or (
+                f"Refine character appearances to match the provided references. "
+                f"Fix face, hair, clothing, accessories, and location details. "
+                f"Panel description: {visual_desc}"
+            )
+            correction = (
+                "Apply cinematic beauty standard: dewy skin, sharp catchlights, volumetric rim light, "
+                "luxury teal-and-orange grade. "
+                + correction
+                + " Preserve composition, framing, camera angle, lighting mood, and character poses exactly."
+            )
+            try:
+                img_bytes = llm.edit_image(
+                    src_img=original_img,
+                    prompt=correction,
+                    refs=char_refs,
+                    aspect_ratio=aspect_ratio,
+                    image_size='1K',
+                )
+            except Exception as e:
+                logger.warning(f"  ⚠️  edit_image failed ({e}), falling back to T2I regeneration...")
+                img_bytes = _regenerate_t2i(llm, scene, panel, visual_desc, char_refs, aspect_ratio)
+    except Exception as e:
+        logger.error(f"❌ Generation error: {e}", exc_info=True)
+        return False
+    finally:
+        original_img.close()
+        for img in opened_ref_imgs:
+            img.close()
+
+    try:
         if img_bytes:
             refined_path.write_bytes(img_bytes)
             logger.info(f"✅ Saved: {refined_path}")
@@ -214,9 +261,5 @@ def refine_panel(
             return False
 
     except Exception as e:
-        logger.error(f"❌ Generation error: {e}", exc_info=True)
+        logger.error(f"❌ Write error: {e}", exc_info=True)
         return False
-    finally:
-        original_img.close()
-        for img in opened_ref_imgs:
-            img.close()
