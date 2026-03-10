@@ -150,7 +150,9 @@ def retry_on_errors(max_retries=3, backoff_factor=2):
                         'Internal Server Error' in error_str or 'Service Unavailable' in error_str or
                         'timed out' in error_str.lower() or
                         'connection refused' in error_str.lower() or
-                        'connection reset' in error_str.lower()
+                        'connection reset' in error_str.lower() or
+                        'Unexpected image response format' in error_str or
+                        'Unexpected edit-image response format' in error_str
                     )
                     if retryable:
                         retries += 1

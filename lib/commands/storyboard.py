@@ -22,7 +22,7 @@ from lib.studio.artist import (
     render_panels,
     render_scene_grids,
 )
-from lib.studio.critic import print_summary, run_quality_gate
+from lib.studio.critic import load_ref_catalog, print_summary, process_scene, run_quality_gate
 from lib.studio.editor import load_quality_report, refine_panel
 from lib.studio.retoucher import edit_image as retoucher_edit_image
 
@@ -423,6 +423,10 @@ def cmd_panel_by_panel_qa(args):
         sys.exit(1)
 
     aspect_ratio = config['image_generation'].get('aspect_ratio', '9:16')
+    cfg = metadata.get("config", config)
+    grid_format = cfg.get("format", {}).get("type", "single_grid_animation")
+    panels_per_scene = cfg.get("format", {}).get("panels_per_scene", 9)
+    ref_catalog = load_ref_catalog(project.ref_dir)
     passed = 0
 
     for panel in panels:
@@ -440,23 +444,24 @@ def cmd_panel_by_panel_qa(args):
 
         for attempt in range(1, max_attempts + 1):
             logger.info(f"\n  🔍 QA (attempt {attempt}/{max_attempts})...")
-            report = run_quality_gate(
+            results = process_scene(
                 llm=vision_llm,
-                ref_dir=project.ref_dir,
-                scene_ids=[scene_id],
-                panel_ids=[pid],
+                scene=scene,
+                ref_catalog=ref_catalog,
+                grid_format=grid_format,
+                panels_per_scene=panels_per_scene,
                 threshold=threshold,
-                max_workers=1,
+                panel_filter=[pid],
                 output_dir=project.output_dir,
                 prompts=prompts,
             )
 
             panel_result = next(
-                (p for p in report.get('panels', []) if p['scene_id'] == scene_id and p['panel_id'] == pid),
+                (p for p in results if p['scene_id'] == scene_id and p['panel_id'] == pid),
                 None,
             )
             if panel_result is None or not panel_result.get('needs_refinement'):
-                logger.info(f"  ✅ Panel {pid} passed QA (fidelity={( panel_result or {}).get('fidelity', '?')})")
+                logger.info(f"  ✅ Panel {pid} passed QA (fidelity={(panel_result or {}).get('fidelity', '?')})")
                 passed += 1
                 break
 
@@ -468,7 +473,13 @@ def cmd_panel_by_panel_qa(args):
                 break
 
             logger.info(f"  🔧 Refining panel {pid} (attempt {attempt})...")
-            quality_prompts = load_quality_report(project.output_dir / "quality_report.json")
+            quality_prompts = {
+                f"{scene_id}_{pid}": {
+                    'refinement_prompt': panel_result.get('refinement_prompt', ''),
+                    'fidelity': panel_result.get('fidelity', 10),
+                    'composition_match': panel_result.get('composition_match', 10),
+                }
+            }
 
             refined_path = project.refined_dir / f"{scene_id:03d}_{pid:02d}_static_refined.png"
             if refined_path.exists():
