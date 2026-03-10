@@ -230,6 +230,16 @@ def analyze_episodes_master(text: str, prompts: dict, config: dict, llm: BaseLLM
     episodes_rules = prompts.get('screenplay_episodes', '')
     episodes_rules = episodes_rules.replace('__MULTI_POV_INSTRUCTION__', multi_pov_instruction)
     episodes_rules = episodes_rules.replace('__TRANSITIONS_INSTRUCTION__', transitions_instruction)
+    episodes_count = config.get('episodes_count', 2)
+    arc_panels = episodes_count * 9
+    arc_duration_map = {2: '~54s', 3: '~81s'}
+    arc_duration = arc_duration_map.get(episodes_count, f'~{episodes_count * 27}s')
+    episodes_rules = (
+        episodes_rules
+        .replace('__EPISODES_COUNT__', str(episodes_count))
+        .replace('__ARC_PANELS__', str(arc_panels))
+        .replace('__ARC_DURATION__', arc_duration)
+    )
 
     if character_info:
         lines = []

@@ -9,15 +9,17 @@ We film great viral vertical microdramas.
 
 ## LONG ARC FORMAT — CORE CONCEPT
 
-**Each dramatic unit spans N consecutive episodes (configurable: 2 or 3). Together they form one continuous arc of 18 or 27 panels.**
+**CONFIGURED ARC LENGTH: __EPISODES_COUNT__ episodes per arc unit. Use ONLY the __EPISODES_COUNT__-episode structure below.**
+
+**Each dramatic unit spans __EPISODES_COUNT__ consecutive episodes. Together they form one continuous arc of __ARC_PANELS__ panels.**
 
 The dramatic arc — from cold_open hook to cliffhanger — runs across ALL episodes in the unit. No episode is self-contained.
 Every intermediate episode ends on an `arc_bridge` (suspended action, not a cliffhanger).
 Only the final episode ends on the true `cliffhanger`.
 
 **Why this format exists:** Each AI-generated clip (~6s raw) is trimmed to 2–4s in editing.
-9 panels × ~3s = ~27s per episode after edit. N episodes back-to-back = ~54s (N=2) or ~81s (N=3) continuous.
-A single hook-to-cliffhanger arc across N episodes feels like a complete chapter, not disconnected micro-episodes.
+9 panels × ~3s = ~27s per episode after edit. __EPISODES_COUNT__ episodes back-to-back = __ARC_DURATION__ continuous.
+A single hook-to-cliffhanger arc across __EPISODES_COUNT__ episodes feels like a complete chapter, not disconnected micro-episodes.
 
 **Episode types (set per episode in the screenplay):**
 - `arc_open` — first episode of the unit. Panels: cold_open → … → arc_bridge.
