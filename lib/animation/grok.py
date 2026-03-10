@@ -32,19 +32,23 @@ def _build_prompt(meta: dict) -> str:
     dialogue = meta.get('dialogue', '')
     voiceover = meta.get('voiceover', '')
 
-    vo_prefix = 'OFFSCREEN VOICEOVER AFTER THE DIALOGUE: ' if dialogue and voiceover else 'OFFSCREEN VOICEOVER: '
+    vo_speech = ''
+    if voiceover:
+        if dialogue:
+            vo_speech = ''
+        else:
+            vo_speech = f'OFFSCREEN VOICEOVER: "{voiceover}"'
 
     return (
-        f"CRITICALLY FORBIDDEN: object morphing, adding new objects, adding new actors.\n"
+        f"CRITICALLY FORBIDDEN: object morphing, adding new objects, adding new actors.\nNO tears, NO sweat, NO spitting.\n"
         f"BACKGROUND SOUNDS: SFX ONLY, NO MUSIC\n\n"
         f"VIDEO INSTRUCTIONS: Filming Action Movie. Smooth transition, high temporal consistency.\n"
         f"STYLE: Hyper-realistic cinematic photography, shot on Arri Alexa Mini LF with 50mm lens.\n\n"
         f"START: {meta.get('visual_start', '')}\n\n"
-        f"END: {meta.get('visual_end', '')}\n\n"
         f"CAMERA: {meta.get('lights_and_camera', '')}\n\n"
         f"ANIMATION: {motion_prompt}\n\n"
         f"{'DIALOGUE:' if dialogue else ''} {dialogue}\n\n"
-        f"{vo_prefix if voiceover else ''} {voiceover}\n\n"
+        f"{vo_speech}\n\n"
     )
 
 
