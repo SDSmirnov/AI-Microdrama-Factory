@@ -19,9 +19,9 @@ except ImportError:
 
 # Voice name → Gemini built-in voice
 VOICE_MAP: dict[str, str] = {
-    "narrator":       "Rasalgethi",
     "narrator_drama": "Fenrir",
     "narrator_soft":  "Vindemiatrix",
+    "narrator":       "Rasalgethi",
     "male_hero":      "Orus",
     "male_deep":      "Puck",
     "male_calm":      "Umbriel",
@@ -42,9 +42,9 @@ VOICE_MAP: dict[str, str] = {
 
 # Voice name → OpenAI voice (for use with OpenRouterLLM / openai/gpt-audio)
 OPENROUTER_VOICE_MAP: dict[str, str] = {
-    "narrator":       "onyx",
     "narrator_drama": "fable",
     "narrator_soft":  "shimmer",
+    "narrator":       "onyx",
     "male_hero":      "echo",
     "male_deep":      "onyx",
     "male_calm":      "alloy",

@@ -38,7 +38,7 @@ class OpenRouterLLM(BaseLLM):
         api_key: str,
         text_model: str,
         image_model: str,
-        tts_model: str = "openai/gpt-4o-audio-preview",
+        tts_model: str = "openai/gpt-audio",
         text_rpm: int = 20,
         image_rpm: int = 10,
         system_prompt: str = "",
@@ -353,7 +353,17 @@ class OpenRouterLLM(BaseLLM):
             "model": self.tts_model,
             "modalities": ["text", "audio"],
             "audio": {"voice": voice, "format": "pcm16"},
-            "messages": [{"role": "user", "content": prompt}],
+            "messages": [
+                 {
+                     "role": "system",
+                     "content": (
+                         "You are a voice assistant. Speak in Russian at a natural, "
+                         "quick conversational pace (~150 words per minute). "
+                         "Do NOT pause between sentences. Read fluently and continuously, "
+                         "as if reading a news broadcast. Minimize silence gaps."
+                    )
+                },
+                {"role": "user", "content": prompt}],
             "stream": True,
         }
 
