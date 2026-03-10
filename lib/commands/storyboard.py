@@ -16,6 +16,7 @@ from lib.core.schemas import SCENE_SCHEMA
 from lib.core.utils import atomic_write, grid_dims, load_metadata
 from lib.llm.base import retry_on_errors
 from lib.studio.artist import (
+    _render_single_panel,
     load_character_refs,
     render_extra_panel,
     render_panels,
@@ -391,6 +392,106 @@ All dialogues, voiceovers and captions MUST be in Russian.
     render_extra_panel(extra_scene, panel, out_png, aspect_ratio, project, llm, prompts)
 
 
+def cmd_panel_by_panel_qa(args):
+    """Render each panel in a scene, run QA, and refine in-place up to max_attempts times."""
+    project, prompts, config = load_project(style=args.style)
+    img_llm = _make_llm(args.llm, project)
+    vision_llm = _make_vision_llm(args.llm, project)
+    load_character_refs(project)
+
+    scene_id = int(args.scene)
+    panel_filter = int(args.panel) if args.panel not in (None, 'all') else None
+    max_attempts = args.max_attempts
+    threshold = args.threshold
+
+    meta_path = project.output_dir / "animation_metadata.json"
+    if not meta_path.exists():
+        logger.error("❌ animation_metadata.json not found. Run 'screenplay' first.")
+        sys.exit(1)
+
+    metadata = load_metadata(meta_path)
+    scene = next((s for s in metadata.get('scenes', []) if s['scene_id'] == scene_id), None)
+    if scene is None:
+        logger.error(f"❌ Scene {scene_id} not found in animation_metadata.json")
+        sys.exit(1)
+
+    panels = scene.get('panels', [])
+    if panel_filter is not None:
+        panels = [p for p in panels if p['panel_index'] == panel_filter]
+    if not panels:
+        logger.error(f"❌ No panels found for scene {scene_id}" + (f" panel {panel_filter}" if panel_filter else ""))
+        sys.exit(1)
+
+    aspect_ratio = config['image_generation'].get('aspect_ratio', '9:16')
+    passed = 0
+
+    for panel in panels:
+        pid = panel['panel_index']
+        logger.info(f"\n{'='*60}")
+        logger.info(f"🎬 Scene {scene_id} · Panel {pid}/{len(panels)}")
+        logger.info(f"{'='*60}")
+
+        _render_single_panel(scene, panel, scene_id, 'static', aspect_ratio, project, img_llm, prompts)
+
+        panel_path = project.panels_dir / f"{scene_id:03d}_{pid:02d}_static.png"
+        if not panel_path.exists():
+            logger.error(f"  ❌ Panel {pid} failed to render, skipping")
+            continue
+
+        for attempt in range(1, max_attempts + 1):
+            logger.info(f"\n  🔍 QA (attempt {attempt}/{max_attempts})...")
+            report = run_quality_gate(
+                llm=vision_llm,
+                ref_dir=project.ref_dir,
+                scene_ids=[scene_id],
+                panel_ids=[pid],
+                threshold=threshold,
+                max_workers=1,
+                output_dir=project.output_dir,
+                prompts=prompts,
+            )
+
+            panel_result = next(
+                (p for p in report.get('panels', []) if p['scene_id'] == scene_id and p['panel_id'] == pid),
+                None,
+            )
+            if panel_result is None or not panel_result.get('needs_refinement'):
+                logger.info(f"  ✅ Panel {pid} passed QA (fidelity={( panel_result or {}).get('fidelity', '?')})")
+                passed += 1
+                break
+
+            if attempt == max_attempts:
+                logger.warning(
+                    f"  ⚠️  Panel {pid} still needs refinement after {max_attempts} attempt(s) "
+                    f"(fidelity={(panel_result or {}).get('fidelity', '?')})"
+                )
+                break
+
+            logger.info(f"  🔧 Refining panel {pid} (attempt {attempt})...")
+            quality_prompts = load_quality_report(project.output_dir / "quality_report.json")
+
+            refined_path = project.refined_dir / f"{scene_id:03d}_{pid:02d}_static_refined.png"
+            if refined_path.exists():
+                refined_path.unlink()
+
+            if not refine_panel(scene_id, pid, 'static', metadata, config, vision_llm, quality_prompts, project=project):
+                logger.error(f"  ❌ Refinement failed for panel {pid}, stopping retries")
+                break
+
+            if refined_path.exists():
+                shutil.copy2(refined_path, panel_path)
+                refined_path.unlink()
+                sidecar = refined_path.with_suffix('.json')
+                if sidecar.exists():
+                    sidecar.unlink()
+                logger.info(f"  ✅ Promoted refined → panels/{panel_path.name}")
+
+    total = len(panels)
+    logger.info(f"\n✅ Done: {passed}/{total} panel(s) passed QA.")
+    if passed < total:
+        sys.exit(1)
+
+
 def register(sub):
     p = sub.add_parser('storyboard', help='Render scene grids or panels')
     p.add_argument('scene', nargs='?', default='all', help='Scene number or "all"')
@@ -436,3 +537,14 @@ def register(sub):
     p.add_argument('--index', required=True,
                    help='Insertion index in N_M format, e.g. 4_5 (between panels 4 and 5)')
     p.set_defaults(func=cmd_extra_panel)
+
+    p = sub.add_parser(
+        'panel-by-panel-with-qa',
+        help='Render each panel, run QA, and refine in-place (up to --max-attempts times)',
+    )
+    p.add_argument('scene', type=int, help='Scene number')
+    p.add_argument('panel', nargs='?', default='all', help='Panel number or "all" (default: all)')
+    p.add_argument('--threshold', type=int, default=5, help='QA fidelity threshold (default: 5)')
+    p.add_argument('--max-attempts', type=int, default=3, dest='max_attempts',
+                   help='Max refinement attempts per panel (default: 3)')
+    p.set_defaults(func=cmd_panel_by_panel_qa)

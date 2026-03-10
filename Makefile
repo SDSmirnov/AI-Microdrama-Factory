@@ -23,12 +23,14 @@ DURATION    ?= 3
 IMAGE       ?=
 EDIT        ?=
 FRAME      ?= both
+THRESHOLD  ?= 5
+MAX_ATTEMPTS ?= 3
 REFS           ?=
 VOICEOVER_DIR  ?= cinematic_render/voiceover
 VOICEOVER_SH   ?= voiceover.sh
 
 .PHONY: help init workdirs styles casting refs screenplay scenes reverse-refine consistency storyboard qa apply-qa accept-qa rebuild-storyboard refinement animation \
-        autocut imgedit tts voiceover dub duck summary split-book
+        autocut imgedit tts voiceover dub duck summary split-book panel-by-panel-with-qa
 
 help:  ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-16s %s\n", $$1, $$2}'
@@ -108,6 +110,9 @@ summary:  ## Generate chapter_summary.txt context for the next chapter
 
 split-book:  ## Split BOOK into filmable 3-POV episode chunks → BOOK_OUT/s0SeNNN.txt (BOOK=file STYLE=... SEASON=N)
 	python cli.py --llm $(LLM) --style $(STYLE) split-book $(BOOK) --output-dir $(BOOK_OUT) --season $(SEASON)
+
+panel-by-panel-with-qa:  ## Render panels one-by-one with inline QA+refine (SCENE=N [PANEL=N] [THRESHOLD=5] [MAX_ATTEMPTS=3])
+	python cli.py --llm $(LLM) --style $(STYLE) panel-by-panel-with-qa $(SCENE) $(PANEL) --threshold $(THRESHOLD) --max-attempts $(MAX_ATTEMPTS)
 
 webserver:  ## Start static web server on :5005 and open Chrome at web/index.html
 	@python3 web/gen_server_info.py
