@@ -71,8 +71,10 @@ def cmd_animation(args):
         if not grok_api_key:
             logger.error("❌ XAI_API_KEY not set")
             sys.exit(1)
+        scene_filter = int(args.scene) if getattr(args, 'scene', None) not in (None, 'all') else None
+        panel_filter = int(args.panel) if getattr(args, 'panel', None) not in (None, 'all') else None
         animator = GrokAnimator(api_key=grok_api_key)
-        animator.run_all(meta_file, panels_dir, out_dir)
+        animator.run_all(meta_file, panels_dir, out_dir, scene_filter=scene_filter, panel_filter=panel_filter)
 
     else:
         logger.error(f"❌ Unknown provider: {args.provider}")
@@ -100,6 +102,7 @@ def register(sub):
     p = sub.add_parser('animation', help='Generate video clips')
     p.add_argument('provider', choices=['veo', 'grok'], help='Animation provider')
     p.add_argument('scene', nargs='?', default='all', help='Scene number or "all"')
+    p.add_argument('panel', nargs='?', default='all', help='Panel number or "all"')
     p.set_defaults(func=cmd_animation)
 
     p = sub.add_parser('autocut', help='AI-trim animation clips vs panel metadata')

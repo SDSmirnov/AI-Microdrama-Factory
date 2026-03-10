@@ -22,7 +22,7 @@ DEFAULT_MODEL = "grok-imagine-video"
 DEFAULT_DURATION = 6
 DEFAULT_ASPECT_RATIO = os.getenv('AI_ASPECT_RATIO', '9:16')
 DEFAULT_RESOLUTION = "720p"
-BATCH_SIZE = 3
+BATCH_SIZE = 9
 BATCH_SLEEP = 30
 
 
@@ -149,6 +149,8 @@ class GrokAnimator(BaseAnimator):
         metadata_path: Path,
         panels_dir: Path,
         out_dir: Path,
+        scene_filter: int = None,
+        panel_filter: int = None,
     ):
         """
         Batch-animate all panels from animation_metadata.json.
@@ -163,8 +165,12 @@ class GrokAnimator(BaseAnimator):
 
         for scene in sorted(metadata.get('scenes', []), key=lambda s: s['scene_id']):
             scene_id = scene['scene_id']
+            if scene_filter is not None and scene_id != scene_filter:
+                continue
             for panel in sorted(scene.get('panels', []), key=lambda p: p['panel_index']):
                 panel_id = panel['panel_index']
+                if panel_filter is not None and panel_id != panel_filter:
+                    continue
                 img_name = f"{scene_id:03d}_{panel_id:02d}_static.png"
                 img_path = panels_dir / img_name
 

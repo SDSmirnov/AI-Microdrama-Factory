@@ -22,7 +22,7 @@ from lib.studio.artist import (
     render_panels,
     render_scene_grids,
 )
-from lib.studio.critic import load_ref_catalog, print_summary, process_scene, run_quality_gate
+from lib.studio.critic import analyze_panel, load_ref_catalog, print_summary, run_quality_gate
 from lib.studio.editor import load_quality_report, refine_panel
 from lib.studio.retoucher import edit_image as retoucher_edit_image
 
@@ -423,9 +423,6 @@ def cmd_panel_by_panel_qa(args):
         sys.exit(1)
 
     aspect_ratio = config['image_generation'].get('aspect_ratio', '9:16')
-    cfg = metadata.get("config", config)
-    grid_format = cfg.get("format", {}).get("type", "single_grid_animation")
-    panels_per_scene = cfg.get("format", {}).get("panels_per_scene", 9)
     ref_catalog = load_ref_catalog(project.ref_dir)
     passed = 0
 
@@ -444,31 +441,27 @@ def cmd_panel_by_panel_qa(args):
 
         for attempt in range(1, max_attempts + 1):
             logger.info(f"\n  🔍 QA (attempt {attempt}/{max_attempts})...")
-            results = process_scene(
-                llm=vision_llm,
-                scene=scene,
-                ref_catalog=ref_catalog,
-                grid_format=grid_format,
-                panels_per_scene=panels_per_scene,
-                threshold=threshold,
-                panel_filter=[pid],
-                output_dir=project.output_dir,
-                prompts=prompts,
-            )
-
-            panel_result = next(
-                (p for p in results if p['scene_id'] == scene_id and p['panel_id'] == pid),
-                None,
-            )
-            if panel_result is None or not panel_result.get('needs_refinement'):
-                logger.info(f"  ✅ Panel {pid} passed QA (fidelity={(panel_result or {}).get('fidelity', '?')})")
+            with Image.open(panel_path) as panel_img:
+                panel_result = analyze_panel(
+                    llm=vision_llm,
+                    panel_img=panel_img,
+                    panel_meta=panel,
+                    scene_meta=scene,
+                    ref_catalog=ref_catalog,
+                    scene_id=scene_id,
+                    panel_id=pid,
+                    threshold=threshold,
+                    prompts=prompts,
+                )
+            if not panel_result.get('needs_refinement'):
+                logger.info(f"  ✅ Panel {pid} passed QA (fidelity={panel_result.get('fidelity', '?')})")
                 passed += 1
                 break
 
             if attempt == max_attempts:
                 logger.warning(
                     f"  ⚠️  Panel {pid} still needs refinement after {max_attempts} attempt(s) "
-                    f"(fidelity={(panel_result or {}).get('fidelity', '?')})"
+                    f"(fidelity={panel_result.get('fidelity', '?')})"
                 )
                 break
 

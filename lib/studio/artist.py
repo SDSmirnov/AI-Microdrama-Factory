@@ -570,11 +570,6 @@ def _build_panel_prompt(scene: dict, panel: dict, frame_type: str, prompts: dict
         visual = panel.get('visual_start', panel.get('visual_end', ''))
 
     is_reversed = panel.get('is_reversed', False)
-    active_motion = (
-        panel.get('motion_prompt_reversed', '')
-        if is_reversed and panel.get('motion_prompt_reversed')
-        else panel.get('motion_prompt', '')
-    )
 
     tags = []
     if panel.get('hook_type') and panel['hook_type'] != 'none':
@@ -602,8 +597,6 @@ Camera / Lighting: {panel.get('lights_and_camera', '')}
 
 {"**IMPORTANT: THIS IS VERTICAL PORTRAIT IMAGE, IT SHOULD BE VIEWED NORMALLY, WITHOUT ROTATION**" if is_portrait(aspect_ratio) else ""}
 """
-    if active_motion:
-        prompt += f"Motion context: {active_motion}\n"
     return prompt
 
 
