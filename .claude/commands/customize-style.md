@@ -11,7 +11,6 @@ Look up the preset for `style_preset` from the table below:
 | Key | Name | Format | Panels | Aspect | Resolution | needs_start_end | needs_dialogue | needs_captions | camera_style |
 |-----|------|--------|--------|--------|------------|----------------|----------------|----------------|--------------|
 | `vertical_9_16_microdrama` | Vertical MicroDrama - Realistic Cinematic | single_grid_animation | 9 | 9:16 | 2K | true | true | false | cinematic_fpov |
-| `vertical_9_16_dark_romance` | Vertical Dark Romance - Realistic Cinematic | single_grid_animation | 9 | 9:16 | 2K | true | true | false | cinematic_fpov |
 | `vertical_9_16_long_arc` | Vertical Long Arc - Realistic Cinematic | single_grid_animation | 9 | 9:16 | 2K | true | true | false | cinematic_fpov |
 
 If `style_preset` is not in the table, default to `vertical_9_16_microdrama`.

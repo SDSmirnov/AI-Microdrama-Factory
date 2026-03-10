@@ -62,7 +62,7 @@ def register(sub):
     p = sub.add_parser('styles', help='Generate custom_prompts/ for a style')
     p.add_argument('novel', help='Novel text file')
     p.add_argument('--style', default='vertical_9_16_microdrama',
-                   help='Style preset: vertical_9_16_microdrama|vertical_9_16_dark_romance|vertical_9_16_long_arc')
+                   help='Style preset: vertical_9_16_microdrama|vertical_9_16_long_arc')
     p.set_defaults(func=cmd_styles)
 
     p = sub.add_parser('casting', help='Identify characters and save reference JSONs')

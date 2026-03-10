@@ -45,7 +45,7 @@ make split-book BOOK=fullbook.txt STYLE=vertical_9_16_microdrama SEASON=1
 /analyze-novel s01e01.txt
 
 # Step 1b (optional): Generate custom_prompts/ overrides for a chosen style
-# Active styles: vertical_9_16_microdrama | vertical_9_16_dark_romance
+# Active styles: vertical_9_16_microdrama 
 /customize-style s01e01.txt vertical_9_16_microdrama
 # → writes override files to custom_prompts/ (style, casting, scenery, imagery, setting, config)
 # → these overlay on top of lib/prompting/<style>/ at runtime
@@ -96,7 +96,6 @@ lib/
   llm/         # BaseLLM ABC + backends: GeminiLLM, OpenRouterLLM, GrokLLM, LogDebugLLM
   prompting/   # Style preset directories (each: *.md prompts + config.json + book-shrinker.md)
     vertical_9_16_microdrama/
-    vertical_9_16_dark_romance/
   studio/      # Production pipeline modules:
     stylist.py      — novel analysis + custom_prompts/ overlay generation
     screenwriter.py — episode/scene/reversal AI passes

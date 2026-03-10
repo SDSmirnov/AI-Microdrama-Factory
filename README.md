@@ -210,7 +210,6 @@ Commands (all accept `--style <preset>` where relevant; default: `vertical_9_16_
 Built-in styles in `lib/prompting/`:
 
 - `vertical_9_16_microdrama` (single_grid_animation, 9 panels, 9:16) — default
-- `vertical_9_16_dark_romance` (single_grid_animation, 9 panels, 9:16) — dark romance / billionaire drama variant
 
 The `--style` flag is a global CLI option, not a subcommand argument. It selects the prompt directory and config. `custom_prompts/` files (if present) overlay on top.
 
@@ -246,7 +245,7 @@ Makefile
 lib/
   core/        # project/env/prompts loader/schemas
   llm/         # OpenRouter, Gemini, Grok, Debug adapters
-  prompting/   # style preset directories (vertical_9_16_microdrama/, vertical_9_16_dark_romance/)
+  prompting/   # style preset directories (vertical_9_16_microdrama/)
   studio/      # stylist/screenwriter/artist/critic/director/editor/cutter/retoucher/bookbinder
   commands/    # argparse command registration (setup/screenplay/storyboard/animation/audio)
   animation/   # Veo and Grok animators
