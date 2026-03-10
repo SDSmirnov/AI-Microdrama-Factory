@@ -51,8 +51,10 @@ Core pipeline stages:
 3. `refs`: render missing reference portraits `ref_thriller/*.png`.
 4. `screenplay`: generate episodes/scenes/reversal pass and `animation_metadata.json`.
 5. `scenes`: generate keyframes for specific episode(s) with cross-episode continuity rules and upsert into metadata.
+5b. `reverse-refine`: re-run refinement + reversal pass on an existing raw episode JSON without re-querying keyframes. Requires `SCENE=N`.
 6. `consistency`: continuity enforcer — enrich ref JSONs from scene/location usage, re-align panel visuals to approved refs. Default: `--dry-run` (JSON only); use `--no-dry-run` or follow with `make refs` to regenerate PNGs.
 7. `storyboard`: render scene grids or individual panel images.
+7b. `panel-by-panel-with-qa`: render each panel one at a time with inline QA + refinement loop (up to `--max-attempts` retries). Requires `SCENE=N`.
 8. `qa`: run visual fidelity checks and produce `quality_report.json`.
 9. `apply-qa`: auto-refine all panels flagged by QA.
 10. `accept-qa`: promote refined panels into `panels/`, backup originals.
@@ -149,8 +151,8 @@ make animation PROVIDER=veo SCENE=all PANEL=all
 Use `make help` to list all targets. Current targets:
 
 - `init`, `workdirs`
-- `split-book`, `styles`, `casting`, `refs`, `screenplay`, `scenes`, `consistency`
-- `storyboard`, `qa`, `apply-qa`, `accept-qa`, `rebuild-storyboard`, `refinement`, `animation`
+- `split-book`, `styles`, `casting`, `refs`, `screenplay`, `scenes`, `reverse-refine`, `consistency`
+- `storyboard`, `panel-by-panel-with-qa`, `qa`, `apply-qa`, `accept-qa`, `rebuild-storyboard`, `refinement`, `animation`
 - `autocut`, `voiceover`, `imgedit`, `tts`, `dub`, `duck`
 - `summary`, `webserver`
 
@@ -187,6 +189,7 @@ Commands (all accept `--style <preset>` where relevant; default: `vertical_9_16_
 - `refs`
 - `screenplay <novel>`
 - `scenes [scene|all]`
+- `reverse-refine <scene>`
 - `consistency [--dry-run|--no-dry-run]`
 - `storyboard [scene|all] [panel|all]`
 - `qa [--scene N ...] [--panel N ...] [--threshold N]`
@@ -194,6 +197,7 @@ Commands (all accept `--style <preset>` where relevant; default: `vertical_9_16_
 - `accept-qa`
 - `rebuild-storyboard [scene|all]`
 - `refinement <scene_id> <panel_id> [--frame start|end|static|both]`
+- `panel-by-panel-with-qa <scene> [panel|all] [--threshold N] [--max-attempts N]`
 - `animation <veo|grok> [scene|all] [panel|all]`
 - `autocut --json <metadata.json> --clips-dir <dir> --out-dir <dir> [--min-fidelity N]`
 - `voiceover [--out-dir <dir>] [--output <script.sh>]`
@@ -209,7 +213,8 @@ Commands (all accept `--style <preset>` where relevant; default: `vertical_9_16_
 
 Built-in styles in `lib/prompting/`:
 
-- `vertical_9_16_microdrama` (single_grid_animation, 9 panels, 9:16) — default
+- `vertical_9_16_microdrama` (single_grid_animation, 9 panels, 9:16) — default. One episode per narrative chapter; multi-POV (pov_a / pov_b / confrontation) supported.
+- `vertical_9_16_long_arc` (single_grid_animation, 9 panels, 9:16). Episodes grouped into arc units spanning 2 or 3 episodes (controlled by `episodes_count` in `config.json`). Each arc unit runs arc_open → [arc_mid] → arc_close as a single hook-to-cliffhanger.
 
 The `--style` flag is a global CLI option, not a subcommand argument. It selects the prompt directory and config. `custom_prompts/` files (if present) overlay on top.
 

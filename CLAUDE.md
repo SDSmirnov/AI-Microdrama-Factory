@@ -121,8 +121,10 @@ All commands that load prompts accept the global `--style <preset>` flag (defaul
 3. **`refs`** (`artist.render_character_refs`): Generates missing reference portrait PNGs
 4. **`screenplay`** (`screenwriter.analyze_scenes_master`): Episodes → scenes → refinement → reversal pass; writes `animation_metadata.json`
 5. **`scenes`** (`screenwriter.run_scenes_pipeline`): Per-episode keyframe generation with cross-episode continuity rules; upserts into `animation_metadata.json`
+5b. **`reverse-refine`** (`screenwriter.run_scenes_pipeline` refinement+reversal only): Re-runs refinement and reversal pass on an already-generated raw episode JSON (`animation_episode_scenes_NNN.json`) without re-querying keyframes. Requires `SCENE=N`.
 6. **`consistency`** (`director.run_continuity_pass`): Enriches ref JSONs from scene/location usage; re-aligns `visual_start`/`visual_end`/`lights_and_camera` to approved references. Default `--dry-run` enriches JSONs only — run `make refs` after to regenerate PNGs. Pass `--no-dry-run` to regenerate PNGs in one step.
 7. **`storyboard`** (`artist.render_scene_grids` / `render_panels`): Generates grid images or individual panel PNGs
+7b. **`panel-by-panel-with-qa`** (`artist.render_panel` + `critic` inline): Renders each panel one at a time, runs QA, and refines in-place up to `--max-attempts` times. Requires `SCENE=N`; optional `PANEL=N` to target one panel.
 8. **`qa`** (`critic.run_quality_gate`): Visual fidelity/consistency scoring; writes `quality_report.json`
 9. **`apply-qa`** / **`refinement`** (`editor.refine_panel`): Regenerates flagged panels using reference images
 10. **`accept-qa`**: Promotes refined PNGs into `panels/`, backs up originals
@@ -140,11 +142,11 @@ All commands that load prompts accept the global `--style <preset>` flag (defaul
 | `custom_prompts/` | User override files; deep-merged on top of `lib/prompting/<style>/` at runtime |
 | `prompts/` | Legacy fallback only (used if `lib/prompting/<style>/` dir is missing) |
 
-`lib/prompting/<style>/` contains: `style.md`, `casting.md`, `scenery.md`, `imagery.md`, `screenplay.md`, `screenplay_scene.md`, `screenplay_episodes.md`, `qa.md`, `episode_type_pov.md`, `episode_type_confrontation.md`, `episode_type_transition.md`, `refinement_arc_rule.md`, `config.json`, `book-shrinker.md`
+`lib/prompting/<style>/` contains: `style.md`, `casting.md`, `scenery.md`, `imagery.md`, `screenplay.md`, `screenplay_scene.md`, `screenplay_episodes.md`, `qa.md`, `episode_type_pov.md`, `episode_type_confrontation.md`, `episode_type_transition.md`, `episode_type_arc_open.md`, `episode_type_arc_mid.md`, `episode_type_arc_close.md`, `refinement_arc_rule.md`, `config.json`, `book-shrinker.md`
 
-Available built-in styles: `vertical_9_16_microdrama`, `vertical_9_16_dark_romance`
+Available built-in styles: `vertical_9_16_microdrama`, `vertical_9_16_long_arc`
 
-`config.json` controls format type (`single_grid_animation` or `single_grid`), panels per scene, aspect ratio, resolution, animation mode, slicing, dialogue, and captions.
+`config.json` controls format type (`single_grid_animation` or `single_grid`), panels per scene, aspect ratio, resolution, animation mode, slicing, dialogue, captions, and `episodes_count` (arc length for `vertical_9_16_long_arc`: 2 or 3 episodes per arc unit).
 
 ### Output Structure
 

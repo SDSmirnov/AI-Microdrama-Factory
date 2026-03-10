@@ -1,6 +1,24 @@
 {
-  "novels": [],
-  "scene_files": [],
-  "has_metadata": false,
+  "novels": [
+    "s01e13.txt"
+  ],
+  "scene_files": [
+    {
+      "episode": 13,
+      "has_refined": true,
+      "has_raw": true
+    },
+    {
+      "episode": 14,
+      "has_refined": true,
+      "has_raw": true
+    },
+    {
+      "episode": 15,
+      "has_refined": true,
+      "has_raw": true
+    }
+  ],
+  "has_metadata": true,
   "storyboards": []
 }
