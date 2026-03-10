@@ -232,6 +232,8 @@ def _render_single_ref(char: dict, config: dict, project: Project, llm: BaseLLM)
 
     refs = []
     opened_imgs = []
+
+    ref_type = char.get('type', 'Character')
     style_ref = char.get('style_reference', '')
     if style_ref and style_ref != name:
         ref_png = project.ref_dir / f"{safe_name(style_ref)}.png"
@@ -242,11 +244,15 @@ def _render_single_ref(char: dict, config: dict, project: Project, llm: BaseLLM)
             refs.append(f"↑ Visual style reference for \"{style_ref}\" — match this aesthetic.\n")
 
     ref_aspect = config.get('reference_characters', {}).get('ref_aspect_ratio', '3:4')
+
     prompt_text = (
         f"CINEMATIC REFERENCE FOR {char['type']}: {name}. "
         f"{char['visual_desc']}. "
-        "Close-up, neutral expression, uniform lighting, 8k."
+        f"Close-up, neutral expression, uniform lighting, 8k."
     )
+
+    if ref_type.lower() == 'character':
+        prompt_text += "Render character full-height"
 
     try:
         img_bytes = llm.make_image(prompt_text, refs=refs, aspect_ratio=ref_aspect, image_size="1K")
