@@ -16,7 +16,7 @@ Usage:
     python cli.py accept-qa
     python cli.py rebuild-storyboard [SCENE|all]
     python cli.py refinement SCENE PANEL [--frame start|end|both]
-    python cli.py animation PROVIDER SCENE PANEL [--frame start|end]
+    python cli.py animation PROVIDER [SCENE|all] [PANEL|all]
 
     # Post-production tools
     python cli.py autocut --json scene.json --clips-dir clips/ --out-dir cut/

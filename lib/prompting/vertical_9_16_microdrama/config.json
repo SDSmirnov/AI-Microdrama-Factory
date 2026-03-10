@@ -7,7 +7,6 @@
   },
   "image_generation": {
     "aspect_ratio": "9:16",
-    "resolution": "2K",
     "image_size": "2K"
   },
   "animation": {

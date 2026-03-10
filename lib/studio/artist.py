@@ -319,8 +319,8 @@ def _build_prompt_header(scene: dict, prompts: dict) -> str:
 
 def _build_grid_prompt(scene: dict, prompts: dict, config: dict) -> str:
     """Build the text prompt for a scene grid image."""
-    aspect_ratio = config['image_generation']['aspect_ratio']
-    resolution = config['image_generation']['image_size']
+    aspect_ratio = config['image_generation'].get('aspect_ratio', '9:16')
+    resolution = config['image_generation'].get('image_size', '2K')
 
     prompt = _build_prompt_header(scene, prompts)
     prompt += f"\nIMPORTANT: Generate SINGLE {resolution} {aspect_ratio} image with panels in grid layout.\n"
@@ -450,8 +450,8 @@ def _render_single_grid(scene: dict, scene_id: int, prompts: dict, config: dict,
                 logger.warning(f"  ⚠️  Could not load cross-scene anchor: {e}")
 
     prompt_text = _build_grid_prompt(scene, prompts, config)
-    aspect_ratio = config['image_generation']['aspect_ratio']
-    resolution = config['image_generation']['image_size']
+    aspect_ratio = config['image_generation'].get('aspect_ratio', '9:16')
+    resolution = config['image_generation'].get('image_size', '2K')
 
     logger.info(f"  🎨 Rendering scene {scene_id} ({config['format']['type']})...")
     img_bytes = None
@@ -807,8 +807,8 @@ def slice_combined(path_combined: Path, sid: int, config: dict, project: Project
 
 def _build_image_prompt(scene: dict, prompts: dict, config: dict) -> str:
     """Build the image generation prompt text for a scene."""
-    aspect_ratio = config['image_generation']['aspect_ratio']
-    resolution = config['image_generation']['image_size']
+    aspect_ratio = config['image_generation'].get('aspect_ratio', '9:16')
+    resolution = config['image_generation'].get('image_size', '2K')
 
     portrait = is_portrait(aspect_ratio)
     prompt = _build_prompt_header(scene, prompts)

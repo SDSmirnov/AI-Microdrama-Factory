@@ -78,10 +78,11 @@ rebuild-storyboard:  ## Rebuild scene grid images from current panels/ (backup o
 	python cli.py rebuild-storyboard $(SCENE)
 
 refinement:  ## Refine panel PANEL in scene SCENE (e.g. SCENE=1 PANEL=3 FRAME=static|start|end|both)
+	@[ "$(SCENE)" != "all" ] && [ "$(PANEL)" != "all" ] || (echo "❌ SCENE and PANEL must be set to integers, e.g. make refinement SCENE=1 PANEL=3"; exit 1)
 	python cli.py --llm $(LLM) --style $(STYLE) refinement $(SCENE) $(PANEL) --frame $(FRAME)
 
 animation:  ## Generate video clips using PROVIDER (veo|grok)
-	python cli.py animation $(PROVIDER) $(SCENE) $(PANEL)
+	python cli.py animation $(PROVIDER) $(SCENE)
 
 autocut:  ## AI-trim clips in CLIPS_DIR using JSON metadata → OUT_DIR
 	python cli.py autocut --json $(JSON) --clips-dir $(CLIPS_DIR) --out-dir $(OUT_DIR)
@@ -112,6 +113,7 @@ split-book:  ## Split BOOK into filmable 3-POV episode chunks → BOOK_OUT/s0SeN
 	python cli.py --llm $(LLM) --style $(STYLE) split-book $(BOOK) --output-dir $(BOOK_OUT) --season $(SEASON)
 
 panel-by-panel-with-qa:  ## Render panels one-by-one with inline QA+refine (SCENE=N [PANEL=N] [THRESHOLD=5] [MAX_ATTEMPTS=3])
+	@[ "$(SCENE)" != "all" ] || (echo "❌ SCENE must be set to an integer, e.g. make panel-by-panel-with-qa SCENE=1"; exit 1)
 	python cli.py --llm $(LLM) --style $(STYLE) panel-by-panel-with-qa $(SCENE) $(PANEL) --threshold $(THRESHOLD) --max-attempts $(MAX_ATTEMPTS)
 
 webserver:  ## Start static web server on :5005 and open Chrome at web/index.html

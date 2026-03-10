@@ -100,7 +100,6 @@ def register(sub):
     p = sub.add_parser('animation', help='Generate video clips')
     p.add_argument('provider', choices=['veo', 'grok'], help='Animation provider')
     p.add_argument('scene', nargs='?', default='all', help='Scene number or "all"')
-    p.add_argument('panel', nargs='?', default='all', help='Panel number or "all"')
     p.set_defaults(func=cmd_animation)
 
     p = sub.add_parser('autocut', help='AI-trim animation clips vs panel metadata')
