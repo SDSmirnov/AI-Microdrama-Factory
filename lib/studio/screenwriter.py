@@ -98,10 +98,19 @@ def _build_continuity_map(episodes_list: list) -> dict:
     return continuity_map
 
 
+_ARC_TYPES = {'arc_open', 'arc_mid', 'arc_close'}
+_POV_TYPES = {'pov_a', 'pov_b', 'confrontation'}
+
+
 def validate_episode_structure(episodes_list: list) -> None:
-    """Warn on 3-POV structural violations (wrong triplet order or missing types)."""
+    """Warn on 3-POV structural violations (wrong triplet order or missing types).
+    Skips validation for long-arc styles (arc_open/arc_mid/arc_close episode types).
+    """
     if not any('chapter_id' in ep for ep in episodes_list):
         return
+    all_types = {ep.get('episode_type', '') for ep in episodes_list}
+    if all_types & _ARC_TYPES:
+        return  # long-arc style — linear structure, no triplet constraint
     chapters: dict = {}
     for ep in episodes_list:
         cid = ep.get('chapter_id', 0)
@@ -242,6 +251,8 @@ def _episode_type_block(episode_type: str, pov_character: str, prompts: dict, co
         panel_duration = str(config['format'].get('panel_duration_s', 6))
         tmpl = prompts.get('episode_type_transition', '')
         return tmpl.replace('{{PANEL_DURATION}}', panel_duration)
+    if episode_type in ('arc_open', 'arc_mid', 'arc_close'):
+        return prompts.get(f'episode_type_{episode_type}', '')
     return ''
 
 

@@ -17,8 +17,8 @@ SCREENPLAY_SCHEMA = {
                 "properties": {
                     "episode_id": {"type": "integer"},
                     "chapter_id": {"type": "integer", "description": "Source chapter number (1-based). All three sub-episodes of the same chapter share the same chapter_id. Transition episodes use 0."},
-                    "episode_type": {"type": "string", "description": "Structural role: pov_a (first protagonist's perspective only), pov_b (second protagonist's perspective only), confrontation (both characters, direct interaction), transition (time-gap bridge — no dialogue, visual rhyme, short panel durations)"},
-                    "pov_character": {"type": "string", "description": "Name of the POV character for pov_a/pov_b episodes. Empty string for confrontation and transition."},
+                    "episode_type": {"type": "string", "description": "Structural role — use values defined by the active style. Multi-POV styles: pov_a (first protagonist only), pov_b (second protagonist only), confrontation (both characters), transition (time-gap bridge). Long-arc styles: arc_open (first episode of arc unit), arc_mid (middle episode), arc_close (final episode of arc unit), transition (bridge between arc units)."},
+                    "pov_character": {"type": "string", "description": "Name of the POV character for pov_a/pov_b episodes. Empty string for all other episode types."},
                     "location": {"type": "string"},
                     "daytime": {"type": "string"},
                     "raw_narrative": {"type": "string", "description": "Full narative from the original text which was used for this episode, do not shorted used text, it will be used for the context"},
