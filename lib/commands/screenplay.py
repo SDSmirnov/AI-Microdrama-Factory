@@ -174,9 +174,14 @@ This summary will be injected verbatim into the next chapter prompt.
 ## CHARACTER REFERENCES
 
 {refs_block or "(no character refs available)"}
+
+RETURN JSON:
+{{
+    "summary": "Verbose summary text"
+}}
 """
 
-    result = llm.generate(prompt)
+    result = llm.make_json(prompt)
     if not result:
         logger.error("❌ LLM returned empty summary")
         sys.exit(1)

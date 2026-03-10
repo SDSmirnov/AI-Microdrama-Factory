@@ -171,7 +171,7 @@ Important: all dialogues, voiceovers and texts MUST be in Russian as in original
 # ---------------------------------------------------------------------------
 # Episode-level screenplay — verbatim from 01_cinematic_preroll.py:529-592
 # ---------------------------------------------------------------------------
-def analyze_episodes_master(text: str, prompts: dict, config: dict, llm: BaseLLM) -> dict:
+def analyze_episodes_master(text: str, prompts: dict, config: dict, llm: BaseLLM, character_info: dict = None) -> dict:
     logger.info("\n🎥 MASTER SCREENWRITER: Preparing screenplay...")
     setting_context = prompts.get('setting', '')
     transitions_cfg = config.get('transitions', {})
@@ -231,7 +231,26 @@ def analyze_episodes_master(text: str, prompts: dict, config: dict, llm: BaseLLM
     episodes_rules = episodes_rules.replace('__MULTI_POV_INSTRUCTION__', multi_pov_instruction)
     episodes_rules = episodes_rules.replace('__TRANSITIONS_INSTRUCTION__', transitions_instruction)
 
-    prompt = f"{episodes_rules}\n\n{setting_context}\n\nRespond in specified JSON format.\n\nTEXT TO ADAPT:\n<STORY>{text}</STORY>"
+    if character_info:
+        lines = []
+        for name, info in character_info.items():
+            desc = info.get('video_visual_desc') or info.get('visual_desc', '')
+            if desc:
+                lines.append(f"- {name}: {desc}")
+            else:
+                lines.append(f"- {name}")
+        char_refs_block = (
+            "CHARACTER/LOCATION REFERENCES — use these EXACT descriptions in visual_continuity_rules "
+            "and screenplay_instructions to prevent hallucination:\n" + "\n".join(lines)
+        )
+    else:
+        char_refs_block = ""
+
+    prompt = (
+        f"{episodes_rules}\n\n{setting_context}\n\n"
+        + (f"{char_refs_block}\n\n" if char_refs_block else "")
+        + f"Respond in specified JSON format.\n\nTEXT TO ADAPT:\n<STORY>{text}</STORY>"
+    )
     return llm.make_json(prompt, schema)
 
 
@@ -695,7 +714,7 @@ def analyze_scenes_master(
     """
     output_dir = output_dir or DEFAULT_OUTPUT_DIR
 
-    episodes = analyze_episodes_master(text, prompts, config, llm)
+    episodes = analyze_episodes_master(text, prompts, config, llm, character_info=character_info)
     if not episodes:
         raise RuntimeError(
             "analyze_episodes_master returned None or empty — check LLM response and API key"
