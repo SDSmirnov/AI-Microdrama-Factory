@@ -233,18 +233,24 @@ class OpenRouterLLM(BaseLLM):
     # Image editing and multimodal analysis
     # ------------------------------------------------------------------
 
-    def edit_image(self, src_img, prompt: str, refs=None) -> bytes:
+    def edit_image(self, src_img, prompt: str, refs=None,
+                   aspect_ratio: str = None, image_size: str = None) -> bytes:
         """
         Edit an existing image with optional reference context.
 
+        Content order: character/scene refs first (visual context), source image after,
+        instruction last — matches recommended multimodal ordering for appearance anchoring.
+
         src_img: image bytes, file path, Path, PIL.Image, data URL, or content-part dict.
-        refs: optional list of extra context parts (text/images).
+        refs: optional list of context parts (text/images) prepended before source.
+        aspect_ratio/image_size: accepted for API compatibility, ignored (OpenRouter handles sizing).
         Returns raw PNG bytes.
         """
-        contents = [self._to_image_part(src_img)]
+        contents = []
         for ref in refs or []:
             contents.append(self._normalize_multimodal_part(ref, media="image"))
-        contents.append({"type": "text", "text": f"Edit the first image. {prompt}"})
+        contents.append(self._to_image_part(src_img))
+        contents.append({"type": "text", "text": f"Edit the last image above. {prompt}"})
 
         @retry_on_errors(max_retries=3, backoff_factor=2)
         def _call():
