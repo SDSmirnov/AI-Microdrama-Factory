@@ -175,9 +175,15 @@ This summary will be injected verbatim into the next chapter prompt.
 
 {refs_block or "(no character refs available)"}
 
-RETURN JSON:
+RETURN JSON, CONTENTS IN RUSSIAN:
 {{
-    "summary": "Verbose summary text"
+    "current_logline": "logline state from the start to the moment",
+    "plot_state": "what happened, key events, unresolved conflicts",
+    "character_states": "who is where, what changed for each character, emotional arc",
+    "visual_continuity": "established looks, key locations, lighting/color palette, camera style",
+    "narrative_thread": "the cliffhanger or setup that carries into the next chapter",
+    "production_notes": "any visual motifs, recurring symbols, tone to maintain",
+    "summary_notes": "detailed summary for context"
 }}
 """
 
@@ -187,7 +193,7 @@ RETURN JSON:
         sys.exit(1)
 
     out_path = Path(args.output)
-    out_path.write_text(result, encoding='utf-8')
+    out_path.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding='utf-8')
     logger.info(f"✅ Summary written to {out_path}")
 
 
