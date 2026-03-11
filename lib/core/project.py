@@ -1,7 +1,6 @@
 """
 Project dataclass: config, dirs, state, and runtime caches.
 """
-import json
 import logging
 import os
 from dataclasses import dataclass, field
@@ -45,15 +44,6 @@ class Project:
 
     def state_path(self) -> Path:
         return self.output_dir / "pipeline_state.json"
-
-    def load_state(self) -> dict:
-        p = self.state_path()
-        if p.exists():
-            return json.loads(p.read_text(encoding='utf-8'))
-        return {}
-
-    def save_state(self, state: dict):
-        self.state_path().write_text(json.dumps(state, indent=2), encoding='utf-8')
 
     def ensure_dirs(self):
         for d in [self.output_dir, self.ref_dir, self.panels_dir,

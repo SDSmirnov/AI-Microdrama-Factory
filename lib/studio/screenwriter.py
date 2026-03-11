@@ -14,6 +14,7 @@ from threading import Lock
 
 
 from lib.core.schemas import SCREENPLAY_SCHEMA, SCENE_SCHEMA, REVERSAL_SCHEMA
+from lib.core.state import ProjectState
 from lib.core.utils import DEFAULT_OUTPUT_DIR, is_portrait
 from lib.llm.base import BaseLLM, retry_on_errors
 
@@ -599,16 +600,31 @@ def run_scenes_pipeline(
     llm: BaseLLM,
     output_dir: Path,
     character_info: dict = None,
+    state: ProjectState | None = None,
+    resume: bool = False,
 ) -> list:
     """
     Process a filtered list of episodes sequentially:
       analyze → refine → reversal → write checkpoint per episode.
     Returns all_scenes (list of refined scene dicts, mutated in place by process_single_scene).
+
+    With resume=True and a ProjectState, episodes whose refined checkpoint is already
+    marked done are loaded from disk instead of re-running the LLM pipeline.
     """
     all_episodes: list = []
     continuity_map = _build_continuity_map(episodes_list)
     for ep in episodes:
         ep_id = ep['episode_id']
+        # Phase 1 skip: raw analysis already done — load raw checkpoint
+        if resume and state and state.episode_raw_done(ep_id):
+            raw_path = output_dir / f"animation_episode_scenes_{ep_id:03d}.json"
+            if raw_path.exists():
+                try:
+                    all_episodes.append((ep_id, json.loads(raw_path.read_text(encoding='utf-8'))))
+                    logger.info(f"⏭  Episode {ep_id}: raw checkpoint loaded (skipping LLM analysis)")
+                    continue
+                except (json.JSONDecodeError, OSError) as exc:
+                    logger.warning(f"⚠️  Episode {ep_id}: raw checkpoint unreadable ({exc}), re-analyzing")
         prev_rules = continuity_map.get(ep_id, '')
         analyze_scenes_for_episode(
             ep_id, json.dumps(ep, ensure_ascii=False, indent=2),
@@ -627,6 +643,18 @@ def run_scenes_pipeline(
 
     all_scenes: list = []
     for ep_counter, scene_list in sorted(ep_scenes_map.items()):
+        # Phase 2 skip: refined checkpoint already done — load from disk
+        if resume and state and state.episode_refined_done(ep_counter):
+            refined_path = output_dir / f"animation_episode_scenes_{ep_counter:03d}_refined.json"
+            if refined_path.exists():
+                try:
+                    data = json.loads(refined_path.read_text(encoding='utf-8'))
+                    all_scenes.extend(data.get('scenes', []))
+                    logger.info(f"⏭  Episode {ep_counter}: refined checkpoint loaded (skipping refinement)")
+                    continue
+                except (json.JSONDecodeError, OSError) as exc:
+                    logger.warning(f"⚠️  Episode {ep_counter}: refined checkpoint unreadable ({exc}), re-refining")
+
         prev_terminal = None
         ep_refined: list = []
         for sc_id, scene in scene_list:
@@ -647,6 +675,8 @@ def run_scenes_pipeline(
         if ep_refined:
             try:
                 _write_episode_checkpoint(ep_counter, ep_refined, output_dir)
+                if state:
+                    state.mark_episode_refined_done(ep_counter)
             except Exception as e:
                 logger.warning(f"⚠️  Could not write checkpoint for episode {ep_counter}: {e}")
 
@@ -717,34 +747,54 @@ def analyze_scenes_master(
     max_workers: int = 10,
     character_info: dict = None,
     output_dir: Path = None,
+    state: ProjectState | None = None,
+    resume: bool = False,
 ) -> dict:
     """
     Full pipeline: episodes → scenes → reversal → save JSONs.
     Returns {'scenes': [...]}.
+
+    With resume=True and a ProjectState, each completed phase is skipped and
+    loaded from its checkpoint file:
+      - Phase 1 (episodes):  skipped if state.episodes_done()  → load animation_episodes.json
+      - Phase 2 (raw/ep):    skipped if state.episode_raw_done(N) → load animation_episode_scenes_NNN.json
+      - Phase 3 (refine/ep): skipped if state.episode_refined_done(N) → load *_refined.json
     """
     output_dir = output_dir or DEFAULT_OUTPUT_DIR
-
-    episodes = analyze_episodes_master(text, prompts, config, llm, character_info=character_info)
-    if not episodes:
-        raise RuntimeError(
-            "analyze_episodes_master returned None or empty — check LLM response and API key"
-        )
-
     output_dir.mkdir(parents=True, exist_ok=True)
-    (output_dir / "animation_episodes.json").write_text(
-        json.dumps(episodes, ensure_ascii=False, indent=2),
-        encoding='utf-8',
-    )
+
+    # ── Phase 1: episode breakdown ────────────────────────────────────────────
+    episodes_path = output_dir / "animation_episodes.json"
+    if resume and state and state.episodes_done() and episodes_path.exists():
+        try:
+            episodes = json.loads(episodes_path.read_text(encoding='utf-8'))
+            logger.info("⏭  Phase 1: episode breakdown loaded from checkpoint (skipping LLM)")
+        except (json.JSONDecodeError, OSError) as exc:
+            logger.warning(f"⚠️  Episode checkpoint unreadable ({exc}), re-generating")
+            episodes = None
+    else:
+        episodes = None
+
+    if episodes is None:
+        episodes = analyze_episodes_master(text, prompts, config, llm, character_info=character_info)
+        if not episodes:
+            raise RuntimeError(
+                "analyze_episodes_master returned None or empty — check LLM response and API key"
+            )
+        episodes_path.write_text(json.dumps(episodes, ensure_ascii=False, indent=2), encoding='utf-8')
+        if state:
+            state.mark_episodes_done(len(episodes.get('episodes', [])))
     logger.debug(episodes)
 
     all_scenes: list = []
-    batch_analyze: list = []
     all_episodes: list = []
 
     episodes_list = episodes.get('episodes', [])
     validate_episode_structure(episodes_list)
     continuity_map = _build_continuity_map(episodes_list)
 
+    # ── Phase 2: parallel raw scene analysis (per episode) ────────────────────
+    batch_analyze: list = []
     for i, episode in enumerate(episodes_list):
         episode_counter = episode.get('episode_id', i + 1)
         prev_rules = continuity_map.get(episode_counter, '')
@@ -754,6 +804,18 @@ def analyze_scenes_master(
     _ep_lock = Lock()
 
     def _safe_analyze(args):
+        ep_id = args[0]
+        if resume and state and state.episode_raw_done(ep_id):
+            raw_path = output_dir / f"animation_episode_scenes_{ep_id:03d}.json"
+            if raw_path.exists():
+                try:
+                    data = json.loads(raw_path.read_text(encoding='utf-8'))
+                    with _ep_lock:
+                        all_episodes.append((ep_id, data))
+                    logger.info(f"⏭  Episode {ep_id}: raw checkpoint loaded (skipping LLM analysis)")
+                    return
+                except (json.JSONDecodeError, OSError) as exc:
+                    logger.warning(f"⚠️  Episode {ep_id}: raw checkpoint unreadable ({exc}), re-analyzing")
         try:
             analyze_scenes_for_episode(*args)
         except Exception as e:
@@ -772,28 +834,40 @@ def analyze_scenes_master(
 
     all_episodes = sorted(all_episodes, key=lambda e: e[0])
 
-    # Assign global scene IDs and group by episode for sequential per-episode refinement.
-    # Scenes within an episode are processed sequentially so the terminal visual_end of
-    # scene N can be passed as spatial anchor into scene N+1's refinement pass.
-    # Different episodes are still refined in parallel.
+    # Assign global scene IDs and write raw checkpoints.
+    # Mark each episode raw-done only after its file is committed to disk.
     scene_counter = 0
     ep_scene_groups: dict = {}  # {episode_counter: [(scene_id, scene), ...]}
 
     for episode_counter, data in all_episodes:
         logger.info(f"Processing episode: {episode_counter} scene start: {scene_counter}")
-        (output_dir / f"animation_episode_scenes_{episode_counter:03d}.json").write_text(
-            json.dumps(data, ensure_ascii=False, indent=2),
-            encoding='utf-8',
-        )
+        raw_path = output_dir / f"animation_episode_scenes_{episode_counter:03d}.json"
+        raw_path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding='utf-8')
+        if state and not state.episode_raw_done(episode_counter):
+            state.mark_episode_raw_done(episode_counter)
         ep_scene_groups[episode_counter] = []
         for scene in data.get('scenes', []):
             scene_counter += 1
             ep_scene_groups[episode_counter].append((scene_counter, scene))
 
+    # ── Phase 3: parallel per-episode refinement + reversal ───────────────────
     failed_scenes = []
     _sc_lock = Lock()
 
     def _process_episode_scenes(ep_counter: int):
+        # Skip if refined checkpoint already committed
+        if resume and state and state.episode_refined_done(ep_counter):
+            refined_path = output_dir / f"animation_episode_scenes_{ep_counter:03d}_refined.json"
+            if refined_path.exists():
+                try:
+                    data = json.loads(refined_path.read_text(encoding='utf-8'))
+                    with _sc_lock:
+                        all_scenes.extend(data.get('scenes', []))
+                    logger.info(f"⏭  Episode {ep_counter}: refined checkpoint loaded (skipping refinement)")
+                    return
+                except (json.JSONDecodeError, OSError) as exc:
+                    logger.warning(f"⚠️  Episode {ep_counter}: refined checkpoint unreadable ({exc}), re-refining")
+
         prev_terminal: str = None
         ep_refined: list = []
         for sc_id, scene in ep_scene_groups[ep_counter]:
@@ -803,7 +877,6 @@ def analyze_scenes_master(
                     all_scenes, output_dir, character_info, prev_terminal,
                 )
                 ep_refined.append(refined)
-                # Thread the terminal frame into the next scene's refinement
                 if refined:
                     last_panel = max(
                         refined.get('panels', []),
@@ -816,10 +889,11 @@ def analyze_scenes_master(
                 logger.error(f"❌ Scene {sc_id} processing failed: {e}")
                 with _sc_lock:
                     failed_scenes.append(sc_id)
-        # Write checkpoint with ALL scenes for this episode (not per-scene overwrite)
         if ep_refined:
             try:
                 _write_episode_checkpoint(ep_counter, ep_refined, output_dir)
+                if state:
+                    state.mark_episode_refined_done(ep_counter)
             except Exception as e:
                 logger.warning(f"⚠️  Could not write checkpoint for episode {ep_counter}: {e}")
 

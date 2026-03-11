@@ -8,7 +8,8 @@ from pathlib import Path
 from lib.commands.common import _make_llm, _make_vision_llm
 from lib.core.project import Project, load_project
 from lib.core.prompts import PROMPTING_DIR
-from lib.core.utils import atomic_write, load_metadata
+from lib.core.state import ProjectState
+from lib.core.utils import atomic_write
 from lib.studio.artist import export_image_prompt, load_character_refs
 from lib.studio.director import run_continuity_pass
 from lib.studio.screenwriter import (
@@ -24,12 +25,17 @@ def cmd_screenplay(args):
     llm = _make_llm(args.llm, project, system_prompt=prompts['screenplay'])
     load_character_refs(project)
 
+    resume = getattr(args, 'resume', False)
+    state = ProjectState.load(project.state_path())
+
     text = Path(args.novel).read_text(encoding='utf-8')
     data = analyze_scenes_master(
         text, prompts, config, llm,
         max_workers=project.max_workers,
         character_info=project.character_info,
         output_dir=project.output_dir,
+        state=state,
+        resume=resume,
     )
     if not data or 'scenes' not in data:
         logger.error("❌ Failed to generate screenplay.")
@@ -67,10 +73,15 @@ def cmd_scenes(args):
     else:
         episodes = episodes_list
 
+    resume = getattr(args, 'resume', False)
+    state = ProjectState.load(project.state_path())
+
     all_scenes = run_scenes_pipeline(
         episodes, episodes_list, prompts, config, llm,
         output_dir=project.output_dir,
         character_info=project.character_info,
+        state=state,
+        resume=resume,
     )
     logger.info(f"\n✅ Done. {len(all_scenes)} scene(s) processed.")
     if not all_scenes:
@@ -262,6 +273,8 @@ def cmd_reverse_refine(args):
                 prev_terminal = last_panel.get('visual_end', '')
 
     _write_episode_checkpoint(ep_num, all_scenes, project.output_dir)
+    state = ProjectState.load(project.state_path())
+    state.mark_episode_refined_done(ep_num)
     logger.info(f"✅ Wrote animation_episode_scenes_{ep_num:03d}_refined.json")
 
     meta_path = project.output_dir / "animation_metadata.json"
@@ -309,10 +322,14 @@ def cmd_split_book(args):
 def register(sub):
     p = sub.add_parser('screenplay', help='Full screenplay + keyframe pipeline')
     p.add_argument('novel', help='Novel text file')
+    p.add_argument('--resume', action='store_true', default=False,
+                   help='Skip already-completed phases (episodes/raw/refined) using pipeline_state.json')
     p.set_defaults(func=cmd_screenplay)
 
     p = sub.add_parser('scenes', help='Generate keyframes for episode(s)')
     p.add_argument('scene', nargs='?', default='all', help='Episode number or "all"')
+    p.add_argument('--resume', action='store_true', default=False,
+                   help='Skip episodes whose refined checkpoint is already done')
     p.set_defaults(func=cmd_scenes)
 
     p = sub.add_parser('reverse-refine', help='Refinement + reversal pass on existing raw episode JSON')
