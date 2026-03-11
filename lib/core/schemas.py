@@ -90,7 +90,7 @@ CHARACTER_SCHEMA = {
             "logline_subject_info": {"type": "string", "description": "One-sentence semantic description of who/what this is in the story (role, relationship, function). Used to deduplicate refs across runs — must be unique enough to distinguish from similarly-named entities."},
             "visual_desc": {"type": "string", "description": "verbose detailed description for the reference image generation"},
             "type": {"type": "string", "description": "Character, location, object, interface, room, vehicle"},
-            "video_visual_desc": {"type": "string", "description": "shorter visual description for character reference in the prerolls and video"},
+            "video_visual_desc": {"type": "string", "description": "Concise visual description for scene context injection. Must preserve: physical build, clothing, face, and — for characters — ALL carry items (bag type and placement, holster location, wallet pocket, keys, badge). Omitting carry items causes actors to pull weapons/phones from thin air in generated scenes."},
             "style_reference": {"type": "string", "description": "Name of the existing or new reference, for details consistency. E.g. for view to entrance, use view from entrance."},
         },
         "required": ["name", "logline_subject_info", "visual_desc", "type", "style_reference", "video_visual_desc"]
@@ -228,7 +228,7 @@ UPDATED_REF_SCHEMA = {
     "type": "object",
     "properties": {
         "visual_desc": {"type": "string", "description": "Highly detailed, comprehensive visual description incorporating all new scene details."},
-        "video_visual_desc": {"type": "string", "description": "Shorter summary of the updated description."}
+        "video_visual_desc": {"type": "string", "description": "Concise updated description for scene context injection. Must preserve all carry items (bag, holster, pockets, badge) — these are referenced when characters retrieve objects in panels."}
     },
     "required": ["visual_desc", "video_visual_desc"]
 }

@@ -2,7 +2,7 @@
 ## INDEPENDENCE PROTOCOL — NON-NEGOTIABLE
 Each panel is rendered by a separate image-generation model that receives ONLY that panel's text — no history, no context, no memory.
 - FORBIDDEN: "same as before", "same POV", "same framing", "same appearance", "as in panel N", "continues from", "identical to", "as established".
-- REQUIRED: Restate character appearance (hair, clothing, build, expression), location details, shot type, camera angle, and lighting in EVERY panel's visual_start and visual_end — even if they repeat word-for-word from the previous panel.
+- REQUIRED: Restate character appearance (hair, clothing, build, expression), carry items (bag on shoulder, holster, wallet pocket — wherever they keep things), location details, shot type, camera angle, and lighting in EVERY panel's visual_start and visual_end — even if they repeat word-for-word from the previous panel.
 - Treat each panel description as the ONLY instruction the image model will ever receive for that shot.
 
 ## VERTICAL MICRODRAMA CINEMATOGRAPHY — 9 PANELS PER SCENE
@@ -82,6 +82,7 @@ MOTION_PROMPT PHYSICAL REALISM — the video model renders every word literally,
    WRONG: "her hand enters with blurring speed"  RIGHT: "at 0.5s her hand enters from the right; finger contacts screen at 0.8s"
 4. Anatomically correct scale: a tear is a 2–3 mm bead on the cheek, not "rivers" or "streams". Dramatic language (ping-pong tears, vomit fountains) is caused by dramatic words in motion_prompt — remove them.
 5. Before writing any phrase: ask — could the AI render this as a grotesque artifact or broken anatomy? If yes, rewrite it as a plain physical movement.
+6. ITEM ORIGIN — every retrieved object must come from a physically real place: "right hand moves to shoulder holster, draws pistol" / "opens bag hanging from left shoulder, removes phone" / "reaches into left breast pocket, produces badge wallet". NEVER write "pulls out a gun" or "takes out phone" — the model has no idea where the item was and will invent a location. The character's reference description defines where everything is carried.
 
 TILT REVEAL — vertical-format signature technique:
 Use tilt in motion_prompt to reveal information progressively top-to-bottom or bottom-to-top.

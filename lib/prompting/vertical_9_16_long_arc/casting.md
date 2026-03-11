@@ -14,6 +14,18 @@ For each NEW character:
   - Clothing: Contemporary luxury attire with specific fabric textures
   - Age: Specific age or range
   - Distinctive features: Accessories, grooming, habitual gesture
+  - **Everyday Carry (EDC)**: Infer realistic carried items from gender, profession, and social context.
+    Real people do not operate via GTA inventory — they carry things somewhere physical.
+    - Men: wallet placement (breast pocket / back pocket / money clip), phone pocket, keys
+      (car fob + home keyring), work badge/ID if applicable, any occupational items
+      (detective: badge wallet + holster; exec: slim briefcase or portfolio)
+    - Women: bag type (clutch / crossbody / tote / handbag / backpack — pick the right one for her archetype),
+      what it visibly contains or implies (wallet, phone, keys, cosmetics pouch, notebook, etc.)
+    - Both: if the character drives, they have car keys; if they live alone, home keys; if they work in
+      a secure building, a keycard or lanyard. Do not omit these unless the character is explicitly
+      described as having nothing on them.
+    State WHERE items are carried and WHAT the carrier looks like (e.g. "tan leather bifold in left
+    breast pocket", "black structured tote hanging from right shoulder").
 
 ## Location/Object/Room/Vehicle/Interface Description Format
 For each NEW reference:

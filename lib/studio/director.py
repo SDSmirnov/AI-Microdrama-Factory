@@ -67,12 +67,13 @@ def _backup_refs(ref_dir: Path, extra_files: list = None) -> Path:
 
 
 def collect_reference_usage(metadata: Dict) -> Dict[str, List[str]]:
-    """Collect all panel descriptions where each reference (character or location) is mentioned."""
+    """Collect panel descriptions per reference, sorted chronologically by scene_id."""
     ref_usage: Dict[str, List[str]] = {}
-    for scene in metadata.get('scenes', []):
+    scenes_sorted = sorted(metadata.get('scenes', []), key=lambda s: s.get('scene_id', 0))
+    for scene in scenes_sorted:
         for panel in scene.get('panels', []):
             context = (
-                f"Scene {scene['scene_id']}, Panel {panel['panel_index']}: "
+                f"[Scene {scene['scene_id']}, Panel {panel['panel_index']}] "
                 f"Start: {panel['visual_start']} | End: {panel['visual_end']} | "
                 f"Camera: {panel.get('lights_and_camera', '')}"
             )
@@ -104,23 +105,46 @@ def enrich_and_regenerate_reference(
         logger.info(f"  ℹ️  Truncating context for {ref_name}: {len(usage_contexts)} usages → 20")
     logger.info(f"🔍 Enriching: {ref_name} (used in {len(usage_contexts)} panels)")
 
+    ref_type = ref_data.get('type', 'entity').lower()
+    is_character = ref_type in ('character', 'person', 'hero', 'villain', 'antagonist', 'protagonist')
+
+    if is_character:
+        temporal_rules = """
+    TEMPORAL RULES (character):
+    These usages are in CHRONOLOGICAL ORDER (earliest scene first).
+    Add ONLY details present from the EARLIEST scenes — these are permanent traits the character always had.
+    DO NOT add anything that first appears in a LATER scene: it likely represents something acquired,
+    gifted, or changed during the story (e.g. a bracelet received mid-plot, a scar from a later fight,
+    a costume change after a plot event). Such story-state details MUST NOT enter the initial reference.
+"""
+    else:
+        temporal_rules = """
+    TEMPORAL RULES (location / room / object / vehicle):
+    Objects, furniture, and props do NOT materialize — if the storyboard shows a phone on a desk
+    in episode 5, that phone was always there. Add ALL mentioned permanent physical details regardless
+    of which scene they appear in.
+    DO NOT add transient states: open/closed doors, scattered papers from a fight, temporary lighting
+    changes, or anything clearly caused by an in-scene action.
+"""
+
     prompt = f"""
     You are a Lead Production Designer.
-    We have an original visual description for the entity "{ref_name}":
+    We have an original visual description for the entity "{ref_name}" (type: {ref_type}):
     <ORIGINAL_DESC>
     {ref_data['visual_desc']}
     </ORIGINAL_DESC>
 
-    However, the storyboard artist added specific new details in various scenes.
-    Here is how "{ref_name}" is actually described in the scenes:
-    <SCENE_USAGES>
+    The storyboard artist added specific details in various scenes.
+    These usages are listed in CHRONOLOGICAL ORDER (earliest scene first):
+    <SCENE_USAGES_CHRONOLOGICAL>
     {chr(10).join(usage_contexts[:20])}
-    </SCENE_USAGES>
+    </SCENE_USAGES_CHRONOLOGICAL>
 
     TASK:
-    Merge the ORIGINAL_DESC with all specific physical details invented in the SCENE_USAGES (e.g., specific desk color, exact props, specific lighting fixtures, specific clothing details).
-    Do NOT include actions or temporary states. ONLY permanent visual design features.
-    Generate a massive, highly detailed visual description that perfectly aligns with what the scenes require.
+    Produce an enriched visual description of "{ref_name}" as it exists AT THE START OF THE STORY.
+    {temporal_rules}
+    ALWAYS EXCLUDE: actions, emotions, character positions, lighting conditions caused by scene events.
+    ONLY permanent, initial visual design features.
 
     {CASTING_RULES}
     """

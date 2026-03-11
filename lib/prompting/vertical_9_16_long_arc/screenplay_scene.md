@@ -2,7 +2,7 @@
 ## INDEPENDENCE PROTOCOL — NON-NEGOTIABLE
 Each panel is rendered by a separate image-generation model that receives ONLY that panel's text — no history, no context, no memory.
 - FORBIDDEN: "same as before", "same POV", "same framing", "same appearance", "as in panel N", "continues from", "identical to", "as established".
-- REQUIRED: Restate character appearance (hair, clothing, build, expression), location details, shot type, camera angle, and lighting in EVERY panel's visual_start and visual_end — even if they repeat word-for-word from the previous panel.
+- REQUIRED: Restate character appearance (hair, clothing, build, expression), carry items (bag on shoulder, holster, wallet pocket — wherever they keep things), location details, shot type, camera angle, and lighting in EVERY panel's visual_start and visual_end — even if they repeat word-for-word from the previous panel.
 - Treat each panel description as the ONLY instruction the image model will ever receive for that shot.
 
 ## VERTICAL MICRODRAMA CINEMATOGRAPHY — 9 PANELS PER SCENE
@@ -128,6 +128,7 @@ MOTION_PROMPT PHYSICAL REALISM — the video model renders every word literally:
 3. No speed metaphors: "blurring speed" → use explicit timestamps and distances.
 4. Anatomically correct scale: a tear is a 2–3 mm bead, not "rivers".
 5. Ask before writing: could the AI render this as a grotesque artifact? If yes, rewrite.
+6. ITEM ORIGIN — every retrieved object must come from a physically real place: "right hand moves to shoulder holster, draws pistol" / "opens bag hanging from left shoulder, removes phone" / "reaches into left breast pocket, produces badge wallet". NEVER write "pulls out a gun" or "takes out phone" — the model has no idea where the item was. The character's reference description defines where everything is carried.
 
 MOTION PROMPTS for vertical format:
 - Prefer vertical camera movements: tilt up/down, vertical dolly, snap zoom into eyes
