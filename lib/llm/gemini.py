@@ -9,6 +9,7 @@ import logging
 import os
 import time
 import wave
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeout
 from io import BytesIO
 from pathlib import Path
 from typing import Any
@@ -394,7 +395,8 @@ class GeminiLLM(BaseLLM):
             'aspect_ratio': "16:9",
             'resolution': '720p',
         }
-        max_wait_seconds = 600  # 10-minute hard limit per clip
+        max_wait_seconds = int(os.getenv('AI_VIDEO_TIMEOUT', '600'))
+        ops_get_timeout = 30  # max seconds to wait for a single operations.get() call
 
         try:
             source = types.GenerateVideosSource(prompt=prompt)
@@ -414,18 +416,26 @@ class GeminiLLM(BaseLLM):
 
             deadline = time.time() + max_wait_seconds
             poll_interval = 10
-            while not operation.done:
-                if time.time() > deadline:
-                    op_name = getattr(operation, 'name', 'unknown')
-                    logger.warning(
-                        f"⚠️  Veo job timed out after {max_wait_seconds}s "
-                        f"(operation={op_name}). The server-side job may still be running "
-                        f"and consuming quota. Cancel it via Google AI Studio or the API."
-                    )
-                    raise TimeoutError(f"Veo job did not complete within {max_wait_seconds}s")
-                time.sleep(poll_interval)
-                poll_interval = min(poll_interval * 2, 60)
-                operation = self.client.operations.get(operation)
+            with ThreadPoolExecutor(max_workers=1) as _ops_pool:
+                while not operation.done:
+                    if time.time() > deadline:
+                        op_name = getattr(operation, 'name', 'unknown')
+                        logger.warning(
+                            f"⚠️  Veo job timed out after {max_wait_seconds}s "
+                            f"(operation={op_name}). The server-side job may still be running "
+                            f"and consuming quota. Cancel it via Google AI Studio or the API."
+                        )
+                        raise TimeoutError(f"Veo job did not complete within {max_wait_seconds}s")
+                    time.sleep(poll_interval)
+                    poll_interval = min(poll_interval * 2, 60)
+                    fut = _ops_pool.submit(self.client.operations.get, operation)
+                    try:
+                        operation = fut.result(timeout=ops_get_timeout)
+                    except FuturesTimeout:
+                        logger.warning(
+                            f"⚠️  operations.get() hung for {ops_get_timeout}s; "
+                            "skipping poll — outer deadline will expire if persistent"
+                        )
 
             if operation.error:
                 raise RuntimeError(f"Veo API error: {operation.error}")

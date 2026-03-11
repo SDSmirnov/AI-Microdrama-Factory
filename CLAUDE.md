@@ -30,6 +30,7 @@ export AI_LOG_LEVEL="DEBUG"                            # logging verbosity
 export AI_ASPECT_RATIO="9:16"                          # image aspect ratio override (default: per config/preset)
 export AI_IMAGE_SIZE="2K"                              # image resolution override (default: per config/preset)
 export AI_REF_ASPECT_RATIO="9:16"                      # reference portrait aspect ratio override
+export AI_VIDEO_TIMEOUT="600"                          # Veo polling hard limit in seconds (default: 600)
 ```
 
 ## Manual Workflow (Claude Code Skills)
