@@ -4,9 +4,9 @@ Steps:
 1. Read `cinematic_render/animation_episodes.json`
 2. Extract the episode where `episode_id` equals $ARGUMENTS. Note its `episode_type` (`pov_a` / `pov_b` / `confrontation` / `transition`) and `pov_character`.
 3. If $ARGUMENTS > 1, extract the **previous episode** (`episode_id` = $ARGUMENTS − 1) and note its `visual_continuity_rules` — enforce these in every panel of this episode.
-4. Check if `custom_prompts/scenery.md` exists — use it; otherwise use `prompts/scenery.md`. Read it.
-5. Check if `custom_prompts/setting.md` exists — use it; otherwise use `prompts/setting.md`. Read it.
-6. Check if `custom_prompts/config.json` exists — use it; otherwise use `prompts/config.json`. Read it for `panels_per_scene` and `animation.enabled`.
+4. Check if `custom_prompts/scenery.md` exists — use it; otherwise use `lib/prompting/vertical_9_16_microdrama/scenery.md`. Read it.
+5. Check if `custom_prompts/setting.md` exists — use it; otherwise use `prompts/setting.md` (legacy fallback). Read it.
+6. Check if `custom_prompts/config.json` exists — use it; otherwise use `lib/prompting/vertical_9_16_microdrama/config.json`. Read it for `panels_per_scene` and `animation.enabled`.
 7. List all `.png` files in `ref_thriller/` — these are the available character/location references.
 8. Generate scene keyframes following all instructions below, applying the episode-type rules for the extracted `episode_type`. Set `episode_id` = $ARGUMENTS in every scene object.
 9. Write output to `cinematic_render/animation_episode_scenes_{episode_id:03d}.json` (zero-padded to 3 digits).

@@ -2,7 +2,7 @@ Novel file: $ARGUMENTS
 
 Steps:
 1. Read the novel file at `$ARGUMENTS`
-2. Check if `custom_prompts/setting.md` exists — use it; otherwise use `prompts/setting.md`. Read it.
+2. Check if `custom_prompts/setting.md` exists — use it; otherwise use `prompts/setting.md` (legacy fallback). Read it.
 3. Generate the master screenplay following all instructions below.
 4. Write the result to `cinematic_render/animation_episodes.json` (create the directory if needed).
 

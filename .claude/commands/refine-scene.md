@@ -6,8 +6,8 @@ Steps:
 3. Read `cinematic_render/animation_episodes.json` and extract that episode for context
 4. If episode > 1, also extract the previous episode for continuity context
 5. Read `cinematic_render/animation_metadata.json` if it exists — find the scene that immediately precedes the first scene in this file (by `scene_id`) and note its last panel's `visual_end` as the **cross-scene terminal frame** for Rule 4.
-6. Check if `custom_prompts/scenery.md` exists — use it; otherwise use `prompts/scenery.md`. Read it.
-7. Check if `custom_prompts/setting.md` exists — use it; otherwise use `prompts/setting.md`. Read it.
+6. Check if `custom_prompts/scenery.md` exists — use it; otherwise use `lib/prompting/vertical_9_16_microdrama/scenery.md`. Read it.
+7. Check if `custom_prompts/setting.md` exists — use it; otherwise use `prompts/setting.md` (legacy fallback). Read it.
 8. For each name in any panel's `references` array, try to read `ref_thriller/{name_lowercased_underscored}.json` and extract `video_visual_desc`
 9. Refine every scene following all instructions below.
 10. Write the result to the same path with `_refined` inserted before `.json` (e.g., `animation_episode_scenes_003_refined.json`)

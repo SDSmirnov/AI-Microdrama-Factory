@@ -2,7 +2,7 @@ Novel file: $ARGUMENTS
 
 Steps:
 1. Read the novel file at `$ARGUMENTS`
-2. Check if `custom_prompts/casting.md` exists — use it; otherwise use `prompts/casting.md`. Read it.
+2. Check if `custom_prompts/casting.md` exists — use it; otherwise use `lib/prompting/vertical_9_16_microdrama/casting.md`. Read it.
 3. Check if `custom_prompts/setting.md` exists — use it; otherwise use `prompts/setting.md`. Read it.
 4. List all `.json` files in `ref_thriller/` and read each one to get existing references (name + logline_subject_info). Only generate NEW ones not already covered.
 5. Generate character/location/object descriptions following all instructions below.

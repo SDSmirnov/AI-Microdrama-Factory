@@ -20,7 +20,7 @@ If `style_preset` is not in the table, default to `vertical_9_16_microdrama`.
 1. Read `novel_file`
 2. Analyze the novel and extract metadata (same as `/analyze-novel`):
    - genre, setting (period/location/world_type), pov, tone, main_character (name + description), special_elements, visual_atmosphere
-3. Read template files from `lib/prompting/<style_preset>/`: `style.md`, `casting.md`, `scenery.md`, `imagery.md`, `setting.md`
+3. Read template files from `lib/prompting/<style_preset>/`: `style.md`, `casting.md`, `scenery.md`, `imagery.md`. Also read `prompts/setting.md` as the base template for `setting.md` (there is no `setting.md` inside `lib/prompting/<style>/`).
 4. Create directory `custom_prompts/` if it doesn't exist
 5. Generate and write each of the 6 files below using the loaded preset values and novel metadata
 6. At the end, print a summary of all files written

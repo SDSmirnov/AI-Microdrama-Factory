@@ -27,11 +27,7 @@ After outputting the JSON, recommend the best visual style preset for this novel
 
 | Preset | Best for |
 |--------|----------|
-| `vertical_microdrama` | Default portrait format for TikTok/Reels/Shorts (9:16) |
-| `realistic_movie` | Contemporary/historical drama, thriller, romance |
-| `anime` | Fantasy, LitRPG, action with stylized aesthetics |
-| `comic_book` | Superhero, action, adventure |
-| `graphic_novel` | Literary fiction, noir, mature drama |
-| `watchmen_style` | Complex, dark, multi-narrative stories |
+| `vertical_9_16_microdrama` | Default portrait format for TikTok/Reels/Shorts (9:16). One episode per narrative chapter; multi-POV (pov_a / pov_b / confrontation) supported. Best for fast-paced stories. |
+| `vertical_9_16_long_arc` | Same portrait format, but episodes grouped into arc units of 2–3 episodes each (arc_open → arc_mid → arc_close). Better for slow-burn narratives, romance, and character-driven drama. |
 
 Explain your recommendation in 2–3 sentences referencing the novel's specific qualities.

@@ -4,7 +4,7 @@ Steps:
 1. Read the scene JSON file at `$ARGUMENTS`
 2. Find all panels where `is_reversed` is `true`
 3. If no reversed panels exist, output "No reversed panels found — nothing to do." and stop.
-4. Check if `custom_prompts/setting.md` exists — use it; otherwise use `prompts/setting.md`. Read it for visual style context.
+4. Check if `custom_prompts/setting.md` exists — use it; otherwise use `prompts/setting.md` (legacy fallback). Read it for visual style context.
 5. Generate `motion_prompt_reversed` for each flagged panel following all instructions below.
 6. For each reversed panel in the JSON:
    - Set `motion_prompt_reversed` to the generated value

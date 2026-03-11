@@ -97,6 +97,7 @@ Optional overrides:
 - `AI_ASPECT_RATIO` — override image aspect ratio (e.g. `9:16`)
 - `AI_IMAGE_SIZE` — override image resolution (e.g. `2K`)
 - `AI_REF_ASPECT_RATIO` — override reference portrait aspect ratio
+- `AI_VIDEO_TIMEOUT` (default: `600`) — Veo polling hard limit in seconds
 
 Note: `make init` validates `OPENROUTER_API_KEY`.
 
