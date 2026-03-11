@@ -112,6 +112,7 @@ def cmd_summary(args):
 
     meta_path = project.output_dir / "animation_metadata.json"
     scenes_block = ""
+    cliffhanger_info = ""
     if meta_path.exists():
         metadata = json.loads(meta_path.read_text(encoding='utf-8'))
         scenes = metadata.get('scenes', [])
@@ -120,7 +121,8 @@ def cmd_summary(args):
             panels = scene.get('panels', [])
             panel_texts = []
             for p in panels:
-                parts = [p.get('visual_start', ''), p.get('visual_end', '')]
+                hook = p.get('hook_type', '')
+                parts = [f"[{hook}]" if hook else "", p.get('visual_start', ''), p.get('visual_end', '')]
                 dlg = p.get('dialogue', '') or p.get('voiceover', '') or p.get('caption', '')
                 if dlg:
                     parts.append(f"[{dlg}]")
@@ -130,6 +132,15 @@ def cmd_summary(args):
                 + "\n".join(f"  {i+1}. {t}" for i, t in enumerate(panel_texts))
             )
         scenes_block = "\n\n".join(scene_summaries)
+        # Extract cliffhanger info from the final panel of the last scene
+        if scenes:
+            last_p = (scenes[-1].get('panels', [None]))[-1]
+            if last_p:
+                cliffhanger_info = (
+                    f"hook_type: {last_p.get('hook_type', 'unknown')}\n"
+                    f"visual_end: {last_p.get('visual_end', '')}\n"
+                    f"emotional_beat: {last_p.get('emotional_beat', '')}"
+                )
 
     refs_block = ""
     ref_dir = project.ref_dir
@@ -156,6 +167,7 @@ The summary must cover:
 3. **Visual continuity** — established looks, key locations, lighting/color palette, camera style
 4. **Narrative thread** — the cliffhanger or setup that carries into the next chapter
 5. **Production notes** — any visual motifs, recurring symbols, tone to maintain
+6. **Cliffhanger chain** — classify the episode-ending cliffhanger by type and recommend what type to use NEXT to avoid audience fatigue. Types: physical_threat (use sparingly — fatigue risk), revelation (needs logical setup), emotional_rupture (betrayal/unexpected silence), interrupted_action (lowest intensity, safest for routine transitions). Rotate — never repeat the same type twice in a row.
 
 Be precise, concise, and production-ready. Write in English.
 This summary will be injected verbatim into the next chapter prompt.
@@ -171,6 +183,11 @@ This summary will be injected verbatim into the next chapter prompt.
 {scenes_block or "(no scenes data available)"}
 
 ---
+## EPISODE-ENDING CLIFFHANGER (final panel)
+
+{cliffhanger_info or "(no cliffhanger data available)"}
+
+---
 ## CHARACTER REFERENCES
 
 {refs_block or "(no character refs available)"}
@@ -183,6 +200,12 @@ RETURN JSON, CONTENTS IN RUSSIAN:
     "visual_continuity": "established looks, key locations, lighting/color palette, camera style",
     "narrative_thread": "the cliffhanger or setup that carries into the next chapter",
     "production_notes": "any visual motifs, recurring symbols, tone to maintain",
+    "cliffhanger_chain": {{
+        "last_type": "one of: physical_threat | revelation | emotional_rupture | interrupted_action",
+        "last_description": "one sentence: what exactly the cliffhanger showed",
+        "avoid_next": "the type(s) to avoid in the next episode to prevent fatigue",
+        "recommend_next": "the recommended cliffhanger type for the next episode and why"
+    }},
     "summary_notes": "detailed summary for context"
 }}
 """

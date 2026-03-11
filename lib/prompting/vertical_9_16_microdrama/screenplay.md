@@ -11,7 +11,8 @@
 - SAFE ZONE: Key action must stay in the middle 65% of frame height. Top 15% and bottom 20% reserved for subtitles/UI.
 - VOICEOVER IS THE SPINE: Every panel has either dialogue or voiceover. Inner monologue reveals what the image cannot show. Never narrates the obvious.
 - DIALOGUE IS PERFORMANCE: ≤8 words per line. Staccato. Emotionally specific. Delivered in close-up on the speaker's face.
-- HOOK ARCHITECTURE: Panel 1 of every episode = cold_open (most arresting image, zero context). Emotional peak before midpoint. Final panel = cliffhanger or revelation.
+- MUTED VIEWING: 80% of viewers watch with sound off. Every panel must convey its full power dynamic, emotion, and stake through image alone. Dialogue, voiceover, and sound_design enhance — they never carry. Test every visual_start: if you removed all audio, would a viewer still know who has power, what emotion is on the face, and what object signals the threat? If not, the visual description is incomplete.
+- HOOK ARCHITECTURE: Panel 1 of every episode = cold_open (IN MEDIAS RES — drop into mid-action or mid-confrontation, something is already happening, skip all setup). The first frame must contain a visible power dynamic or a stake object already in play. FORBIDDEN: passive character, contemplative expression, establishing shot, beauty without conflict. Emotional peak before midpoint. Final panel = cliffhanger (open question, never a closed reveal).
 
 ## RESPONSE PROTOCOLS
 

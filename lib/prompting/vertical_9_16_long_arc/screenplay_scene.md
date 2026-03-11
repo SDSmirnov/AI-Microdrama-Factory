@@ -15,6 +15,8 @@ FRAMING HIERARCHY:
 - MS (Medium Shot): chest up — confrontation, spatial relationship between characters
 - WIDE: only when the environment is the dramatic agent (threat, scale, isolation)
 
+ANGLE VARIETY RULE: No two consecutive panels may share the same shot scale AND the same camera angle. If P3 = CU / eye-level, then P4 must change at least one dimension: scale (ECU / MS / WIDE) OR angle (low / high / over-shoulder / oblique). Monotone shot sequences collapse rhythm. Force a change at every cut.
+
 SAFE ZONE RULE: Compose all key subjects within the middle 65% of frame height.
 Top 15% and bottom 20% must be visually clear (sky, wall, floor — no faces, no action).
 Set text_safe_composition: true when this is achieved.
@@ -22,10 +24,11 @@ Set text_safe_composition: true when this is achieved.
 VISUAL DRAMATIC INTENSITY — WHAT GOES IN EVERY NARRATIVE FRAME:
 (Applies to panel_type=narrative only. For atmosphere_insert: fill question 3 with the single environmental element that carries all the drama; fill question 4 with how that element changes state. Skip questions 1–2.)
 
-**visual_start must answer three questions in one image:**
+**visual_start must answer four questions in one image:**
 1. WHO has power right now, and WHO doesn't? — Show it through spatial position, posture, or a prop.
 2. WHAT specific emotion is visible on the primary face? — Write the physics: "jaw set, lips compressed, eyes tracking her hands." The AI renders what you describe.
 3. WHAT detail signals something is at stake? — A door left open, a phone face-down, hands too close, a glass at the edge of a table.
+4. IS the character's signature visual tell present? — For any CU or ECU, the character's defining prop, mark, or gesture (as documented in their reference) must be explicitly described as visible, OR motion_prompt must explain why it is off-frame. Signature tells are the "fairy tale anchor" — without them, characters become generic faces. Never omit them at close range.
 
 **visual_end must show a state transition with dramatic weight — not a completed action:**
 - A decision made visible, a boundary crossed, a contradiction revealed.
@@ -52,7 +55,13 @@ RIGHT: "At 0s phone sits on table, hand rests 10cm to the right. At 1.5s fingers
 ### arc_open — First Episode of the Arc Unit
 
 Mandatory panel structure:
-- P1: cold_open — most arresting image, zero context, maximum visual tension. hook_type: cold_open. [≈0–6s]
+- P1: cold_open — IN MEDIAS RES. The viewer drops into mid-action, mid-confrontation, or mid-consequence. Something is ALREADY HAPPENING when the frame opens. Choose one of five hook archetypes that fits the source scene:
+  * STATUS REVERSAL: protagonist caught in humiliation or subjugation — the viewer asks "how will they turn this around?" (exploits the human drive for justice)
+  * IMPOSSIBLE SITUATION: no visible exit — the viewer asks "how do they get out of this?"
+  * HIDDEN IDENTITY: someone in frame is not who they appear — the viewer asks "who is this really?"
+  * TICKING CLOCK: a deadline or countdown is already in motion — the viewer asks "will they make it?"
+  * SHOCKING REVELATION: something just happened off-frame — the viewer asks "what was that?"
+  Record the chosen hook archetype in hook_type as: cold_open/status_reversal, cold_open/impossible_situation, cold_open/hidden_identity, cold_open/ticking_clock, or cold_open/revelation. A hand already extended with money. Eyes already locked in a challenge. A door that just slammed. An object mid-fall. The opening image must make the viewer ask "what the hell is happening RIGHT NOW?" — not "I wonder what will happen." The cold_open is NOT necessarily the chronological start of the episode: if the source scene opens with travel, setup, or neutral context, SKIP IT and open on the arc's first moment of tension or power shift instead. REQUIRED: a visible power dynamic (who is exerting pressure, who is cornered), a stake object already in play, or a micro-action already in motion — face showing strain, hand mid-gesture, body already reacting. FORBIDDEN for cold_open: character sitting/looking/waiting/traveling without active conflict; establishing location shots; beauty-without-stakes (reflections in windows, city lights on a passive face, a character at rest); any shot where the answer to "what is at stake right now?" is "nothing yet." hook_type: cold_open. [≈0–6s]
 - P2: verbal_hook — character speaks the arc's central conflict in ≤8 words: ultimatum, threat, confession, or challenge. CU on speaker's face. hook_type: verbal_hook. [≈7s mark]
 - P3: context — orient the viewer through action, not exposition. One MS or WIDE shot.
 - P4: first_escalation — first obstacle, complication, or pressure arrives.
@@ -98,7 +107,13 @@ The confrontation is already boiling. Arrive at it immediately.
 - P6: twist — one fact changes everything. Arrives visually: a prop, a reflection, a door opening.
 - P7: reversal — power dynamic inverts. Delivered through physical action or discovery.
 - P8: consequence — the visible, irreversible cost of the reversal. Not resolution — the aftermath is still open.
-- P9: cliffhanger — hook_type: cliffhanger. Freeze on maximum unresolved tension. One visible element, two possible interpretations. End mid-breath. Never resolve. Never summarize. [The Button]
+- P9: cliffhanger — Freeze on maximum unresolved tension. One visible element, two possible interpretations. End mid-breath. Never resolve. Never summarize. [The Button]. DIAGNOSTIC: the cliffhanger must end on an OPEN QUESTION, never a closed reveal. Reveals satisfy — the viewer gets the answer and leaves. Questions compel — the viewer must return to find out. WRONG: "We see the truth is now known." RIGHT: "Eyes narrow on something we cannot yet see — what did they find?" If your P9 answers anything, move the answer to the next arc's opening and end here on the moment just before.
+  Choose one of four cliffhanger types based on context AND prior arc cliffhangers (rotate — never repeat the same type twice in a row):
+  * PHYSICAL THREAT: character in immediate danger. Use sparingly — only at true climactic arcs. RISK: overuse causes fatigue; the viewer stops fearing.
+  * SHOCKING REVELATION: new information reframes everything shown so far. Requires logical preparation in earlier panels — cannot arrive without a seed. Best at structural turning points.
+  * EMOTIONAL RUPTURE: unexpected reaction, betrayal, or sudden silence where there should be words. Best for drama and romance arcs.
+  * INTERRUPTED ACTION: cut mid-gesture, mid-word, mid-step. Best for routine arc transitions — lowest intensity, highest versatility.
+  Record the chosen type in hook_type as: cliffhanger/physical_threat, cliffhanger/revelation, cliffhanger/emotional_rupture, or cliffhanger/interrupted_action.
 
 ### transition episode
 Atmosphere-only. ALL 9 panels are atmosphere_insert. No dialogue, no character conflict, no close-ups.

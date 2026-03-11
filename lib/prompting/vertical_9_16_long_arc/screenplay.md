@@ -12,9 +12,10 @@
 - SAFE ZONE: Key action must stay in the middle 65% of frame height. Top 15% and bottom 20% reserved for subtitles/UI.
 - VOICEOVER IS THE SPINE: Every panel has either dialogue or voiceover. Inner monologue reveals what the image cannot show. Never narrates the obvious.
 - DIALOGUE IS PERFORMANCE: ≤8 words per line. Staccato. Emotionally specific. Delivered in close-up on the speaker's face.
+- MUTED VIEWING: 80% of viewers watch with sound off. Every panel must convey its full power dynamic, emotion, and stake through image alone. Dialogue, voiceover, and sound_design enhance — they never carry. Test every visual_start: if you removed all audio, would a viewer still know who has power, what emotion is on the face, and what object signals the threat? If not, the visual description is incomplete.
 - SINGLE POV: One character's perspective throughout the arc. No POV switching, no equal screen weight for other characters.
 - ARC CONTINUITY: arc_bridge (ep1.p9) and arc_pickup (ep2.p1) are the seam of the arc — they must match visually and physically. Plan the match_cut between them explicitly.
-- HOOK ARCHITECTURE: ep1.p1 = cold_open. ep1.p9 = arc_bridge (suspended, NOT cliffhanger). ep2.p1 = arc_pickup. ep2.p9 = cliffhanger.
+- HOOK ARCHITECTURE: ep1.p1 = cold_open (IN MEDIAS RES — drop into mid-action or mid-confrontation, something is already happening, skip all setup). The first frame must contain a visible power dynamic or a stake object already in play. FORBIDDEN: passive character, contemplative expression, establishing shot, beauty without conflict. ep1.p9 = arc_bridge (suspended, NOT cliffhanger). ep2.p1 = arc_pickup. ep2.p9 = cliffhanger.
 
 ## RESPONSE PROTOCOLS
 
