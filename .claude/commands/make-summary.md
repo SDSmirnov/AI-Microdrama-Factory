@@ -23,6 +23,7 @@ Reads the novel file, `cinematic_render/animation_metadata.json` (if present), a
 3. **Visual continuity** — looks, locations, lighting/color palette, camera style
 4. **Narrative thread** — cliffhanger or setup that carries into the next chapter
 5. **Production notes** — visual motifs, recurring symbols, tone
+6. **Cliffhanger chain** — classifies the episode-ending cliffhanger by type (physical_threat / revelation / emotional_rupture / interrupted_action) and recommends what type to use next to avoid audience fatigue
 
 ## Execution
 
