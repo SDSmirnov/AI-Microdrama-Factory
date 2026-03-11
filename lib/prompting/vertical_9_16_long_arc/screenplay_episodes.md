@@ -28,6 +28,8 @@ A single hook-to-cliffhanger arc across __EPISODES_COUNT__ episodes feels like a
 - `arc_close` — final episode of the unit. Panels: arc_pickup → … → cliffhanger.
 - `transition` — atmosphere-only bridge between two arc units, no character conflict.
 
+__DUEL_INSTRUCTION__
+
 ## ARC UNIT CONFIGURATIONS
 
 ### 2-EPISODE ARC (N=2, 18 panels, ~54s finished edit)

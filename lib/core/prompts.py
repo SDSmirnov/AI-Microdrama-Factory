@@ -18,6 +18,7 @@ PROMPT_FILES = ['style', 'casting', 'scenery', 'imagery', 'setting',
                 'screenplay', 'screenplay_scene', 'screenplay_episodes', 'qa',
                 'episode_type_pov', 'episode_type_confrontation', 'episode_type_transition',
                 'episode_type_arc_open', 'episode_type_arc_mid', 'episode_type_arc_close',
+                'episode_type_duel',
                 'refinement_arc_rule']
 
 
@@ -96,7 +97,12 @@ def load_prompts(style: str = 'vertical_9_16_microdrama') -> tuple[dict, dict]:
 
 
 def _apply_env_overrides(config: dict) -> None:
-    """Apply AI_ASPECT_RATIO / AI_IMAGE_SIZE / AI_REF_ASPECT_RATIO env overrides in-place."""
+    """Apply env overrides in-place.
+
+    Supported vars:
+      AI_ASPECT_RATIO, AI_IMAGE_SIZE, AI_REF_ASPECT_RATIO — image generation
+      AI_EPISODES_COUNT — arc length for long_arc style (2 or 3)
+    """
     ig = config.setdefault("image_generation", {})
     if v := os.getenv("AI_ASPECT_RATIO"):
         ig["aspect_ratio"] = v
@@ -106,6 +112,8 @@ def _apply_env_overrides(config: dict) -> None:
     rc = config.setdefault("reference_characters", {})
     if v := os.getenv("AI_REF_ASPECT_RATIO"):
         rc["ref_aspect_ratio"] = v
+    if v := os.getenv("AI_EPISODES_COUNT"):
+        config["episodes_count"] = int(v)
 
 
 def get_default_config() -> dict:

@@ -36,6 +36,11 @@
   "multi_pov": {
     "enabled": false
   },
+  "duel": {
+    "enabled": false,
+    "character_a": "",
+    "character_b": ""
+  },
   "reference_characters": {
     "enabled": true,
     "auto_cast": true

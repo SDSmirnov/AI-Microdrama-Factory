@@ -170,6 +170,48 @@ Important: all dialogues, voiceovers and texts MUST be in Russian as in original
 
 
 # ---------------------------------------------------------------------------
+# Duel mode instruction builder
+# ---------------------------------------------------------------------------
+def _build_duel_instruction(duel_cfg: dict, prompts: dict, episodes_count: int) -> str:
+    """Build the __DUEL_INSTRUCTION__ block injected into screenplay_episodes prompt."""
+    char_a = duel_cfg.get('character_a', 'Character A')
+    char_b = duel_cfg.get('character_b', 'Character B')
+
+    if episodes_count == 2:
+        arc_map = (
+            "### DUEL ARC — 2-EPISODE STRUCTURE\n\n"
+            "```\n"
+            "arc_open  (Ep1, P1–9):  cold_open[A+B] → first_demand[A] → first_counter[B] →\n"
+            "                         escalation[A] → emotional_capture[B] → rising_action[A] →\n"
+            "                         atmosphere_insert → near_collapse[B] → arc_bridge[A+B]\n"
+            "arc_close (Ep2, P1–9):  arc_pickup[A+B] → pressure_exchange[A] → decisive_blow[B] →\n"
+            "                         impact[A] → atmosphere_insert → twist → cost[A+B] →\n"
+            "                         consequence[A+B] → cliffhanger[A+B: ambiguous]\n"
+            "```\n"
+        )
+    else:
+        arc_map = (
+            "### DUEL ARC — 3-EPISODE STRUCTURE\n\n"
+            "```\n"
+            "arc_open  (Ep1, P1–9):  cold_open[A+B] → first_demand[A] → first_counter[B] →\n"
+            "                         escalation[A] → emotional_capture[B] → rising_action[A] →\n"
+            "                         atmosphere_insert → near_collapse[B] → arc_bridge[A+B]\n"
+            "arc_mid   (Ep2, P1–9):  arc_pickup[A+B] → pressure_exchange → complication →\n"
+            "                         rising_pressure[B] → atmosphere_insert → new_weapon[A] →\n"
+            "                         counter_offensive[B] → pre_collapse[A] → arc_bridge[A+B]\n"
+            "arc_close (Ep3, P1–9):  arc_pickup[A+B] → collapse_point → reversal →\n"
+            "                         aftermath → atmosphere_insert → twist → cost[A+B] →\n"
+            "                         consequence[A+B] → cliffhanger[A+B: ambiguous]\n"
+            "```\n"
+        )
+
+    duel_block = (prompts.get('episode_type_duel', '')
+                  .replace('__CHAR_A__', char_a)
+                  .replace('__CHAR_B__', char_b))
+    return f"## DUEL MODE — {char_a.upper()} vs {char_b.upper()}\n\n{arc_map}\n{duel_block}"
+
+
+# ---------------------------------------------------------------------------
 # Episode-level screenplay — verbatim from 01_cinematic_preroll.py:529-592
 # ---------------------------------------------------------------------------
 def analyze_episodes_master(text: str, prompts: dict, config: dict, llm: BaseLLM, character_info: dict = None) -> dict:
@@ -235,11 +277,14 @@ def analyze_episodes_master(text: str, prompts: dict, config: dict, llm: BaseLLM
     arc_panels = episodes_count * 9
     arc_duration_map = {2: '~54s', 3: '~81s'}
     arc_duration = arc_duration_map.get(episodes_count, f'~{episodes_count * 27}s')
+    duel_cfg = config.get('duel', {})
+    duel_instruction = _build_duel_instruction(duel_cfg, prompts, episodes_count) if duel_cfg.get('enabled') else ''
     episodes_rules = (
         episodes_rules
         .replace('__EPISODES_COUNT__', str(episodes_count))
         .replace('__ARC_PANELS__', str(arc_panels))
         .replace('__ARC_DURATION__', arc_duration)
+        .replace('__DUEL_INSTRUCTION__', duel_instruction)
     )
 
     if character_info:
@@ -282,7 +327,14 @@ def _episode_type_block(episode_type: str, pov_character: str, prompts: dict, co
         tmpl = prompts.get('episode_type_transition', '')
         return tmpl.replace('{{PANEL_DURATION}}', panel_duration)
     if episode_type in ('arc_open', 'arc_mid', 'arc_close'):
-        return prompts.get(f'episode_type_{episode_type}', '')
+        block = prompts.get(f'episode_type_{episode_type}', '')
+        duel_cfg = config.get('duel', {})
+        if duel_cfg.get('enabled'):
+            duel_block = (prompts.get('episode_type_duel', '')
+                          .replace('__CHAR_A__', duel_cfg.get('character_a', 'Character A'))
+                          .replace('__CHAR_B__', duel_cfg.get('character_b', 'Character B')))
+            block = f'{block}\n\n{duel_block}'
+        return block
     return ''
 
 
