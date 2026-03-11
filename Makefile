@@ -28,9 +28,11 @@ MAX_ATTEMPTS ?= 3
 REFS           ?=
 VOICEOVER_DIR  ?= cinematic_render/voiceover
 VOICEOVER_SH   ?= voiceover.sh
+NARRATIVE      ?=
+INDEX          ?=
 
 .PHONY: help init workdirs styles casting refs screenplay scenes reverse-refine consistency storyboard qa apply-qa accept-qa rebuild-storyboard refinement animation \
-        autocut imgedit tts voiceover dub duck summary split-book panel-by-panel-with-qa
+        autocut imgedit tts voiceover dub duck summary split-book panel-by-panel-with-qa extra-panel
 
 help:  ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-16s %s\n", $$1, $$2}'
@@ -111,6 +113,12 @@ summary:  ## Generate chapter_summary.txt context for the next chapter
 
 split-book:  ## Split BOOK into filmable 3-POV episode chunks → BOOK_OUT/s0SeNNN.txt (BOOK=file STYLE=... SEASON=N)
 	python cli.py --llm $(LLM) --style $(STYLE) split-book $(BOOK) --output-dir $(BOOK_OUT) --season $(SEASON)
+
+extra-panel:  ## Generate extra micro-panel not in screenplay (SCENE=N INDEX=4_5 NARRATIVE=file.txt)
+	@[ -n "$(NARRATIVE)" ] || (echo "❌ NARRATIVE must be set, e.g. make extra-panel NARRATIVE=extra.txt SCENE=1 INDEX=4_5"; exit 1)
+	@[ "$(SCENE)" != "all" ] || (echo "❌ SCENE must be set to an integer, e.g. make extra-panel SCENE=1"; exit 1)
+	@[ -n "$(INDEX)" ] || (echo "❌ INDEX must be set in N_M format, e.g. make extra-panel INDEX=4_5"; exit 1)
+	python cli.py --llm $(LLM) --style $(STYLE) extra-panel $(NARRATIVE) --scene $(SCENE) --index $(INDEX)
 
 panel-by-panel-with-qa:  ## Render panels one-by-one with inline QA+refine (SCENE=N [PANEL=N] [THRESHOLD=5] [MAX_ATTEMPTS=3])
 	@[ "$(SCENE)" != "all" ] || (echo "❌ SCENE must be set to an integer, e.g. make panel-by-panel-with-qa SCENE=1"; exit 1)
