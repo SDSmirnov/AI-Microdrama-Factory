@@ -50,7 +50,7 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument(
-        '--llm', choices=['openrouter', 'gemini', 'grok', 'debug'], default='openrouter',
+        '--llm', choices=['openrouter', 'gemini', 'debug'], default='openrouter',
         help='LLM backend for text/image generation (default: openrouter)'
     )
     parser.add_argument(

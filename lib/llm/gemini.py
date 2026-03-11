@@ -45,6 +45,7 @@ class GeminiLLM(BaseLLM):
         video_model: str = "veo-3.1-fast-generate-preview",
         tts_model: str = "gemini-2.5-flash-preview-tts",
         rpm: int = 30,
+        system_prompt: str = "",
     ):
         self.api_key = api_key
         self.text_model = text_model
@@ -52,6 +53,7 @@ class GeminiLLM(BaseLLM):
         self.image_model = image_model.removeprefix("google/")
         self.video_model = video_model
         self.tts_model = tts_model
+        self.system_prompt = system_prompt
         self.limiter = RateLimiter(rpm)
 
         self.client = genai.Client(api_key=api_key)
@@ -67,6 +69,8 @@ class GeminiLLM(BaseLLM):
             "max_output_tokens": max_tokens,
             "safety_settings": SAFETY,
         }
+        if self.system_prompt:
+            config["system_instruction"] = self.system_prompt
         if schema:
             config["response_schema"] = schema
 
@@ -101,7 +105,7 @@ class GeminiLLM(BaseLLM):
         prompt: str,
         refs: list = None,
         aspect_ratio: str = '9:16',
-        image_size: str = '1K',
+        image_size: str = '2K',
         temperature: float = None,
     ) -> bytes:
         """

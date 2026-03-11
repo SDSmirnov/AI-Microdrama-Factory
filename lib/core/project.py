@@ -63,9 +63,6 @@ class Project:
         elif effective == 'gemini':
             if not self.gemini_api_key:
                 errors.append("IMG_AI_API_KEY / GOOGLE_API_KEY is not set (required for --llm gemini, Veo animation, TTS, dubbing)")
-        elif effective == 'grok':
-            if not self.grok_api_key:
-                errors.append("XAI_API_KEY is not set (required for --llm grok)")
         return errors
 
 

@@ -172,7 +172,7 @@ class BaseLLM(ABC):
     """Abstract base class for all LLM backends."""
 
     @abstractmethod
-    def make_json(self, prompt: str, schema: dict = None) -> dict:
+    def make_json(self, prompt: str, schema: dict = None, max_tokens: int = 32000) -> dict:
         """Generate structured JSON from a text prompt."""
         ...
 

@@ -57,7 +57,7 @@ class LogDebugLLM(BaseLLM):
         logger.info(f"[LogDebugLLM] saved → {path}")
         return path
 
-    def make_json(self, prompt: str, schema: dict = None) -> dict:
+    def make_json(self, prompt: str, schema: dict = None, max_tokens: int = 32000) -> dict:
         caller = _caller_name()
         self._write(caller, prompt, schema=schema)
         return {}
