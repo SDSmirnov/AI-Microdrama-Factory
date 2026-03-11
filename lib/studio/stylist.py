@@ -13,10 +13,10 @@ from lib.llm.base import BaseLLM
 
 logger = logging.getLogger(__name__)
 
-_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-PROMPTING_DIR = _PROJECT_ROOT / "lib" / "prompting"
-PROMPTS_DIR = _PROJECT_ROOT / "prompts"   # legacy fallback
-CUSTOM_DIR = Path("custom_prompts")
+_LIB_ROOT = Path(__file__).resolve().parent.parent.parent  # code repo root
+PROMPTING_DIR = _LIB_ROOT / "lib" / "prompting"   # library presets (always from code repo)
+PROMPTS_DIR = Path.cwd() / "prompts"               # project-local legacy fallback
+CUSTOM_DIR = Path.cwd() / "custom_prompts"         # project-local overrides
 
 # ---------------------------------------------------------------------------
 # Style presets — keyed by lib/prompting/ directory name
