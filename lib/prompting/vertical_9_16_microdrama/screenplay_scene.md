@@ -156,3 +156,13 @@ SCENE-LEVEL CAMERA AND LIGHTING MASTER:
 For every scene, generate:
 - camera_master: one sentence capturing the dominant lens (mm), angle, and primary lighting condition shared by all panels in this scene.
 - lighting_master: one sentence capturing key light direction/color/quality, fill ratio, and any visible practicals. All panels must stay within this lighting DNA — deviations must be noted in that panel's lights_and_camera.
+
+LOCATION REFERENCE NAMING — populate location_references per panel using EXACT split view names:
+- Room refs are split into two views. Pick the one matching the camera angle in this panel:
+  - `{Room-Name}-View-From-Entrance` — camera is at or near the entrance door, looking INTO the room
+  - `{Room-Name}-View-To-Entrance` — camera is at the far end of the room, looking BACK toward the entrance
+- Vehicle refs are split into three views:
+  - `{Vehicle-Name}-Exterior` — camera outside the vehicle
+  - `{Vehicle-Name}-Interior-From-Entrance` — camera inside, looking in from the driver/main door side
+  - `{Vehicle-Name}-Interior-To-Entrance` — camera inside, looking toward the entrance from the rear
+- Names must match existing refs EXACTLY (letters, digits, hyphens) — a mismatch silently skips the reference image during rendering.

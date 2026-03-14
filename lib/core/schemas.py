@@ -71,7 +71,7 @@ SCENE_SCHEMA = {
                                 "caption": {"type": "string"},
                                 "duration": {"type": "integer"},
                                 "references": {"type": "array", "items": {"type": "string"}},
-                                "location_references": {"type": "array", "items": {"type": "string"}, "description": "Location/environment references visible in this panel (rooms, buildings, outdoor settings). Used for panel-by-panel rendering to maintain location consistency."},
+                                "location_references": {"type": "array", "items": {"type": "string"}, "description": "Location/environment reference names visible in this panel. Use the specific view ref that matches the camera angle: for rooms use '{Room-Name}-View-From-Entrance' (camera at door looking in) or '{Room-Name}-View-To-Entrance' (camera at far end looking toward door); for vehicles use '{Vehicle-Name}-Exterior', '{Vehicle-Name}-Interior-From-Entrance', or '{Vehicle-Name}-Interior-To-Entrance'. Names must exactly match existing refs or rendering will skip them."},
                             },
                             "required": ["panel_index", "visual_start", "visual_end", "motion_prompt", "is_reversed", "motion_prompt_reversed", "lights_and_camera", "dialogue", "voiceover", "emotional_beat", "hook_type", "text_safe_composition", "panel_type", "transition_to_next", "sound_design", "caption", "duration", "references", "location_references"]
                         }

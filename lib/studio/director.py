@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 CASTING_RULES = """
 ## Reference Generation
-- **Shot Type**: Close-up portrait for characters, medium view for objects, full view for locations and rooms
+- **Shot Type**: Close-up portrait for characters, medium view for objects, architectural wide shot for rooms/vehicles
 - **Expression for characters**: Neutral, professional
 - **Lighting**: Uniform studio lighting
 - **Background**: Solid neutral backdrop
@@ -35,15 +35,17 @@ CASTING_RULES = """
 - For vehicles and rooms - use BLANK BACKGROUND, SHOW THEM EMPTY, WITHOUT PEOPLE
 
 ## Important for rooms:
-- For every room generate a single 2-panel image, panels stacked vertically:
-  - TOP: View from the door
-  - BOTTOM: View to the door
+- Each room is split into TWO SEPARATE refs (one PNG each, architectural photography, empty):
+  - `{Room-Name}-View-From-Entrance`: wide shot from the entrance doorway looking INTO the room
+  - `{Room-Name}-View-To-Entrance`: wide shot from inside looking BACK toward the entrance door;
+    style_reference = {Room-Name}-View-From-Entrance (ensures identical furniture/materials)
+- Room visual_desc uses compass wall layout: NORTH/SOUTH/EAST/WEST walls with explicit contents
 
 ## Important for vehicles:
-- For every vehicle generate a single 3-panel image, panels stacked vertically:
-  - TOP: View outside
-  - MIDDLE: View inside from the entrance, wide shot
-  - BOTTOM: View inside to the entrance, wide shot
+- Each vehicle is split into THREE SEPARATE refs (one PNG each, empty, no people):
+  - `{Vehicle-Name}-Exterior`: full exterior, three-quarter front angle
+  - `{Vehicle-Name}-Interior-From-Entrance`: cabin view from driver/main door; style_reference = Exterior
+  - `{Vehicle-Name}-Interior-To-Entrance`: cabin view toward entrance from rear; style_reference = Interior-From-Entrance
 """
 
 
