@@ -322,7 +322,10 @@ def process_scene(
         cc = result["character_consistency"]
         di = result.get("dramatic_intensity", "?")
         need = "🔴 NEEDS FIX" if result["needs_refinement"] else "🟢 OK"
-        logger.info(f"    → fidelity={fid}/10  char_consistency={cc}/10  drama={di}/10  {need}")
+        mirror_tag = "  🪞 MIRROR" if result.get("suggest_mirror") else ""
+        logger.info(f"    → fidelity={fid}/10  char_consistency={cc}/10  drama={di}/10  {need}{mirror_tag}")
+        if result.get("suggest_mirror"):
+            logger.info(f"       🪞 {result.get('mirror_reason', '')}")
         if result["artifacts"]:
             for art in result["artifacts"][:3]:
                 logger.info(f"       ⚠️  {art}")
@@ -425,6 +428,7 @@ def run_quality_gate(
         "threshold": threshold,
         "total_panels": len(all_results),
         "needs_refinement": sum(1 for r in all_results if r["needs_refinement"]),
+        "suggest_mirror": sum(1 for r in all_results if r.get("suggest_mirror")),
         "avg_fidelity": round(sum(r["fidelity"] for r in all_results) / max(len(all_results), 1), 2),
         "avg_dramatic_intensity": round(sum(r.get("dramatic_intensity", 0) for r in all_results) / max(len(all_results), 1), 2),
         "panels": all_results,
@@ -448,10 +452,13 @@ def print_summary(report: Dict, threshold: int):
     print(f"{'QUALITY GATE REPORT':^72}")
     print(f"{'=' * 72}")
     avg_di = report.get("avg_dramatic_intensity", 0)
+    mirror_count = report.get("suggest_mirror", 0)
     print(f"  Panels analyzed:      {total}")
     print(f"  Average fidelity:     {avg_fid:.1f}/10")
     print(f"  Avg dramatic intens:  {avg_di:.1f}/10")
     print(f"  Threshold:            {threshold}")
     print(f"  🟢 Passed:            {total - needs_fix}")
     print(f"  🔴 Needs refinement:  {needs_fix}")
+    if mirror_count:
+        print(f"  🪞 Mirror fix only:   {mirror_count}")
     print(f"{'=' * 72}\n")

@@ -186,6 +186,22 @@ PANEL_QA_SCHEMA = {
                 "If false: empty string."
             ),
         },
+        "suggest_mirror": {
+            "type": "boolean",
+            "description": (
+                "True if the ONLY spatial fix needed is horizontally flipping this panel. "
+                "Set when character/object positions are mirrored vs previous panels "
+                "but faces, lighting, and composition are otherwise acceptable. "
+                "Must also set needs_refinement=true when this is true."
+            ),
+        },
+        "mirror_reason": {
+            "type": "string",
+            "description": (
+                "If suggest_mirror is true: describe which character or element is spatially "
+                "flipped and relative to which panel. Empty string otherwise."
+            ),
+        },
         "reasoning": {
             "type": "string",
             "description": "Brief explanation of the scores.",
@@ -198,6 +214,8 @@ PANEL_QA_SCHEMA = {
         "artifacts",
         "needs_refinement",
         "refinement_prompt",
+        "suggest_mirror",
+        "mirror_reason",
         "dramatic_intensity",
         "reasoning",
     ],
