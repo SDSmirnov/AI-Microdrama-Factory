@@ -259,18 +259,68 @@ def _render_single_ref(char: dict, config: dict, project: Project, llm: BaseLLM)
     if style_ref and style_ref != name:
         ref_png = project.ref_dir / f"{safe_name(style_ref)}.png"
         if ref_png.exists():
-            img = Image.open(ref_png)
-            opened_imgs.append(img)
-            refs.append(img)
-            refs.append(f"↑ Visual style reference for \"{style_ref}\" — match this aesthetic.\n")
+            # If style_reference is a monolithic Room/Vehicle PNG (no view suffix)
+            # and this ref IS a view-specific entry, crop the appropriate strip so
+            # the AI doesn't copy the multi-panel layout.
+            style_ref_is_mono = not any(
+                style_ref.endswith(f'-{s}') for s, _ in _ROOM_VIEWS + _VEHICLE_VIEWS
+            )
+            name_suffix = next(
+                (s for s, _ in _ROOM_VIEWS + _VEHICLE_VIEWS if name.endswith(f'-{s}')),
+                None,
+            )
+            if style_ref_is_mono and name_suffix and ref_type.lower() in ('room', 'vehicle'):
+                views = _ROOM_VIEWS if ref_type.lower() == 'room' else _VEHICLE_VIEWS
+                view_names = [s for s, _ in views]
+                n = len(view_names)
+                idx = view_names.index(name_suffix) if name_suffix in view_names else 0
+                try:
+                    with Image.open(ref_png) as src:
+                        w, h = src.size
+                        strip_h = h // n
+                        top = idx * strip_h
+                        bottom = top + strip_h if idx < n - 1 else h
+                        img = src.crop((0, top, w, bottom)).copy()
+                    opened_imgs.append(img)
+                    refs.append(img)
+                    refs.append(
+                        f"↑ Visual style reference for \"{style_ref}\" (view {idx + 1}/{n}) "
+                        f"— match this aesthetic, single panel only.\n"
+                    )
+                    logger.debug(f"    ✂️  Cropped style ref strip {idx + 1}/{n} for {name}")
+                except Exception as e:
+                    logger.warning(f"  ⚠️  Could not crop style ref for {name}: {e}")
+            else:
+                img = Image.open(ref_png)
+                opened_imgs.append(img)
+                refs.append(img)
+                refs.append(f"↑ Visual style reference for \"{style_ref}\" — match this aesthetic.\n")
 
     ref_aspect = config.get('reference_characters', {}).get('ref_aspect_ratio', '3:4')
 
     if ref_type.lower() in ('room', 'vehicle'):
+        consistency_rules = (
+            "CONSISTENCY WITH STYLE REFERENCE (same room, opposite angle): "
+            "ALL shared architectural elements MUST be identical — "
+            "wall materials, floor finish, ceiling design, lighting fixtures, window frames, "
+            "and any object visible from both angles (central fixture, furniture, bar counter, etc.) "
+            "must match the reference exactly in material, color, scale, and proportion. "
+            "SPATIAL MIRROR LAW: this view is a 180-degree turn from the reference. "
+            "Left and right walls are SWAPPED — what appeared on the LEFT in the reference "
+            "must appear on the RIGHT here, and vice versa. "
+            "The far wall in the reference is now the near wall (behind the camera); "
+            "the near wall in the reference is now the far wall (visible ahead)."
+        ) if refs else ""
         prompt_text = (
             f"CINEMATIC ENVIRONMENT REFERENCE: {name}. "
             f"{char['visual_desc']}. "
-            f"Architectural photography, empty — no people, uniform studio lighting, 8k."
+            f"Architectural photography, empty — no people, uniform studio lighting, 8k. "
+            f"SINGLE IMAGE, single camera angle. "
+            f"Show ONLY what is directly visible from this exact camera position within the described walls. "
+            f"DO NOT show adjacent rooms, pools, corridors, or any space beyond the walls. "
+            f"DO NOT add glass walls, mirrors, or openings not explicitly described. "
+            f"DO NOT invent furniture, objects, or architectural features not listed above. "
+            f"{consistency_rules}"
         )
     else:
         prompt_text = (
@@ -381,9 +431,11 @@ _ROOM_VIEWS = [
     (
         'View-To-Entrance',
         'Wide shot standing at the far end of the room, camera looking BACK toward the entrance wall and door. '
-        'Use the compass wall layout from visual_desc: show the entrance wall with its door, '
-        'plus wall features now behind the camera (rear wall details, furniture behind the viewer). '
-        'Include out-of-frame details from the entrance view: what is BEHIND the viewer when entering. '
+        'CRITICAL SPATIAL RULE — 180-degree turn: left and right walls are SWAPPED relative to View-From-Entrance. '
+        'What was on the LEFT when entering is now on the RIGHT. What was on the RIGHT when entering is now on the LEFT. '
+        'Example: if the bar was on the LEFT wall (WEST) in View-From-Entrance, it must appear on the RIGHT side of this image. '
+        'Use the compass wall layout from visual_desc to determine the correct left/right placement for each wall. '
+        'Show the entrance wall with its door at the far end. '
         'All furniture and materials must be identical to the View-From-Entrance style reference. '
         'Empty room, no people, architectural photography.',
     ),
