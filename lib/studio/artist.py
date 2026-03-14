@@ -309,6 +309,46 @@ def render_character_refs(prompts: dict, config: dict, llm: BaseLLM, project: Pr
 # Room / Vehicle ref splitting
 # ---------------------------------------------------------------------------
 
+_MULTIPANEL_MARKERS = ('top:', 'bottom:', 'top panel', 'bottom panel', '2-panel', 'two-panel',
+                       'panel stacked', 'panels stacked', 'left panel', 'right panel')
+
+_VIEW_DESC_SCHEMA = {
+    'type': 'object',
+    'properties': {'visual_desc': {'type': 'string'}},
+    'required': ['visual_desc'],
+}
+
+
+def _extract_view_desc(original_desc: str, view_suffix: str, view_instruction: str,
+                       llm: BaseLLM) -> str:
+    """Use LLM to extract a clean single-panel visual description for one view.
+
+    Called only when original_desc contains multi-panel layout markers.
+    Returns the rewritten description, or original_desc on failure.
+    """
+    prompt = (
+        f"The following room reference has a multi-panel visual_desc that describes "
+        f"multiple camera angles (e.g. TOP/BOTTOM or left/right panels) in one block.\n\n"
+        f"original visual_desc:\n{original_desc}\n\n"
+        f"Extract and rewrite ONLY the part relevant to this single view:\n"
+        f"View: {view_suffix}\nView instruction: {view_instruction}\n\n"
+        f"Rules:\n"
+        f"- Return a single coherent paragraph describing only this one camera angle.\n"
+        f"- Remove all multi-panel layout language (TOP, BOTTOM, panels, etc.).\n"
+        f"- Keep all specific details: furniture, materials, colours, lighting, props.\n"
+        f"- Do NOT add new details not present in the original.\n"
+        f"Return JSON: {{\"visual_desc\": \"...\"}}"
+    )
+    try:
+        result = llm.make_json(prompt, schema=_VIEW_DESC_SCHEMA, max_tokens=1024)
+        desc = result.get('visual_desc', '').strip()
+        if desc:
+            return desc
+    except Exception as e:
+        logger.warning(f"  ⚠️  LLM view-desc extraction failed: {e}")
+    return original_desc
+
+
 _ROOM_VIEWS = [
     (
         'View-From-Entrance',
@@ -386,6 +426,11 @@ def remake_room_refs(config: dict, llm: BaseLLM, project: Project):
         views = _ROOM_VIEWS if rtype == 'Room' else _VEHICLE_VIEWS
         prev_view_name: Optional[str] = None
 
+        orig_desc = info['visual_desc']
+        is_multipanel = any(m in orig_desc.lower() for m in _MULTIPANEL_MARKERS)
+        if is_multipanel:
+            logger.info(f"  🔍 Multi-panel visual_desc detected for {name} — will use LLM to extract per-view descriptions")
+
         for view_suffix, view_instruction in views:
             view_name = f"{name}-{view_suffix}"
             view_json_path = project.ref_dir / f"{safe_name(view_name)}.json"
@@ -399,13 +444,17 @@ def remake_room_refs(config: dict, llm: BaseLLM, project: Project):
                 except Exception:
                     pass
             else:
+                if is_multipanel:
+                    view_desc = _extract_view_desc(orig_desc, view_suffix, view_instruction, llm)
+                else:
+                    view_desc = f"{orig_desc}. {view_instruction}"
                 new_ref = {
                     'name': view_name,
                     'logline_subject_info': (
                         f"{info.get('logline_subject_info', '')} — "
                         f"{view_suffix.replace('-', ' ')} perspective"
                     ),
-                    'visual_desc': f"{info['visual_desc']}. {view_instruction}",
+                    'visual_desc': view_desc,
                     'video_visual_desc': info.get('video_visual_desc', ''),
                     'type': rtype,
                     'style_reference': prev_view_name or '',
@@ -414,9 +463,32 @@ def remake_room_refs(config: dict, llm: BaseLLM, project: Project):
                 project.character_info[view_name] = new_ref
                 logger.info(f"  ✅ Created JSON: {view_name}")
 
-            # Render PNG immediately so next view's style_reference is resolvable
-            view_char = project.character_info[view_name]
-            _render_single_ref(view_char, config, project, llm)
+            view_png_path = project.ref_dir / f"{safe_name(view_name)}.png"
+
+            # First view: crop top half of the original combined PNG so it stays
+            # consistent with already-filmed scenes. Subsequent views are generated
+            # via API using the cropped first view as style_reference.
+            if not prev_view_name and not view_png_path.exists():
+                orig_png = project.ref_dir / f"{safe_name(name)}.png"
+                if orig_png.exists():
+                    try:
+                        with Image.open(orig_png) as img:
+                            w, h = img.size
+                            top_half = img.crop((0, 0, w, h // 2))
+                        buf = BytesIO()
+                        top_half.save(buf, format='PNG')
+                        view_png_path.write_bytes(buf.getvalue())
+                        project.character_images[view_name] = str(view_png_path)
+                        logger.info(f"    ✂️  Cropped top half → {view_png_path}")
+                    except Exception as e:
+                        logger.warning(f"  ⚠️  Crop failed for {name}: {e}; falling back to API render")
+
+            # Render via API if PNG still missing (no original, or crop failed)
+            if not view_png_path.exists():
+                view_char = project.character_info[view_name]
+                _render_single_ref(view_char, config, project, llm)
+            elif view_name not in project.character_images:
+                project.character_images[view_name] = str(view_png_path)
 
             prev_view_name = view_name
 
