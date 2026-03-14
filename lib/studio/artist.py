@@ -340,7 +340,7 @@ def _extract_view_desc(original_desc: str, view_suffix: str, view_instruction: s
         f"Return JSON: {{\"visual_desc\": \"...\"}}"
     )
     try:
-        result = llm.make_json(prompt, schema=_VIEW_DESC_SCHEMA, max_tokens=1024)
+        result = llm.make_json(prompt, schema=_VIEW_DESC_SCHEMA)
         desc = result.get('visual_desc', '').strip()
         if desc:
             return desc
