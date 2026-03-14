@@ -245,14 +245,20 @@ def _render_single_ref(char: dict, config: dict, project: Project, llm: BaseLLM)
 
     ref_aspect = config.get('reference_characters', {}).get('ref_aspect_ratio', '3:4')
 
-    prompt_text = (
-        f"CINEMATIC REFERENCE FOR {char['type']}: {name}. "
-        f"{char['visual_desc']}. "
-        f"Close-up, neutral expression, uniform lighting, 8k."
-    )
-
-    if ref_type.lower() == 'character':
-        prompt_text += "Render character full-height"
+    if ref_type.lower() in ('room', 'vehicle'):
+        prompt_text = (
+            f"CINEMATIC ENVIRONMENT REFERENCE: {name}. "
+            f"{char['visual_desc']}. "
+            f"Architectural photography, empty — no people, uniform studio lighting, 8k."
+        )
+    else:
+        prompt_text = (
+            f"CINEMATIC REFERENCE FOR {char['type']}: {name}. "
+            f"{char['visual_desc']}. "
+            f"Close-up, neutral expression, uniform lighting, 8k."
+        )
+        if ref_type.lower() == 'character':
+            prompt_text += " Render character full-height."
 
     try:
         img_bytes = llm.make_image(prompt_text, refs=refs, aspect_ratio=ref_aspect, image_size="1K")
@@ -297,6 +303,126 @@ def render_character_refs(prompts: dict, config: dict, llm: BaseLLM, project: Pr
 
     if failed:
         logger.warning(f"  ⚠️  {len(failed)}/{len(to_render)} ref(s) failed to render: {failed}. Run 'python cli.py refs' to retry.")
+
+
+# ---------------------------------------------------------------------------
+# Room / Vehicle ref splitting
+# ---------------------------------------------------------------------------
+
+_ROOM_VIEWS = [
+    (
+        'View-From-Entrance',
+        'Wide shot standing at the entrance doorway, camera looking INTO the room toward the opposite wall. '
+        'Use the compass wall layout from visual_desc: show the opposite wall, left wall, right wall, center floor. '
+        'All furniture and decor visible from this angle must match the compass layout exactly. '
+        'Empty room, no people, architectural photography.',
+    ),
+    (
+        'View-To-Entrance',
+        'Wide shot standing at the far end of the room, camera looking BACK toward the entrance wall and door. '
+        'Use the compass wall layout from visual_desc: show the entrance wall with its door, '
+        'plus wall features now behind the camera (rear wall details, furniture behind the viewer). '
+        'Include out-of-frame details from the entrance view: what is BEHIND the viewer when entering. '
+        'All furniture and materials must be identical to the View-From-Entrance style reference. '
+        'Empty room, no people, architectural photography.',
+    ),
+]
+
+_VEHICLE_VIEWS = [
+    (
+        'Exterior',
+        'Full exterior, three-quarter front angle, studio lighting, '
+        'entire vehicle in frame, no people.',
+    ),
+    (
+        'Interior-From-Entrance',
+        'Interior cabin view looking IN from the driver/main door. '
+        'Dashboard, steering wheel, front seats, controls, '
+        'cabin materials. No people.',
+    ),
+    (
+        'Interior-To-Entrance',
+        'Interior cabin view looking TOWARD the entrance door from '
+        'the back seat. Rear cabin, headrests, door panels, '
+        'details not visible from entrance side. No people.',
+    ),
+]
+
+
+def remake_room_refs(config: dict, llm: BaseLLM, project: Project):
+    """Split existing Room/Vehicle refs into separate per-view refs and render them.
+
+    For each Room ref, creates:
+      {name}-View-From-Entrance  (rendered independently)
+      {name}-View-To-Entrance    (style_reference → View-From-Entrance)
+
+    For each Vehicle ref, creates:
+      {name}-Exterior
+      {name}-Interior-From-Entrance  (style_reference → Exterior)
+      {name}-Interior-To-Entrance    (style_reference → Interior-From-Entrance)
+
+    Original combined ref JSON/PNG are left untouched (not deleted).
+    Renders sequentially within each group so style_reference PNGs are available.
+    """
+    load_character_refs(project)
+
+    all_view_suffixes = {v[0] for v in _ROOM_VIEWS + _VEHICLE_VIEWS}
+
+    to_split = [
+        (name, info)
+        for name, info in project.character_info.items()
+        if info.get('type') in ('Room', 'Vehicle')
+        and not any(name.endswith(f'-{s}') for s in all_view_suffixes)
+    ]
+
+    if not to_split:
+        logger.info("  ✅ No unsplit Room/Vehicle refs found.")
+        return
+
+    logger.info(f"  📋 {len(to_split)} ref(s) to split into views.")
+
+    for name, info in to_split:
+        rtype = info['type']
+        views = _ROOM_VIEWS if rtype == 'Room' else _VEHICLE_VIEWS
+        prev_view_name: Optional[str] = None
+
+        for view_suffix, view_instruction in views:
+            view_name = f"{name}-{view_suffix}"
+            view_json_path = project.ref_dir / f"{safe_name(view_name)}.json"
+
+            if view_json_path.exists():
+                logger.info(f"  ⏭  Skip JSON {view_name} (exists)")
+                # still update project cache so style_reference chain works
+                try:
+                    existing = json.loads(view_json_path.read_text(encoding='utf-8'))
+                    project.character_info[view_name] = existing
+                except Exception:
+                    pass
+            else:
+                new_ref = {
+                    'name': view_name,
+                    'logline_subject_info': (
+                        f"{info.get('logline_subject_info', '')} — "
+                        f"{view_suffix.replace('-', ' ')} perspective"
+                    ),
+                    'visual_desc': f"{info['visual_desc']}. {view_instruction}",
+                    'video_visual_desc': info.get('video_visual_desc', ''),
+                    'type': rtype,
+                    'style_reference': prev_view_name or '',
+                }
+                view_json_path.write_text(json.dumps(new_ref, indent=2), encoding='utf-8')
+                project.character_info[view_name] = new_ref
+                logger.info(f"  ✅ Created JSON: {view_name}")
+
+            # Render PNG immediately so next view's style_reference is resolvable
+            view_char = project.character_info[view_name]
+            _render_single_ref(view_char, config, project, llm)
+
+            prev_view_name = view_name
+
+        logger.info(f"  ✅ Split complete: {name} → {len(views)} views")
+
+    logger.info("  ✅ remake-room-refs done.")
 
 
 # ---------------------------------------------------------------------------

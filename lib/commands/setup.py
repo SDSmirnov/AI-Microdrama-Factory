@@ -5,7 +5,7 @@ from pathlib import Path
 
 from lib.commands.common import _make_llm
 from lib.core.project import Project, load_project
-from lib.studio.artist import auto_cast_characters, render_character_refs
+from lib.studio.artist import auto_cast_characters, remake_room_refs, render_character_refs
 from lib.studio.stylist import analyze_novel, generate_custom_prompts
 
 logger = logging.getLogger(__name__)
@@ -56,6 +56,13 @@ def cmd_refs(args):
     logger.info(f"\n✅ Done. Reference PNGs in {project.ref_dir}/")
 
 
+def cmd_remake_room_refs(args):
+    project, prompts, config = load_project(style=args.style)
+    llm = _make_llm(args.llm, project, system_prompt=prompts['screenplay'])
+    remake_room_refs(config, llm, project)
+    logger.info(f"\n✅ Done. Split view PNGs in {project.ref_dir}/")
+
+
 def register(sub):
     sub.add_parser('init', help='Validate env and create directories').set_defaults(func=cmd_init)
 
@@ -69,3 +76,9 @@ def register(sub):
 
     p = sub.add_parser('refs', help='Render missing character reference portraits from existing JSONs')
     p.set_defaults(func=cmd_refs)
+
+    p = sub.add_parser(
+        'remake-room-refs',
+        help='Split Room/Vehicle refs into separate per-view refs and render them',
+    )
+    p.set_defaults(func=cmd_remake_room_refs)
