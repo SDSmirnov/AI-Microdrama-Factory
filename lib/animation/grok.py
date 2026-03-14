@@ -22,7 +22,7 @@ DEFAULT_MODEL = "grok-imagine-video"
 DEFAULT_DURATION = 6
 DEFAULT_ASPECT_RATIO = os.getenv('AI_ASPECT_RATIO', '9:16')
 DEFAULT_RESOLUTION = "720p"
-BATCH_SIZE = 9
+BATCH_SIZE = 3
 BATCH_SLEEP = 30
 
 
@@ -37,7 +37,7 @@ def _build_prompt(meta: dict) -> str:
         if dialogue:
             vo_speech = ''
         else:
-            vo_speech = f'OFFSCREEN VOICEOVER: "{voiceover}"'
+            vo_speech = f'OFF-SCREEN VOICE OVER (lips do not move): "{voiceover}"'
 
     return (
         f"CRITICALLY FORBIDDEN: object morphing, adding new objects, adding new actors.\nNO tears, NO sweat, NO spitting.\n"

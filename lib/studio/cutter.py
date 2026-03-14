@@ -127,7 +127,7 @@ def run_autocut(
         s_id = scene["scene_id"]
         for panel in scene.get("panels", []):
             p_idx = panel["panel_index"]
-            pattern = f"clip_{s_id}_{p_idx:03d}.mp4"
+            pattern = f"clip_{s_id:02d}_{p_idx:03d}.mp4"
             src = clips / pattern
             if not src.exists():
                 logger.warning(f"Not found: {pattern} — skipping")

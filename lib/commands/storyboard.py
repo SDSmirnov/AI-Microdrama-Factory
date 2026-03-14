@@ -354,7 +354,7 @@ NEVER write "same as before", "same POV", "continues from", etc.
 
 Return a single scene (scene_id={args.scene}) containing exactly 1 panel (panel_index=1).
 Match camera_master and lighting_master from context above verbatim in lights_and_camera.
-All dialogues, voiceovers and captions MUST be in Russian.
+All dialogues, voiceovers and captions MUST be in English.
 """
 
     @retry_on_errors(max_retries=3, backoff_factor=2)

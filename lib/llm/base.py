@@ -95,7 +95,7 @@ def parse_json(text: str) -> dict:
         if result is not None:
             return result
 
-    logger.error("❌ parse_json: all strategies failed. Response head: %s", text[:300])
+    logger.error("❌ parse_json: all strategies failed. Response head: %s", text)
     raise json.JSONDecodeError("Cannot extract JSON from LLM response", text, 0)
 
 

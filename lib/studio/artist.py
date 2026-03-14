@@ -587,7 +587,7 @@ def _build_panel_prompt(scene: dict, panel: dict, frame_type: str, prompts: dict
 Location: {scene['location']}
 Scene setup: {scene.get('pre_action_description', '')}
 CONSISTENCY RULE: Maintain IDENTICAL face, hair, clothing, and body proportions as shown in the reference images.
-NO CAPTIONS. NO TEXT OVERLAYS. NO WATERMARKS.
+NO CAPTIONS. NO TEXT OVERLAYS. NO WATERMARKS. NO TEARS. NO SPITTING.
 
 Generate a SINGLE portrait image ({aspect_ratio}) for:
 Panel {panel['panel_index']} — {frame_type.upper()} frame{tag_str}

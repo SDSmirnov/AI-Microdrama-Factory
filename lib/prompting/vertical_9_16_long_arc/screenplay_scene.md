@@ -168,7 +168,7 @@ MANDATORY: plan the arc_bridge → arc_pickup seam as a match_cut across the epi
 ## SOUND
 
 DIALOGUE: ≤8 words, CU on speaker's face. Populate both `dialogue` and `voiceover` for inner counterpoint.
-VOICEOVER: inner monologue revealing what the image cannot show. Russian language.
+VOICEOVER: inner monologue revealing what the image cannot show. English language.
 
 SOUND DESIGN (sound_design) — required for EVERY panel:
 - Deliberate sonic contrast: sustained silence broken by a sharp sound > continuous noise.

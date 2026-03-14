@@ -162,7 +162,7 @@ Animation mode: {is_animation}
 {"Include visual_start and visual_end for START/END keyframes." if is_animation else "Include single key visual moment per panel."}
 {f"Include dialogue (≤{config['dialogue'].get('max_words_per_line', 8)} words per line) and voiceover for each panel." if config['dialogue']['enabled'] else ""}
 {"Include caption for narrative text." if config['captions']['enabled'] else ""}
-Important: all dialogues, voiceovers and texts MUST be in Russian as in original text for the consistency.
+Important: all dialogues, voiceovers and texts MUST be in English for the consistency.
 
 {prompts.get('screenplay_scene', '')}
     """
