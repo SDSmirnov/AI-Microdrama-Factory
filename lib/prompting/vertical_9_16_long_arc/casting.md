@@ -47,15 +47,35 @@ For each NEW reference:
 - **Quality**: 8K resolution, sharp focus, photorealistic skin texture
 
 ## Important for rooms:
-- For every room generate a single 2-panel image, panels stacked vertically:
-  - TOP: View from the door
-  - BOTTOM: View to the door
+
+### Room visual_desc — use compass wall layout (MANDATORY format):
+Write the room description as a wall-by-wall inventory using cardinal directions.
+Assign the entrance door to a wall first, then describe all four walls consistently.
+Example format:
+```
+ROOM SIZE: medium office, ~5×4 m, 2.7 m ceiling, parquet floor, white plaster walls.
+NORTH WALL (entrance): solid wood door center, narrow built-in bookshelf to the left of door, coat hook to the right.
+SOUTH WALL (opposite): single casement window with roll blinds, centered, city view.
+EAST WALL (right when entering): L-shaped work desk with laptop, monitor, desk lamp, filing cabinet underneath.
+WEST WALL (left when entering): two visitor chairs in dark leather, small side table between them, framed art above.
+CENTER: no obstructions, open floor space.
+CEILING/FLOOR: recessed LED strip lighting, warm tone; dark oak parquet.
+```
+This format MUST be used for every Room ref so that per-view renders know exactly what is visible from each angle.
+
+- For every room generate TWO SEPARATE ref entries (two distinct names, two distinct JSON objects):
+  1. `{Room-Name}-View-From-Entrance` — wide shot from the entrance doorway (e.g. NORTH WALL) looking toward the opposite wall (e.g. SOUTH WALL). Shows: opposite wall, left wall, right wall, center. Single portrait image, empty room.
+  2. `{Room-Name}-View-To-Entrance` — wide shot from the opposite end of the room looking BACK toward the entrance wall and door. Shows: entrance wall with door, and the wall features behind the viewer's back (rear furniture, windows, decor only visible from this angle). Single portrait image, empty room.
+     Set `style_reference` to `{Room-Name}-View-From-Entrance` so furniture materials and style are consistent.
 
 ## Important for vehicles:
-- For every vehicle generate a single 3-panel image, panels stacked vertically:
-  - TOP: View outside
-  - MIDDLE: View inside from the entrance, wide shot
-  - BOTTOM: View inside to the entrance, wide shot
+- For every vehicle generate THREE SEPARATE ref entries:
+  1. `{Vehicle-Name}-Exterior` — full exterior, three-quarter front angle, studio lighting.
+  2. `{Vehicle-Name}-Interior-From-Entrance` — interior looking IN from driver/main door. Dashboard, seats, controls, cabin details.
+     Set `style_reference` to `{Vehicle-Name}-Exterior`.
+  3. `{Vehicle-Name}-Interior-To-Entrance` — interior looking TOWARD the entrance from the back seat.
+     Rear cabin, headrests, door panels, details not visible from entrance side.
+     Set `style_reference` to `{Vehicle-Name}-Interior-From-Entrance`.
 
 ## Visual Description
 - Must be verbose, precise, and contain specific features so that AI model can efficiently implement without hallucinations

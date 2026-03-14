@@ -24,6 +24,18 @@ __DRAMATIC_INTENSITY_PANEL_TYPE__
   Example: "Panel is static and inert. Add visible power imbalance: reframe so character A stands over seated character B. Add character A's hand resting on B's shoulder from above. Insert a prop in foreground (unsigned contract, phone with lit screen) to signal what is at stake. B's face should show jaw clenched, eyes averted downward — not neutral."
   Never write "panel lacks drama" — write what specific visual element would create it.
 
+- **spatial_consistency** (not scored, checked via artifacts + suggest_mirror):
+  Compare character/object positions in this panel against PREVIOUS PANELS descriptions.
+  Flag in artifacts if any of the following occur WITHOUT a matching cut/setup change:
+  - Character A was described to the LEFT of B, now appears to the RIGHT (or vice versa)
+  - A character entering from one side now exits or stands on the opposite side in the same room
+  - Screen direction flips: a character moving/facing right now faces/moves left
+  - A dominant foreground/background relationship inverts (A was in front, now behind)
+  If a spatial flip is detected and it is the ONLY issue (faces, lighting, composition are fine):
+  set suggest_mirror=true and describe the flip in mirror_reason.
+  If other issues also exist, set needs_refinement=true and include the spatial issue in refinement_prompt.
+  Note: text descriptions may not always specify sides explicitly — only flag when clearly contradicted.
+
 ## IMPORTANT
 - Compare character faces CAREFULLY against reference images.
 - Even small differences (hair color, eye color, facial structure) matter.

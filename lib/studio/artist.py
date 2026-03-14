@@ -191,12 +191,33 @@ For each NEW reference, provide:
   - type: Character | Location | Object | Room | Vehicle | Interface
   - style_reference: name of an existing or new reference to use as style base
 
+CRITICAL — Rooms and Vehicles MUST be split into separate per-view entries (see casting instructions above).
+NEVER create a single monolithic entry with type=Room or type=Vehicle.
+A bare "Room-Name" entry with type=Room is WRONG — always use "{Room-Name}-View-From-Entrance" and "{Room-Name}-View-To-Entrance".
+A bare "Vehicle-Name" entry with type=Vehicle is WRONG — always use "{Vehicle-Name}-Exterior", "{Vehicle-Name}-Interior-From-Entrance", "{Vehicle-Name}-Interior-To-Entrance".
+visual_desc for each view entry must describe ONE camera angle only — no TOP/BOTTOM panels, no multi-panel layouts.
+
 Text:
 
 <STORY>{text}</STORY>
 """
 
     new_chars = llm.make_json(prompt, CHARACTER_SCHEMA)
+
+    # Reject any monolithic Room/Vehicle entries without a view suffix — the LLM
+    # was explicitly told to split these; a bare entry means it ignored the rule.
+    _view_suffixes = {s for s, _ in _ROOM_VIEWS + _VEHICLE_VIEWS}
+    bad = [c for c in (new_chars or [])
+           if c.get('type') in ('Room', 'Vehicle')
+           and not any(c.get('name', '').endswith(f'-{s}') for s in _view_suffixes)]
+    if bad:
+        bad_names = [c['name'] for c in bad]
+        logger.warning(
+            "  ⚠️  LLM returned monolithic Room/Vehicle entries (not split into views): %s. "
+            "Run 'make remake-room-refs' to split them, or delete and re-cast.",
+            bad_names,
+        )
+
     if new_chars:
         ctx = f"{casting_prompt_template} {setting_context}"
         max_workers = project.max_workers
