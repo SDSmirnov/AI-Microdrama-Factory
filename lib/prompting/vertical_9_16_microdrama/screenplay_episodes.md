@@ -17,6 +17,10 @@ The viewer asks "what is happening?" THAT question keeps them watching.
 
 **The 21-Second Emotional Capture:** By panel 4 (≈21s mark), the viewer must feel they cannot leave without knowing what happens next. Create an irreversible emotional commitment — an action taken, a line crossed, a secret revealed — that makes scrolling away feel like abandonment. If a viewer survives to panel 4, they finish the episode.
 
+**The 15-Second Depth Test (YouTube retention checkpoint):** Panel 3 (≈12–18s) is the platform's second highest drop-off point — 40–60% of non-captured viewers leave here. This panel must function as a SECOND ENTRY POINT: a viewer who missed panels 1–2 (e.g., arrived via algorithm mid-autoplay) must be able to read the central conflict from Panel 3 alone — who has power, what emotion is on the primary face, what object is at stake. If Panel 3 requires context from P1-P2 to understand, it fails the depth test. Design it as a self-contained power-dynamic image.
+
+**The 30-Second Crystallization (YouTube completion predictor):** Panel 5 (≈27–33s mark) is YouTube's algorithm completion-prediction checkpoint: viewers who reach 30s finish the episode at high rates, which drives recommendations. This panel must contain the episode's POINT OF NO RETURN — the irreversible action or revelation that makes abandonment feel like loss. It is NOT the climax; it is the moment the stakes become visceral. Additionally, this panel must be designed as the episode's strongest standalone thumbnail candidate: compositionally legible as a static image, no key action in text-overlay zones, face in CU or ECU with a recognizable but ambiguous emotion.
+
 **Cold Open = IN MEDIAS RES + Visual Question Mark:** The cold_open is NOT an arresting image — it is an unanswered question delivered mid-action.
 Show CONSEQUENCE before CAUSE: the reaction before the stimulus, the wound before the weapon, the running before the threat.
 The viewer must be asking "what the hell is happening RIGHT NOW?" — that unresolved tension is the hook.
@@ -31,11 +35,13 @@ COLD OPEN FORBIDDEN PATTERNS (the AI defaults to these — reject them all):
 COLD OPEN REQUIRED: Something is ALREADY HAPPENING. A hand already extended with money. Eyes already locked. An object already mid-flight. A jaw already set to refuse. Drop into the episode's first moment of power shift — if that moment is panel 3 in story chronology, OPEN ON PANEL 3 FIRST, then rewind or continue forward.
 
 **Micro-Act Structure (per episode, 9 panels):**
-- Panels 1–2: HOOK + CONTEXT. Drop into chaos, then orient.
-- Panels 3–5: ESCALATION. Pressure compounds. Each panel adds a new obstacle or revelation.
-- Panels 6–7: CONFRONTATION / PEAK. Maximum interpersonal or physical conflict. Face in extreme close-up.
-- Panel 8: TWIST / REVERSAL. One piece of information changes everything.
-- Panel 9: CLIFFHANGER. Freeze on maximum tension. Cut. Never resolve.
+- Panels 1–2: HOOK + CONTEXT [3–7s zone]. Drop into chaos, then orient. Target panel duration: 4–5s each — accelerate through the highest drop-off zone. Do not exceed 5s for P1-P3.
+- Panel 3: ESCALATION [15s DEPTH TEST]. First pressure or obstacle. Must be self-contained as a second entry point (see 15-Second Depth Test). Target duration: 4–5s.
+- Panel 4: EMOTIONAL CAPTURE [21s LOCK]. Point of no return — the action, revelation, or commitment the viewer cannot abandon. Expand to 6s.
+- Panel 5: CRYSTALLIZATION [30s COMPLETION TRIGGER]. Stakes become visceral and irreversible. Strongest thumbnail candidate. 6–7s.
+- Panels 6–7: CONFRONTATION / PEAK. Maximum interpersonal or physical conflict. Face in extreme close-up. 7–8s each.
+- Panel 8: TWIST / REVERSAL. One piece of information changes everything. 6s.
+- Panel 9: CLIFFHANGER. Freeze on maximum unresolved tension. Cut. Never resolve. 5–6s.
 
 **Shot Scale Rhythm:** Prevent monotony by alternating scale across panels.
 After 2–3 consecutive ECU/CU panels, insert one MS or WIDE to re-establish spatial context before the next escalation.

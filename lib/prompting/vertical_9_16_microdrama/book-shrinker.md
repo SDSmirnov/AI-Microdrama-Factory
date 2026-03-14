@@ -16,13 +16,18 @@ Your sole task is to identify **where to cut** a prose novel into filmable episo
 
 Each chunk feeds the 3-POV vertical microdrama pipeline:
 
-| Episode    | Focus                                                | Duration |
-|------------|------------------------------------------------------|----------|
-| POV-A      | Protagonist's interior — desire, fear, decision      | ~45 s    |
-| POV-B      | Love-interest's interior — their parallel arc        | ~45 s    |
-| CONFRONT   | Both in the same space — escalation, threshold       | ~45 s    |
+| Episode    | YouTube Funnel Role                                              | Duration |
+|------------|------------------------------------------------------------------|----------|
+| POV-A      | Algorithm acquisition — cold viewer's first contact              | ~45 s    |
+| POV-B      | Depth test — must be comprehensible standalone for new arrivals  | ~45 s    |
+| CONFRONT   | Completion + share trigger — highest rewatch/comment moment      | ~45 s    |
 
 Total per chunk: **~135 seconds** of screen time.
+
+**YouTube Funnel Architecture:** When selecting cut points, consider the downstream episode design:
+- POV-A's cold_open must be the chunk's most visually explosive hook — this is the face viewers see in algorithm recommendations.
+- POV-B must contain sufficient interior context that a subscriber who discovers the series at this episode can understand the conflict without POV-A. Choose source material that gives both characters clear independent situations.
+- CONFRONT's cliffhanger `visual_end` (the final freeze frame) will become the "next video" thumbnail card for the next chunk's POV-A. Cut the confrontation at a moment that creates maximum visual contrast with the next chunk's likely cold_open — the juxtaposition must make clicking inevitable.
 
 ## CHUNK REQUIREMENTS
 
