@@ -146,7 +146,7 @@ def base_scene_prompt(prompts: dict, config: dict, character_info: dict = None) 
                 lines.append(f"- {name}: {desc}")
             else:
                 lines.append(f"- {name}")
-        char_refs_block = "CHARACTER/LOCATION REFERENCES (use these exact descriptions for visual consistency):\n" + "\n".join(lines)
+        char_refs_block = "CHARACTER/LOCATION REFERENCE BASELINE — for identification only. In visual_start/visual_end write ONLY deviations from these (costume change, injury, scene prop, flashback). Do NOT repeat canonical features already here:\n" + "\n".join(lines)
     else:
         char_refs_block = "Available Characters/Locations/Objects for panel references: []"
 
@@ -297,8 +297,9 @@ def analyze_episodes_master(text: str, prompts: dict, config: dict, llm: BaseLLM
             else:
                 lines.append(f"- {name}")
         char_refs_block = (
-            "CHARACTER/LOCATION REFERENCES — use these EXACT descriptions in visual_continuity_rules "
-            "and screenplay_instructions to prevent hallucination:\n" + "\n".join(lines)
+            "CHARACTER/LOCATION REFERENCES — for screenplay planning and visual_continuity_rules only "
+            "(use exact descriptions to prevent hallucination). Panel visual_start/visual_end must describe "
+            "only scene-specific deviations, not repeat these baselines:\n" + "\n".join(lines)
         )
     else:
         char_refs_block = ""
@@ -444,11 +445,21 @@ according to the rules below. Do NOT change scene_id, panel_index, or structural
 
 ## REFINEMENT RULES
 
-### RULE 1 — SELF-CONTAINED PANELS
-Each panel will be rendered INDEPENDENTLY — no pipeline shares context between panels.
-Therefore every panel MUST contain all required visual information inline:
-- Repeat the character's full visual appearance in visual_start and visual_end (hair, clothing, build,
-  distinguishing features) — NEVER write "same appearance as before" or "continues from panel N".
+### RULE 1 — SELF-CONTAINED PANELS (deviations only, not full descriptions)
+Each panel is rendered INDEPENDENTLY alongside its character/location reference images.
+The T2I model already receives reference PNGs and their full descriptions — do NOT repeat baseline
+appearance (canonical outfit, hair color, build, eye color) that is already in the references.
+
+Instead, for each panel write ONLY what DIFFERS from the reference for this specific panel:
+- Costume/wardrobe changes (e.g. "wearing silk robe instead of usual dress")
+- Scene-specific props not in the reference (e.g. "holding a gun", "bandage on left arm")
+- Flashback or alternate-timeline appearance (e.g. "younger, 18yo, school uniform — flashback")
+- Injury, dirt, wetness, or other transient physical state
+
+NEVER repeat canonical features (hair color, body type, usual clothing) — they are in the refs.
+NEVER write "same appearance as before" or "continues from panel N" — each panel is standalone.
+
+Always specify per panel (these are NOT in references):
 - Repeat the location details (architecture, lighting, props, atmosphere) in every panel.
 - Repeat the exact shot type and camera angle (ECU / CU / MS / WIDE + lens + angle) in every panel
   and in lights_and_camera — never say "same framing".
@@ -460,8 +471,10 @@ visual_start must explicitly state the spatial arrangement at t=0:
 - Distance from camera (foreground / mid-ground / background).
 - Dominant expression, posture, gesture at t=0.
 - Background elements visible from this camera angle.
-Example: "MEDIUM SHOT. Ivan (30s, dark stubble, grey hoodie) stands LEFT of frame, facing RIGHT toward
-camera at 45°, arms crossed, jaw tight. Behind him: rain-streaked window, blurred city lights bokeh."
+- Any scene-specific appearance deviation from their reference (costume change, injury, etc.)
+Example: "MEDIUM SHOT. Ivan stands LEFT of frame, facing RIGHT toward camera at 45°, arms crossed,
+jaw tight, wearing silk robe [deviation: usually in grey hoodie]. Behind him: rain-streaked window,
+blurred city lights bokeh."
 
 ### RULE 3 — is_reversed FLAG FOR ANIMATION
 Panels will be animated as {config['format'].get('panel_duration_s', 6)}-second clips by the AI video model, which does NOT support image references.

@@ -235,9 +235,16 @@ def align_scene_prompts(scene: Dict, all_refs_data: Dict, llm: BaseLLM) -> Dict:
     </CURRENT_SCENE>
 
     TASK:
-    For each panel, correct ONLY what contradicts the APPROVED_REFERENCES or the scene masters:
-    1. Rewrite 'visual_start' and 'visual_end' where colors, props, or materials contradict references.
-    2. Rewrite 'lights_and_camera' where it contradicts camera_master or lighting_master.
+    For each panel, correct ONLY accidental inconsistencies against APPROVED_REFERENCES or scene masters.
+    1. Fix accidental drift in baseline physical features (wrong eye color, face shape, body type,
+       architectural details, location atmosphere that contradicts the reference).
+    2. Fix 'lights_and_camera' where it contradicts camera_master or lighting_master.
+    PRESERVE intentional scene-specific deviations — do NOT revert them:
+    - Costume/wardrobe changes explicitly stated in the panel (e.g. "silk robe", "uniform", "bikini")
+    - Flashback or alternate-timeline appearances (e.g. "younger", "school uniform", "flashback")
+    - Transient physical state (injury, wetness, dirt, emotional dishevelment)
+    - Props carried or worn that are relevant to the scene action
+    A character wearing different clothing than their reference is INTENTIONAL — preserve it.
     Do not change action, dialogue, or structure — only enforce physical and technical consistency.
     Return the full list of panels with adjusted visual_start, visual_end, and lights_and_camera.
     """

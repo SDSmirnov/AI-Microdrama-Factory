@@ -2,7 +2,7 @@
 ## INDEPENDENCE PROTOCOL — NON-NEGOTIABLE
 Each panel is rendered by a separate image-generation model that receives ONLY that panel's text — no history, no context, no memory.
 - FORBIDDEN: "same as before", "same POV", "same framing", "same appearance", "as in panel N", "continues from", "identical to", "as established".
-- REQUIRED: Restate character appearance (hair, clothing, build, expression), carry items (bag on shoulder, holster, wallet pocket — wherever they keep things), location details, shot type, camera angle, and lighting in EVERY panel's visual_start and visual_end — even if they repeat word-for-word from the previous panel.
+- REQUIRED in EVERY panel's visual_start and visual_end: location details, shot type, camera angle, and lighting. Character reference images are injected separately — do NOT repeat canonical appearance (hair color, build, eye color, usual outfit). Instead, describe ONLY scene-specific deviations: costume changes ("silk robe instead of usual dress"), carried items for this scene ("holding a gun", "bag on left shoulder"), injuries or transient state ("soaked, mascara running"), flashback appearance ("18yo, school uniform — flashback"). Signature visual tells (scar, tattoo, prop) must be mentioned when visible at CU/ECU range.
 - Treat each panel description as the ONLY instruction the image model will ever receive for that shot.
 
 ## VERTICAL MICRODRAMA CINEMATOGRAPHY — 9 PANELS PER SCENE
