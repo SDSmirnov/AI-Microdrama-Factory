@@ -183,9 +183,9 @@ def _build_duel_instruction(duel_cfg: dict, prompts: dict, episodes_count: int) 
             "```\n"
             "arc_open  (Ep1, P1–9):  cold_open[A+B] → first_demand[A] → first_counter[B] →\n"
             "                         escalation[A] → emotional_capture[B] → rising_action[A] →\n"
-            "                         atmosphere_insert → near_collapse[B] → arc_bridge[A+B]\n"
+            "                         pivot → near_collapse[B] → arc_bridge[A+B]\n"
             "arc_close (Ep2, P1–9):  arc_pickup[A+B] → pressure_exchange[A] → decisive_blow[B] →\n"
-            "                         impact[A] → atmosphere_insert → twist → cost[A+B] →\n"
+            "                         impact[A] → pivot → twist → cost[A+B] →\n"
             "                         consequence[A+B] → cliffhanger[A+B: ambiguous]\n"
             "```\n"
         )
@@ -195,12 +195,12 @@ def _build_duel_instruction(duel_cfg: dict, prompts: dict, episodes_count: int) 
             "```\n"
             "arc_open  (Ep1, P1–9):  cold_open[A+B] → first_demand[A] → first_counter[B] →\n"
             "                         escalation[A] → emotional_capture[B] → rising_action[A] →\n"
-            "                         atmosphere_insert → near_collapse[B] → arc_bridge[A+B]\n"
+            "                         pivot → near_collapse[B] → arc_bridge[A+B]\n"
             "arc_mid   (Ep2, P1–9):  arc_pickup[A+B] → pressure_exchange → complication →\n"
-            "                         rising_pressure[B] → atmosphere_insert → new_weapon[A] →\n"
+            "                         rising_pressure[B] → pivot → new_weapon[A] →\n"
             "                         counter_offensive[B] → pre_collapse[A] → arc_bridge[A+B]\n"
             "arc_close (Ep3, P1–9):  arc_pickup[A+B] → collapse_point → reversal →\n"
-            "                         aftermath → atmosphere_insert → twist → cost[A+B] →\n"
+            "                         aftermath → pivot → twist → cost[A+B] →\n"
             "                         consequence[A+B] → cliffhanger[A+B: ambiguous]\n"
             "```\n"
         )
@@ -226,7 +226,7 @@ def analyze_episodes_master(text: str, prompts: dict, config: dict, llm: BaseLLM
     multi_pov_enabled = multi_pov_cfg.get('enabled', False)
 
     transitions_instruction = (
-        f'7. TRANSITION EPISODES (episode_type: "transition"): When a significant time gap (>{gap_threshold}) exists between chapters, insert one Transition episode BEFORE the POV-A episode of the next chapter. Transitions bridge the gap using {transition_style} technique — parallel images from each character\'s space during the time gap (e.g. both characters\' environments at dawn, rain on two different windows). Rules: no dialogue, no voiceover, all panels are atmosphere_insert, panel durations 2–3s. pov_character: "". Episode must still have {panels_per_scene} panels.'
+        f'7. TRANSITION EPISODES (episode_type: "transition"): When a significant time gap (>{gap_threshold}) exists between chapters, insert one Transition episode BEFORE the POV-A episode of the next chapter. Transitions bridge the gap using {transition_style} technique — parallel environmental shots from each character\'s space during the time gap (e.g. both characters\' environments at dawn, rain on two different windows). Rules: no dialogue, no voiceover, no character close-ups, panel_type "narrative", panel durations 2–3s. pov_character: "". Episode must still have {panels_per_scene} panels.'
         if transitions_enabled else
         '7. Do not generate transition episodes.'
     )

@@ -22,7 +22,6 @@ Top 15% and bottom 20% must be visually clear (sky, wall, floor — no faces, no
 Set text_safe_composition: true when this is achieved.
 
 VISUAL DRAMATIC INTENSITY — WHAT GOES IN EVERY NARRATIVE FRAME:
-(Applies to panel_type=narrative only. For atmosphere_insert: skip questions 1–2; fill question 3 with the single environmental element that carries all the drama — scale, texture, or color temperature is the conflict; and fill question 4 with how that element changes state: wave rising or cresting, ember dying or flaring, fog thickening or thinning.)
 
 **visual_start must answer four questions in one image:**
 1. WHO has power right now, and WHO doesn't? — Show it through spatial position (standing over / cornered), posture (open vs. closed), or a prop (who holds the phone, the contract, the weapon).
@@ -43,7 +42,7 @@ RIGHT: "At 0s phone sits on table, hand rests 10cm to the right. At 1.5s fingers
 The physical hesitation tells the viewer everything about the character's internal state without a single word.
 
 9-PANEL MICRO-ACT STRUCTURE (mandatory rhythm for pov_a / pov_b / confrontation episodes):
-(TRANSITION episodes override this entirely — see episode_type block. All 9 panels are atmosphere_insert with no dialogue, no character conflict structure.)
+(TRANSITION episodes override this entirely — see episode_type block. All 9 panels are environmental with no dialogue, no character conflict structure.)
 - Panel 1: cold_open — IN MEDIAS RES. The viewer drops into mid-action, mid-confrontation, or mid-consequence. Something is ALREADY HAPPENING when the frame opens. Choose one of five hook archetypes that fits the source scene:
   * STATUS REVERSAL: protagonist caught in humiliation or subjugation — the viewer asks "how will they turn this around?" (exploits the human drive for justice)
   * IMPOSSIBLE SITUATION: no visible exit — the viewer asks "how do they get out of this?"
@@ -149,12 +148,7 @@ TRANSITION TO NEXT PANEL (transition_to_next):
 - hard_cut: standard clean cut (default).
 
 PANEL TYPE (panel_type):
-- narrative: standard story panel.
-- atmosphere_insert: MANDATORY — exactly one per pov/confrontation episode, at panel 7 or 8 (emotional peak / pre-cliffhanger). Exception: transition episodes use atmosphere_insert for ALL 9 panels — the episode_type block defines their full structure. A single minimalist WOW shot with no dialogue, no character close-ups. Two subtypes:
-  * ENVIRONMENTAL: 1–2 macro-scale elements only (crashing wave, wall of flame, fog swallowing a city, storm wall, lone tree in wind). Grand scale, 2–3 color palette. visual_start: "minimalism: [element], [light condition], hyper-realistic. No people, no faces." No character refs needed.
-  * TEXTURE/DETAIL: extreme macro of a single physical surface — cracked concrete, condensation on cold glass, a scar, a burning letter, fabric under tension. Reveals what the story is made of. Shallow DOF, single element, fills the frame.
-  Duration 3–4s. Transition in via smash_cut or match_cut; transition out via smash_cut or match_cut.
-  The voiceover or sound from the surrounding panels spills over this image — the abstract visual amplifies the emotion without explaining it.
+- narrative: the only valid value. Every panel shows characters in action — faces, hands, power dynamics.
 
 **IMPORTANT: EACH SCENE MUST HAVE EXACTLY 9 PANELS following the structure above.**
 

@@ -22,7 +22,6 @@ Top 15% and bottom 20% must be visually clear (sky, wall, floor — no faces, no
 Set text_safe_composition: true when this is achieved.
 
 VISUAL DRAMATIC INTENSITY — WHAT GOES IN EVERY NARRATIVE FRAME:
-(Applies to panel_type=narrative only. For atmosphere_insert: fill question 3 with the single environmental element that carries all the drama; fill question 4 with how that element changes state. Skip questions 1–2.)
 
 **visual_start must answer four questions in one image:**
 1. WHO has power right now, and WHO doesn't? — Show it through spatial position, posture, or a prop.
@@ -67,7 +66,7 @@ Mandatory panel structure:
 - P4: first_escalation — first obstacle, complication, or pressure arrives.
 - P5: emotional_capture — point of no return: an action taken, a line crossed, a secret revealed. hook_type: emotional_capture. [≈30s mark]
 - P6: rising_action — stakes raised further. A new obstacle or revelation that makes escape impossible.
-- P7: atmosphere_insert — panel_type: atmosphere_insert. No dialogue, no character close-ups. Duration 3–4s.
+- P7: pivot — ECU reaction shot at peak pressure, before the revelation. Duration 3–4s.
 - P8: mid_revelation — new information changes the context of everything shown so far. Sets up what follows.
 - P9: arc_bridge — hook_type: arc_bridge. Physical suspension: action frozen mid-motion at the threshold. sound_design: silence. motion_prompt ends before the action resolves.
 
@@ -78,7 +77,7 @@ Mandatory panel structure:
 - P2: escalation_return — pressure from arc_open returns with increased force.
 - P3: complication — a new obstacle, dimension, or character reframes the situation.
 - P4: rising_pressure — the complication compounds; no clear exit visible.
-- P5: atmosphere_insert — panel_type: atmosphere_insert. Duration 3–4s.
+- P5: pivot — ECU reaction shot at peak pressure, before the new revelation. Duration 3–4s.
 - P6: new_revelation — information that reframes arc_open's events and makes arc_close's confrontation inevitable.
 - P7: stakes_raised — the cost of the new revelation becomes visible and irreversible.
 - P8: pre_confrontation — the collision between forces is now inevitable; characters are on the collision course, closing distance.
@@ -103,7 +102,7 @@ The confrontation is already boiling. Arrive at it immediately.
 - P4: peak_intensity — the confrontation at its absolute summit before it breaks.
 
 **Panels P5–P9 are identical regardless of N:**
-- P5: atmosphere_insert — panel_type: atmosphere_insert. Duration 3–4s. Transition in via smash_cut.
+- P5: pivot — ECU reaction shot after peak confrontation, before the twist. Duration 3–4s. Transition in via smash_cut.
 - P6: twist — one fact changes everything. Arrives visually: a prop, a reflection, a door opening.
 - P7: reversal — power dynamic inverts. Delivered through physical action or discovery.
 - P8: consequence — the visible, irreversible cost of the reversal. Not resolution — the aftermath is still open.
@@ -116,7 +115,7 @@ The confrontation is already boiling. Arrive at it immediately.
   Record the chosen type in hook_type as: cliffhanger/physical_threat, cliffhanger/revelation, cliffhanger/emotional_rupture, or cliffhanger/interrupted_action.
 
 ### transition episode
-Atmosphere-only. ALL 9 panels are atmosphere_insert. No dialogue, no character conflict, no close-ups.
+Environmental-only. ALL 9 panels: no character close-ups, no dialogue, no conflict.
 Serves as visual bridge between two arc units. See episode_type_transition.md for full spec.
 
 ## MOTION PROMPTS
@@ -186,11 +185,7 @@ TRANSITION TO NEXT PANEL (transition_to_next):
 - arc_bridge → arc_pickup (episode boundary): plan as match_cut in both visual_end of bridge and visual_start of pickup.
 
 PANEL TYPE (panel_type):
-- narrative: standard story panel.
-- atmosphere_insert: exactly one per episode (arc_open.p7 / arc_mid.p5 / arc_close.p5). Duration 3–4s. No dialogue, no character close-ups.
-  * ENVIRONMENTAL: 1–2 macro-scale elements. visual_start: "minimalism: [element], [light condition], hyper-realistic. No people, no faces."
-  * TEXTURE/DETAIL: extreme macro of a single physical surface. Shallow DOF, fills the frame.
-  Transition in/out via smash_cut or match_cut.
+- narrative: the only valid value. Every panel shows characters in action — faces, hands, power dynamics.
 
 **IMPORTANT: EACH SCENE MUST HAVE EXACTLY 9 PANELS following the structure above.**
 

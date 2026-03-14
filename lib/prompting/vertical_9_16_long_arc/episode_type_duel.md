@@ -9,7 +9,7 @@
 Every confrontation panel is owned by one character and answered by the next.
 - Panel owned by __CHAR_A__ (attack) → immediately followed by __CHAR_B__'s reaction (counter)
 - Panel owned by __CHAR_B__ (attack) → immediately followed by __CHAR_A__'s reaction (counter)
-- `atmosphere_insert` panels: neutral — show the arena, not the fighters
+- `pivot` panels: neutral — ECU on the arena's detail or a face without clear advantage
 - `arc_bridge`: BOTH characters frozen at threshold — equal frame weight, no clear winner yet
 
 **THE REACTOR RULE (mandatory):**

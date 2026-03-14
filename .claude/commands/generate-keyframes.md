@@ -122,10 +122,7 @@ Always leave as empty string `""` — populated by the `/reversal-pass` skill.
 Expected clip length in seconds: 6–8.
 
 ### panel_type
-`narrative` (default — standard story panel) or `atmosphere_insert` (1–2 element minimalist WOW shot used as emotional anchor or rhythm break). Two subtypes of atmosphere_insert:
-- **ENVIRONMENTAL**: 1–2 macro-scale elements (wave, flame, fog bank, storm wall, silhouette on horizon). Grand scale, 2–3 color palette, "minimalism: [element], [light], hyper-realistic." No character refs.
-- **TEXTURE/DETAIL**: extreme macro close-up of a physical surface (scarred skin, condensation on glass, cracked concrete, a ring, fabric fibers). Shallow DOF, single element, fill frame.
-Use once per episode at the emotional peak or pre-cliffhanger. Duration 3–4s. Transition into/out with smash_cut or match_cut.
+Always `"narrative"`. Every panel shows characters — faces, hands, power dynamics.
 
 ### transition_to_next
 Edit cut technique to the next panel:
@@ -170,7 +167,7 @@ Apply these rules based on the `episode_type` extracted in step 2:
 - Both characters present throughout. Early panels establish spatial tension, middle panels alternate ECU between faces, final panel is unresolved cliffhanger. No backlink needed.
 
 ### Transition Episodes (time-gap bridges)
-- ALL panels: `panel_type: "atmosphere_insert"`, `duration: 3`.
+- ALL panels: `panel_type: "narrative"`, `duration: 3`. Environmental/location shots only — no character close-ups.
 - `dialogue: ""` and `voiceover: ""` for ALL panels — no spoken content of any kind.
 - Alternate between the two characters' spaces (odd panels = Character A's environment, even panels = Character B's). Same time of day, mirrored compositions.
 - `transition_to_next: "match_cut"` between panels (matching shape or motion vector). `smash_cut` only for final panel.

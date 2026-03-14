@@ -135,11 +135,7 @@ If a location change or time-skip occurs, it must be stated explicitly in visual
 Flag in artifacts if there is an unexplained discontinuity.
 """
 
-    dramatic_intensity_panel_type = (
-        "  Panel type is ATMOSPHERE_INSERT: score atmospheric intensity instead — the drama lives in scale, texture, and color, not in faces or conflict. A crashing wave that fills the frame scores 9; a generic sky scores 2. Visible power struggle or faces are NOT expected here."
-        if panel_type == "atmosphere_insert" else
-        "  Evaluate: is there a visible power struggle, physical threat, raw emotion on a face, or a visual secret in the frame?"
-    )
+    dramatic_intensity_panel_type = "  Evaluate: is there a visible power struggle, physical threat, raw emotion on a face, or a visual secret in the frame?"
 
     qa_criteria = (prompts or {}).get('qa', '')
     if qa_criteria:

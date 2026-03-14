@@ -98,6 +98,5 @@ __TRANSITIONS_INSTRUCTION__
     (c) STAKE OBJECT: one prop or environmental detail that carries the scene's subtext without dialogue (a door left ajar, a phone screen lit face-down, hands too close).
     (d) STATE TRANSITION: what changes between visual_start and visual_end — not the action, but its dramatic meaning (e.g. "she crosses from petitioner to threat").
     These four elements are the inputs that make visual_start/visual_end score dramatic_intensity ≥7 in QA.
-    For atmosphere_insert panels: skip (a) and (b). For (c) specify the single environmental element and its dramatic quality (scale, texture, color temperature). For (d) specify how the element changes state (wave rising / fog thickening / ember dying).
 
 Respond in specified JSON format.

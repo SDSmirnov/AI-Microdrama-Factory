@@ -1,6 +1,6 @@
 ## EPISODE TYPE: TRANSITION — TIME GAP BRIDGE
 This episode bridges a time gap between chapters. It is purely visual and sonic — no narrative action.
-- ALL panels: panel_type = "atmosphere_insert", duration 2–3s (NOT {{PANEL_DURATION}}s).
+- ALL panels: panel_type = "narrative", duration 2–3s (NOT {{PANEL_DURATION}}s). No character close-ups — environmental and location shots only.
 - dialogue: "" (empty string) for ALL panels — absolutely no spoken dialogue.
 - voiceover: "" (empty string) for ALL panels — no narration.
 - VISUAL RHYME: alternate between the two characters' spaces (odd panels = Character A's environment, even panels = Character B's environment, or use parallel montage). Same time of day, mirrored compositions.

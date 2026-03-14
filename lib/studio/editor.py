@@ -152,17 +152,10 @@ def refine_panel(
 
     references = panel.get('references', [])
     if not references:
-        panel_type = panel.get('panel_type', 'narrative')
-        if panel_type == 'atmosphere_insert':
-            logger.info(
-                f"ℹ️  Scene {scene_id} panel {panel_id} is atmosphere_insert — "
-                f"no character refs by design. Regenerate via 'storyboard' instead."
-            )
-        else:
-            logger.warning(
-                f"⚠️  Scene {scene_id} panel {panel_id}: no references specified, "
-                f"cannot refine. Add refs to metadata or regenerate via 'storyboard'."
-            )
+        logger.warning(
+            f"⚠️  Scene {scene_id} panel {panel_id}: no references specified, "
+            f"cannot refine. Add refs to metadata or regenerate via 'storyboard'."
+        )
         return False
 
     ref_content, loaded_refs, opened_ref_imgs = load_character_references(references)

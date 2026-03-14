@@ -100,7 +100,7 @@ Set `is_reversed=true` for any panel where:
 - Do not change these unless they are clearly wrong
 
 ### panel_type / transition_to_next / sound_design
-- Verify `panel_type` is `narrative` or `atmosphere_insert`. Confirm atmosphere_insert panels have no character `references` and use minimalist visual language.
+- Verify `panel_type` is `"narrative"` for every panel.
 - Verify `transition_to_next` is set correctly: `match_cut` must name the matching visual element in `motion_prompt`; `jump_cut` panels should have duration 2–3s; `j_cut` panels must describe the bleeding audio in `sound_design`.
 - Verify `sound_design` is present for every panel. At least one panel per scene must have `sound_design="silence"` paired with `transition_to_next=smash_cut` on the following panel. If missing or generic, write a specific sonic cue.
 

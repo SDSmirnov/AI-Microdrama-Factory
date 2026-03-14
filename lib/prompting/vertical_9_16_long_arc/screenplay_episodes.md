@@ -69,7 +69,7 @@ arc_close (Ep3, P1–9):  arc_pickup → confrontation_build → confrontation_p
 | P4 | first_escalation | — |
 | P5 | emotional_capture | emotional_capture |
 | P6 | rising_action | — |
-| P7 | atmosphere_insert | — |
+| P7 | pivot | — |
 | P8 | mid_revelation | — |
 | P9 | arc_bridge | arc_bridge |
 
@@ -81,7 +81,7 @@ arc_close (Ep3, P1–9):  arc_pickup → confrontation_build → confrontation_p
 | P2 | escalation_return | — |
 | P3 | complication | — |
 | P4 | rising_pressure | — |
-| P5 | atmosphere_insert | — |
+| P5 | pivot | — |
 | P6 | new_revelation | — |
 | P7 | stakes_raised | — |
 | P8 | pre_confrontation | — |
@@ -95,7 +95,7 @@ arc_close (Ep3, P1–9):  arc_pickup → confrontation_build → confrontation_p
 | P2 | escalation_return (N=2) / confrontation_build (N=3) | — |
 | P3 | confrontation_build (N=2) / confrontation_peak (N=3) | — |
 | P4 | confrontation_peak (N=2) / peak_intensity (N=3) | — |
-| P5 | atmosphere_insert | — |
+| P5 | pivot | — |
 | P6 | twist | — |
 | P7 | reversal | — |
 | P8 | consequence | — |
@@ -164,7 +164,7 @@ In N=3 arcs: echo the motif briefly in arc_mid as well (without payoff — just 
 2. Screenplay instructions drive AI image generation and animation. Be very direct and verbose.
 3. Each arc unit covers ~54s (N=2) or ~81s (N=3) of real-time action in the finished edit.
 4. Mark hook_type for: cold_open, verbal_hook, emotional_capture, arc_bridge, arc_pickup, cliffhanger panels.
-5. Every episode MUST include exactly one atmosphere_insert panel (arc_open.p7, arc_mid.p5, arc_close.p5).
+5. arc_open.p7, arc_mid.p5, and arc_close.p5 are pivot panels: ECU reaction shot, no dialogue, duration 3–4s.
 6. In screenplay_instructions, include the full sonic arc across the unit. Name where silence lives, where the sonic hit lands, and what the crescendo moment is.
 7. In visual_continuity_rules, tag any visual motif with "MOTIF:" prefix.
 8. Note intended shot scale (ECU / CU / MS / WIDE) for each panel in screenplay_instructions.
@@ -173,7 +173,7 @@ In N=3 arcs: echo the motif briefly in arc_mid as well (without payoff — just 
     (b) EMOTION: specific physical expression on the primary face — not a label, a description.
     (c) STAKE OBJECT: one prop or detail carrying subtext without dialogue.
     (d) STATE TRANSITION: what changes between visual_start and visual_end — its dramatic meaning.
-    For atmosphere_insert: skip (a)+(b); specify (c) environmental element and (d) how it changes state.
+    For pivot panels: (a)+(b) are minimal (reaction only), but character must still be visible.
 10. arc_bridge panel (any episode): sound_design=silence; motion_prompt ends before action completes.
 11. arc_pickup panel (any episode): visual_start continues from previous arc_bridge visual_end — same location, same physical moment.
 12. arc_close in N=2: confrontation must accelerate across panels 2–4 since no arc_mid pre-warmed it. Start arc_close.p2 with immediate escalation, not a slow pickup.

@@ -112,7 +112,7 @@ The final panel must leave one visible element unexplained with two possible int
    - **Confrontation** (`episode_type: "confrontation"`): Both characters present, direct interaction, peak conflict of the chapter. `pov_character: ""`.
    - Cover the full story from beginning to end. Each sub-episode covers 30–50 seconds.
 
-7. **TRANSITION EPISODES** (`episode_type: "transition"`): When a significant time gap (>4h) exists between chapters, insert one Transition episode BEFORE the POV-A episode of the next chapter. Transitions bridge the gap using visual_rhyme technique — parallel images from each character's space during the time gap. Rules: no dialogue, no voiceover, all panels are `atmosphere_insert`, panel durations 2–3s. `pov_character: ""`. Episode must still have 9 panels.
+7. **TRANSITION EPISODES** (`episode_type: "transition"`): When a significant time gap (>4h) exists between chapters, insert one Transition episode BEFORE the POV-A episode of the next chapter. Transitions bridge the gap using visual_rhyme technique — parallel environmental shots from each character's space during the time gap. Rules: no dialogue, no voiceover, no character close-ups, `panel_type: "narrative"`, panel durations 2–3s. `pov_character: ""`. Episode must still have 9 panels.
 
 8. **BACKLINK RULE** (mandatory for pov_a and pov_b episodes): Panel 2 or 3 MUST use `hook_type: "backlink"` — a brief visual callback (duration 2–3s, no dialogue) to the most emotionally charged moment from the PREVIOUS chapter, as remembered or triggered in this character's mind. The voiceover reveals the inner echo of that memory.
 
@@ -128,7 +128,6 @@ The final panel must leave one visible element unexplained with two possible int
     - **(b) EMOTION**: what specific physical expression is on the primary face — not a label but a description (e.g. "upper lip barely drawn back, eyes fixed on a point behind her ear, not her eyes").
     - **(c) STAKE OBJECT**: one prop or environmental detail that carries the scene's subtext without dialogue (a door left ajar, a phone screen lit face-down, hands too close).
     - **(d) STATE TRANSITION**: what changes between visual_start and visual_end — not the action, but its dramatic meaning (e.g. "she crosses from petitioner to threat").
-    - For `atmosphere_insert` panels: skip (a) and (b). For (c) specify the single environmental element and its dramatic quality (scale, texture, color temperature). For (d) specify how the element changes state (wave rising / fog thickening / ember dying).
 
 16. Apply both NITPICKER and "IT'S CRAP, REDO IT" protocols.
 
@@ -146,7 +145,7 @@ The final panel must leave one visible element unexplained with two possible int
 - Final panel is the unresolved cliffhanger. No backlink needed.
 
 ### Transition Episodes
-- ALL panels: `panel_type = "atmosphere_insert"`, `duration` 2–3s.
+- ALL panels: `panel_type = "narrative"`, `duration` 2–3s. Environmental/location shots only — no character close-ups.
 - `dialogue: ""` and `voiceover: ""` for ALL panels — absolutely no spoken dialogue.
 - VISUAL RHYME: alternate between the two characters' spaces (odd panels = Character A's environment, even panels = Character B's). Same time of day, mirrored compositions.
 - `transition_to_next`: use `match_cut` between panels (matching geometric shape or motion vector). `smash_cut` only for the final panel.
