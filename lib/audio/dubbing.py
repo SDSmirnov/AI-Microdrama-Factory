@@ -36,6 +36,7 @@ except ImportError:
 TARGET_WPM = 130          # Russian speech rate
 SPEED_TOLERANCE = 1.35    # max speedup factor
 MIN_GAP_MS = 50           # min gap between dub segments
+MAX_INTRA_GAP_SEC = 1.5   # word gap threshold to force-split a Whisper segment
 
 
 # ---------------------------------------------------------------------------
@@ -56,6 +57,44 @@ def _file_hash(filepath: str) -> str:
 
 def _max_words(duration_sec: float) -> int:
     return int((duration_sec * TARGET_WPM) / 60)
+
+
+def _split_on_gaps(segments: list[dict], max_gap_sec: float = MAX_INTRA_GAP_SEC) -> list[dict]:
+    """Split Whisper segments where the inter-word gap exceeds max_gap_sec.
+
+    A pause that long inside a single segment almost certainly means Whisper
+    stitched together two distinct utterances (different speakers or takes).
+    Word text tokens from faster-whisper carry a leading space, so joining
+    them with "" and stripping produces the correct phrase.
+    """
+    result = []
+    for seg in segments:
+        words = seg.get("words", [])
+        if len(words) <= 1:
+            result.append(seg)
+            continue
+
+        # collect indices where a new chunk starts
+        cut_at = [0]
+        for i in range(len(words) - 1):
+            if words[i + 1]["start"] - words[i]["end"] >= max_gap_sec:
+                cut_at.append(i + 1)
+        cut_at.append(len(words))
+
+        if len(cut_at) == 2:          # no cuts found
+            result.append(seg)
+            continue
+
+        for j in range(len(cut_at) - 1):
+            chunk = words[cut_at[j]: cut_at[j + 1]]
+            result.append({
+                "start": chunk[0]["start"],
+                "end": chunk[-1]["end"],
+                "original_text": "".join(w["word"] for w in chunk).strip(),
+                "words": chunk,
+            })
+
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -95,16 +134,26 @@ def transcribe_video(
     model = WhisperModel("medium", device="cpu", compute_type="int8")
     segments_raw, _ = model.transcribe(
         temp_wav,
-        beam_size=5,
+        beam_size=10,
         language="en",
         word_timestamps=True,
         vad_filter=True,
-        vad_parameters=dict(min_silence_duration_ms=500),
+        vad_parameters=dict(min_silence_duration_ms=100),
     )
     segments = [
-        {"start": s.start, "end": s.end, "original_text": s.text.strip()}
+        {
+            "start": s.start,
+            "end": s.end,
+            "original_text": s.text.strip(),
+            "words": [
+                {"word": w.word, "start": w.start, "end": w.end}
+                for w in (s.words or [])
+            ],
+        }
         for s in segments_raw
     ]
+    segments = _split_on_gaps(segments)
+    logger.info("After gap-split: %d segments", len(segments))
 
     cache = {
         "video_hash": video_hash,
@@ -128,31 +177,61 @@ def analyze_and_translate(
     llm: BaseLLM | None = None,
     api_key: str | None = None,
 ) -> list[dict]:
-    """Translate segments to Russian, add tone/voice_type/speaker_id."""
+    """Translate segments to Russian, add tone/voice_type/speaker_id.
+
+    If a Whisper segment contains speech from multiple speakers (detected via
+    screenplay context), the LLM splits it into sub-segments using word-level
+    timestamps. Output list may be longer than input.
+    """
     if llm is None:
         llm = _default_llm(api_key)
 
+    # Send word list as indexed tokens so LLM returns word index ranges,
+    # not timestamps (LLM cannot reliably copy float values).
     input_data = [
         {
             "id": i,
             "text": s["original_text"],
             "duration": round(s["end"] - s["start"], 2),
             "max_words": _max_words(s["end"] - s["start"]),
+            "words": [
+                {"idx": j, "word": w["word"]}
+                for j, w in enumerate(s.get("words", []))
+            ],
         }
         for i, s in enumerate(segments)
     ]
 
     prompt = f"""You are a professional Russian dubbing director.
 
-For EACH sentence:
-1. Translate to natural Russian.
-2. Keep translation within max_words (Russian rate: {TARGET_WPM} wpm).
-3. Detect Emotion/Tone.
-4. Choose Voice Type from: male_hero, male_deep, male_calm, female_hero, female_soft, female_strict, narrator.
-5. Assign speaker_id for consistency (e.g. "hero", "narrator").
+For EACH segment, check the screenplay context and determine how many speakers are present.
+If a segment contains speech from multiple speakers, split it at word boundaries.
 
-Output RAW JSON list with fields: id, ru_text, word_count, tone, voice_type, speaker_id.
-DO NOT use Markdown.
+Rules:
+1. Translate each part to natural Russian.
+2. Keep translation within max_words per part (Russian rate: {TARGET_WPM} wpm).
+3. Detect Emotion/Tone per part.
+4. Choose Voice Type from: male_hero, male_deep, male_calm, female_hero, female_soft, female_strict, narrator.
+5. Assign speaker_id for consistency (e.g. "igor", "ruslan_vo").
+6. For each split specify word_start_idx and word_end_idx (inclusive) from the "words" list.
+   Timestamps will be derived from these indices in code — do NOT include start/end floats.
+
+Output RAW JSON list — one entry per segment:
+{{
+  "id": <original segment id>,
+  "splits": [
+    {{
+      "word_start_idx": <int>,
+      "word_end_idx": <int, inclusive>,
+      "ru_text": "<Russian translation>",
+      "tone": "<tone>",
+      "voice_type": "<voice type>",
+      "speaker_id": "<speaker id>"
+    }}
+  ]
+}}
+
+Single-speaker segments have exactly one split covering all words. DO NOT use Markdown.
 
 <CONTEXT>{context}</CONTEXT>
 
@@ -160,24 +239,54 @@ DATA: {json.dumps(input_data, ensure_ascii=False)}"""
 
     try:
         result = llm.make_json(prompt)
-        trans_map = {item["id"]: item for item in result}
+        splits_map = {item["id"]: item["splits"] for item in result}
     except Exception:
         logger.warning("Failed to parse translation response", exc_info=True)
         return segments
 
     enriched = []
     for i, seg in enumerate(segments):
-        item = trans_map.get(i, {})
-        seg = seg.copy()
-        ru = item.get("ru_text", seg["original_text"])
-        seg.update(
-            ru_text=ru,
-            word_count=len(ru.split()),
-            tone=item.get("tone", "neutral"),
-            voice_type=item.get("voice_type", "narrator"),
-            speaker_id=item.get("speaker_id"),
-        )
-        enriched.append(seg)
+        words = seg.get("words", [])
+        splits = splits_map.get(i) or []
+        if not splits:
+            enriched.append({
+                **seg,
+                "ru_text": seg["original_text"],
+                "word_count": len(seg["original_text"].split()),
+                "tone": "neutral",
+                "voice_type": "narrator",
+                "speaker_id": None,
+            })
+            continue
+
+        for split in splits:
+            w0 = split.get("word_start_idx", 0)
+            w1 = split.get("word_end_idx", len(words) - 1)
+            if words:
+                w0 = max(0, min(w0, len(words) - 1))
+                w1 = max(w0, min(w1, len(words) - 1))
+                start = words[w0]["start"]
+                end = words[w1]["end"]
+                original_text = "".join(words[j]["word"] for j in range(w0, w1 + 1)).strip()
+            else:
+                start, end = seg["start"], seg["end"]
+                original_text = seg["original_text"]
+
+            if end <= start:
+                logger.warning("Skipping split with invalid range [%s, %s] in segment %d", start, end, i)
+                continue
+            ru = split.get("ru_text") or original_text
+            enriched.append({
+                "start": start,
+                "end": end,
+                "original_text": original_text,
+                "ru_text": ru,
+                "word_count": len(ru.split()),
+                "tone": split.get("tone", "neutral"),
+                "voice_type": split.get("voice_type", "narrator"),
+                "speaker_id": split.get("speaker_id"),
+            })
+
     return enriched
 
 
