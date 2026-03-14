@@ -180,7 +180,7 @@ The summary must cover:
 5. **Production notes** — any visual motifs, recurring symbols, tone to maintain
 6. **Cliffhanger chain** — classify the episode-ending cliffhanger by type and recommend what type to use NEXT to avoid audience fatigue. Types: physical_threat (use sparingly — fatigue risk), revelation (needs logical setup), emotional_rupture (betrayal/unexpected silence), interrupted_action (lowest intensity, safest for routine transitions). Rotate — never repeat the same type twice in a row.
 
-Be precise, concise, and production-ready. Write in English.
+Be precise, concise, and production-ready. Write in Russian.
 This summary will be injected verbatim into the next chapter prompt.
 
 ---

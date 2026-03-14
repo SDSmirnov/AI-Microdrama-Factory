@@ -8,7 +8,7 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-TARGET_LANGUAGE = os.getenv("TARGET_LANGUAGE", "English")
+TARGET_LANGUAGE = os.getenv("TARGET_LANGUAGE", "Russian")
 
 _LIB_ROOT = Path(__file__).resolve().parent.parent.parent  # code repo root (stable even when lib/ is symlinked)
 

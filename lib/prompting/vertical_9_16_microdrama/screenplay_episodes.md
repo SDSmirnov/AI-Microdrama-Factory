@@ -93,16 +93,54 @@ __MULTI_POV_INSTRUCTION__
 __TRANSITIONS_INSTRUCTION__
 8. Every pov_a and pov_b episode MUST have panel 2 or 3 with hook_type: "backlink" — a brief visual callback (duration 2–3s, no dialogue) to the most emotionally charged moment from the PREVIOUS chapter, as remembered or triggered in this character's mind. The voiceover reveals the inner echo of that memory.
 9. Episode 1 (first pov_a) panel 1 MUST be a cold_open — consequence before cause, visual question mark, no exposition.
-10. Mark hook_type for the cold_open panel, emotional peak panel, and cliffhanger panel in screenplay_instructions.
-11. Every episode MUST end on a cliffhanger or revelation — never on resolution.
-12. In screenplay_instructions, include the episode sonic arc: name exactly where silence lives, where the sonic hit lands, and what the crescendo moment is.
-13. In visual_continuity_rules, tag any visual motif established in this episode with "MOTIF:" prefix so downstream episodes can call it back deliberately.
-14. Note intended shot scale (ECU / CU / MS / WIDE) for each panel position in screenplay_instructions to enforce scale rhythm.
-15. DRAMATIC CONTENT SPEC — for each narrative panel in pov/confrontation screenplay_instructions, explicitly state (skip entirely for transition episodes — their screenplay_instructions describe visual rhyme and sonic texture only):
-    (a) POWER: who controls this moment and through what physical indicator (spatial position, prop ownership, gaze direction)?
-    (b) EMOTION: what specific physical expression is on the primary face — not a label but a description (e.g. "upper lip barely drawn back, eyes fixed on a point behind her ear, not her eyes").
-    (c) STAKE OBJECT: one prop or environmental detail that carries the scene's subtext without dialogue (a door left ajar, a phone screen lit face-down, hands too close).
-    (d) STATE TRANSITION: what changes between visual_start and visual_end — not the action, but its dramatic meaning (e.g. "she crosses from petitioner to threat").
-    These four elements are the inputs that make visual_start/visual_end score dramatic_intensity ≥7 in QA.
+10. Every episode MUST end on a cliffhanger or revelation — never on resolution.
+11. In visual_continuity_rules, tag any visual motif established in this episode with "MOTIF:" prefix so downstream episodes can call it back deliberately.
+12. SCREENPLAY_INSTRUCTIONS FORMAT SPEC — mandatory for all pov/confrontation/arc episodes. (Transition episodes: describe visual rhyme and sonic texture only — no per-panel structure needed.)
+
+FORBIDDEN in screenplay_instructions: shorthand codes. These communicate nothing to the scene generator and produce panels that fail QA:
+  ✗ Role codes: "R_attack", "A_counter", "neutral", "context", "arc_pickup", "arc_bridge"
+  ✗ Power ledger ticks: "R+1", "A+3", "R+4/A+2"
+  ✗ Beat labels without content: "first_escalation", "rising_action", "pivot"
+
+REQUIRED FORMAT — write screenplay_instructions as a production blueprint the scene generator can execute directly:
+
+```
+SONIC ARC: [exact map — name where silence lives, where sonic hit lands, crescendo moment; e.g. "P1–P3: low ambient hum. P4: sudden silence. P5: sharp crack on cut. P6–P7: string crescendo. P8: drop to silence. P9: single heartbeat, cut."]
+
+[For DUEL/INTERCUT episodes only — add:]
+INTERCUT: [which panels cut to which location and why; e.g. "P1,P3,P5,P7,P9 — VIP Sauna, Ruslan interrogates Marat. P2,P4,P6,P8 — Alisa's Kitchen, Alisa reads texts in real time."]
+
+P1 [hook_type | SCALE | LOCATION]:
+  POWER: [who controls and through what physical indicator — position, prop ownership, gaze]
+  EMOTION: [physics of the primary face — micro-expression, not a label; e.g. "jaw set, lips compressed, eyes tracking her hands not her face"]
+  STAKE OBJECT: [one prop or environmental detail that carries the scene's subtext]
+  STATE: [what changes from visual_start to visual_end — the dramatic meaning, not the action; e.g. "crosses from petitioner to threat"]
+  DIALOGUE SEED: [the ≤8-word line, or "— silence —", or "VO: [inner monologue fragment]"]
+
+P2 [hook_type | SCALE | LOCATION]:
+  ... (same structure for all 9 panels)
+```
+
+POWER/EMOTION/STAKE/STATE are the direct inputs the scene generator uses for visual_start, visual_end, and motion_prompt. Omitting them or collapsing them to codes forces the scene AI to invent all four from scratch — and it will invent generic images. These four fields are what make visual_start/visual_end score dramatic_intensity ≥7 in QA.
+
+EXAMPLE of a correctly written P1 and P2 for a duel-mode arc_open episode:
+```
+SONIC ARC: P1–P3 low ambient sauna steam hiss, tense silence under dialogue. P4 sharp phone buzz breaks silence. P5–P7 minimalist strings build. P8 amplified swallow then pin-drop silence. P9 single musical sting, hard cut.
+INTERCUT: P1,P3,P5,P7,P9 — Elite VIP Sauna, Ruslan and Marat face-to-face. P2,P4,P6,P8 — Alisa's modest kitchen, Alisa reads incoming texts.
+
+P1 [cold_open/hidden_identity | MS | Elite VIP Sauna]:
+  POWER: Ruslan seated upright, deliberate stillness, cradling untouched cognac. Marat reclines but finger-pulls his bathrobe collar open (heat, nerves). Full glass vs. half-empty = the ledger of who is losing composure.
+  EMOTION: Ruslan — minimal smile, eyes tracking Marat's hands not his face. The patience of a predator who has already decided.
+  STAKE OBJECT: Two crystal cognac glasses on dark wood table. One full (Ruslan's, untouched), one half-empty (Marat's).
+  STATE: Opens mid-trap. Viewer asks "what does Ruslan already know?" — suspicion before cause.
+  DIALOGUE SEED: "Хорошо тут у тебя." (Marat, low, too casual)
+
+P2 [verbal_hook | CU | Alisa's Kitchen]:
+  POWER: Alisa seated, phone face-up on table — information arrives before she can defend against it. Marat's text is already visible on screen.
+  EMOTION: Face mid-sip of tea; cup freezes 2 cm from lips, eye-whites appear above iris — the micro-freeze of a person who just read something threatening.
+  STAKE OBJECT: Phone screen lit, Marat's contact name visible.
+  STATE: From domestic calm to immediate threat-awareness. Whatever Ruslan said to Marat has already landed on her.
+  DIALOGUE SEED: VO: "Он проверяет..."
+```
 
 Respond in specified JSON format.

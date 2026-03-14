@@ -3,7 +3,7 @@ All JSON schemas used across the pipeline, consolidated in one place.
 """
 import os
 
-_LANG = os.getenv("TARGET_LANGUAGE", "English")
+_LANG = os.getenv("TARGET_LANGUAGE", "Russian")
 
 SCREENPLAY_SCHEMA = {
     "type": "object",

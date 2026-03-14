@@ -165,18 +165,42 @@ In N=3 arcs: echo the motif briefly in arc_mid as well (without payoff — just 
 3. Each arc unit covers ~54s (N=2) or ~81s (N=3) of real-time action in the finished edit.
 4. Mark hook_type for: cold_open, verbal_hook, emotional_capture, arc_bridge, arc_pickup, cliffhanger panels.
 5. arc_open.p7, arc_mid.p5, and arc_close.p5 are pivot panels: ECU reaction shot, no dialogue, duration 3–4s.
-6. In screenplay_instructions, include the full sonic arc across the unit. Name where silence lives, where the sonic hit lands, and what the crescendo moment is.
-7. In visual_continuity_rules, tag any visual motif with "MOTIF:" prefix.
-8. Note intended shot scale (ECU / CU / MS / WIDE) for each panel in screenplay_instructions.
-9. DRAMATIC CONTENT SPEC — for each narrative panel explicitly state:
-    (a) POWER: who controls this moment and through what physical indicator?
-    (b) EMOTION: specific physical expression on the primary face — not a label, a description.
-    (c) STAKE OBJECT: one prop or detail carrying subtext without dialogue.
-    (d) STATE TRANSITION: what changes between visual_start and visual_end — its dramatic meaning.
-    For pivot panels: (a)+(b) are minimal (reaction only), but character must still be visible.
-10. arc_bridge panel (any episode): sound_design=silence; motion_prompt ends before action completes.
-11. arc_pickup panel (any episode): visual_start continues from previous arc_bridge visual_end — same location, same physical moment.
-12. arc_close in N=2: confrontation must accelerate across panels 2–4 since no arc_mid pre-warmed it. Start arc_close.p2 with immediate escalation, not a slow pickup.
-13. arc_mid (N=3 only): must introduce at least one new narrative element (revelation, character, location, information) that reframes arc_open's events and makes arc_close's confrontation inevitable.
+6. In visual_continuity_rules, tag any visual motif with "MOTIF:" prefix.
+7. arc_bridge panel (any episode): sound_design=silence; motion_prompt ends before action completes.
+8. arc_pickup panel (any episode): visual_start continues from previous arc_bridge visual_end — same location, same physical moment.
+9. arc_close in N=2: confrontation must accelerate across panels 2–4 since no arc_mid pre-warmed it. Start arc_close.p2 with immediate escalation, not a slow pickup.
+10. arc_mid (N=3 only): must introduce at least one new narrative element (revelation, character, location, information) that reframes arc_open's events and makes arc_close's confrontation inevitable.
+11. SCREENPLAY_INSTRUCTIONS FORMAT SPEC — mandatory for all arc_open/arc_mid/arc_close episodes. (Transition episodes: visual rhyme and sonic texture only — no per-panel structure needed.)
+
+FORBIDDEN in screenplay_instructions: shorthand codes. These communicate nothing to the scene generator and produce panels that fail QA:
+  ✗ Role codes: "neutral", "context", "arc_pickup", "arc_bridge", "atm_insert"
+  ✗ Beat labels without content: "first_escalation", "rising_action", "pivot"
+  ✗ Any label that names the beat but doesn't describe its visual content
+
+REQUIRED FORMAT — write screenplay_instructions as a production blueprint the scene generator can execute directly:
+
+```
+SONIC ARC: [exact map across the full arc unit — where silence lives, where sonic hit lands, crescendo moment; arc_bridge=silence always; e.g. "P1–P3: low ambient hum. P4: sudden silence. P5: sharp crack on cut. P6–P7: string crescendo. P8: drop to silence. P9 (arc_bridge): silence — sonic reset."]
+
+[For DUEL/INTERCUT episodes only — add:]
+INTERCUT: [which panels cut to which location and why]
+
+P1 [hook_type | SCALE | LOCATION]:
+  POWER: [who controls and through what physical indicator — position, prop ownership, gaze]
+  EMOTION: [physics of the primary face — micro-expression, not a label; e.g. "jaw set, lips compressed, eyes tracking her hands not her face"]
+  STAKE OBJECT: [one prop or environmental detail that carries the scene's subtext]
+  STATE: [what changes from visual_start to visual_end — dramatic meaning, not the action]
+  DIALOGUE SEED: [the ≤8-word line, or "— silence —", or "VO: [inner monologue fragment]"]
+
+P2 [hook_type | SCALE | LOCATION]:
+  ... (same structure; for pivot panels POWER+EMOTION only — no STAKE OBJECT / STATE needed)
+
+P9 [arc_bridge | SCALE | LOCATION]:
+  POWER: [spatial disposition frozen at threshold]
+  EMOTION: [held tension — the face before the action]
+  MATCH CUT SHAPE: [geometric element in visual_end that links to next episode's arc_pickup; e.g. "hand 1cm from target — MATCH CUT via extended arm line"]
+```
+
+POWER/EMOTION/STAKE/STATE are the direct inputs the scene generator uses for visual_start, visual_end, and motion_prompt. Collapsing them to beat-label codes forces the scene AI to invent all four from scratch — it will produce generic images that fail QA at dramatic_intensity ≥7. The arc_bridge MATCH CUT SHAPE field is required so the episode boundary seam is planned at generation time, not patched in refinement.
 
 Respond in specified JSON format.

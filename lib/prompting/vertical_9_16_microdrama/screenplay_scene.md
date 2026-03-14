@@ -1,4 +1,19 @@
 
+## SCREENPLAY_INSTRUCTIONS — YOUR PANEL-BY-PANEL BLUEPRINT
+
+The episode JSON you receive contains a `screenplay_instructions` field with a per-panel blueprint (P1…P9).
+For each panel, use its blueprint fields as **direct inputs**:
+- `POWER` → drives spatial composition in `visual_start` (who is standing/sitting/cornered, who holds the prop)
+- `EMOTION` → drives the primary face physics in `visual_start` and `visual_end`
+- `STAKE OBJECT` → must appear as a visible element in `visual_start`; use for bokeh/rack focus where noted
+- `STATE` → defines the dramatic delta between `visual_start` and `visual_end`
+- `DIALOGUE SEED` → starting point for `dialogue`/`voiceover`; expand to full ≤8-word line
+- `hook_type` in the bracket → set panel's `hook_type` field to the value after the `/` (e.g. `cold_open/hidden_identity`)
+- `SCALE` in the bracket → set the shot scale in `lights_and_camera`
+- `LOCATION` in the bracket → set the scene location; for INTERCUT episodes, alternate locations per the INTERCUT rule
+
+If `screenplay_instructions` lacks a blueprint entry for a panel (e.g. transition episodes), infer from narrative context.
+
 ## INDEPENDENCE PROTOCOL — NON-NEGOTIABLE
 Each panel is rendered by a separate image-generation model that receives ONLY that panel's text — no history, no context, no memory.
 - FORBIDDEN: "same as before", "same POV", "same framing", "same appearance", "as in panel N", "continues from", "identical to", "as established".
