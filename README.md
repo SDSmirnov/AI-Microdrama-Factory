@@ -49,13 +49,14 @@ Core pipeline stages:
 1. `styles`: analyze novel + generate `custom_prompts/` overlay on top of `lib/prompting/<style>/`.
 2. `casting`: detect references and write `ref_thriller/*.json`.
 3. `refs`: render missing reference portraits `ref_thriller/*.png`.
+3b. `remake-room-refs`: split Room/Vehicle refs into per-view variants (View-From-Entrance, View-To-Entrance, Exterior, etc.) and render each as a separate PNG.
 4. `screenplay`: generate episodes/scenes/reversal pass and `animation_metadata.json`.
 5. `scenes`: generate keyframes for specific episode(s) with cross-episode continuity rules and upsert into metadata.
 5b. `reverse-refine`: re-run refinement + reversal pass on an existing raw episode JSON without re-querying keyframes. Requires `SCENE=N`.
 6. `consistency`: continuity enforcer — enrich ref JSONs from scene/location usage, re-align panel visuals to approved refs. Default: `--dry-run` (JSON only); use `--no-dry-run` or follow with `make refs` to regenerate PNGs.
 7. `storyboard`: render scene grids or individual panel images.
 7b. `panel-by-panel-with-qa`: render each panel one at a time with inline QA + refinement loop (up to `--max-attempts` retries). Requires `SCENE=N`.
-8. `qa`: run visual fidelity checks and produce `quality_report.json`.
+8. `qa`: run visual fidelity checks and produce `quality_report.json`. Panels with only a spatial direction flip get `suggest_mirror=true` instead of `needs_refinement` — horizontal flip is cheaper than full re-render.
 9. `apply-qa`: auto-refine all panels flagged by QA.
 10. `accept-qa`: promote refined panels into `panels/`, backup originals.
 11. `rebuild-storyboard`: rebuild scene grid images from current `panels/`.
@@ -152,7 +153,7 @@ make animation PROVIDER=veo SCENE=all PANEL=all
 Use `make help` to list all targets. Current targets:
 
 - `init`, `workdirs`
-- `split-book`, `styles`, `casting`, `refs`, `screenplay`, `scenes`, `reverse-refine`, `consistency`
+- `split-book`, `styles`, `casting`, `refs`, `remake-room-refs`, `screenplay`, `scenes`, `reverse-refine`, `consistency`
 - `storyboard`, `panel-by-panel-with-qa`, `qa`, `apply-qa`, `accept-qa`, `rebuild-storyboard`, `refinement`, `animation`
 - `autocut`, `voiceover`, `imgedit`, `tts`, `dub`, `duck`
 - `summary`, `webserver`
@@ -188,6 +189,7 @@ Commands (all accept `--style <preset>` where relevant; default: `vertical_9_16_
 - `styles <novel> --style <preset>`
 - `casting <novel>`
 - `refs`
+- `remake-room-refs`
 - `screenplay <novel>`
 - `scenes [scene|all]`
 - `reverse-refine <scene>`
@@ -242,6 +244,8 @@ Reference artifacts:
 
 - `ref_thriller/*.json`
 - `ref_thriller/*.png`
+- `ref_thriller/*-View-From-Entrance.{json,png}` (after `remake-room-refs`)
+- `ref_thriller/*-View-To-Entrance.{json,png}` (after `remake-room-refs`)
 
 ## Project Layout
 

@@ -58,6 +58,10 @@ make split-book BOOK=fullbook.txt STYLE=vertical_9_16_microdrama SEASON=1
 # Step 2b: Render missing reference portraits (runs Python — requires API key)
 /render-references
 
+# Step 2c (optional): Split Room/Vehicle refs into per-view variants (runs Python)
+# → writes ref_thriller/<location>-View-From-Entrance.{json,png} etc.
+make remake-room-refs
+
 # Step 3: Break the novel into ~30 episodes with screenplay instructions
 /write-screenplay s01e01.txt
 # → writes cinematic_render/animation_episodes.json
@@ -101,7 +105,7 @@ lib/
   studio/      # Production pipeline modules:
     stylist.py      — novel analysis + custom_prompts/ overlay generation
     screenwriter.py — episode/scene/reversal AI passes
-    artist.py       — casting, reference rendering, grid/panel image generation, slicing
+    artist.py       — casting, reference rendering, room-view splitting, grid/panel image generation, slicing
     critic.py       — QA gate: fidelity/consistency scoring per panel
     director.py     — continuity enforcer: enriches refs, aligns scene prompts
     editor.py       — panel refinement using original + reference images
@@ -121,13 +125,14 @@ All commands that load prompts accept the global `--style <preset>` flag (defaul
 1. **`styles`** (`stylist.analyze_novel` + `generate_custom_prompts`): Extracts genre/tone/characters; writes `custom_prompts/` overlay files on top of `lib/prompting/<style>/`
 2. **`casting`** (`artist.auto_cast_characters`): Identifies characters/locations/objects from text; saves reference JSONs to `ref_thriller/`
 3. **`refs`** (`artist.render_character_refs`): Generates missing reference portrait PNGs
+3b. **`remake-room-refs`** (`artist.remake_room_refs`): Splits monolithic Room/Vehicle refs into per-view variants — rooms get `View-From-Entrance` / `View-To-Entrance`; vehicles get `Exterior` / `Interior-From-Entrance` / `Interior-To-Entrance`. Renders each view as a separate PNG using architectural photography style (empty, no people). Run after `refs` when location consistency matters across opposing camera angles.
 4. **`screenplay`** (`screenwriter.analyze_scenes_master`): Episodes → scenes → refinement → reversal pass; writes `animation_metadata.json`
 5. **`scenes`** (`screenwriter.run_scenes_pipeline`): Per-episode keyframe generation with cross-episode continuity rules; upserts into `animation_metadata.json`
 5b. **`reverse-refine`** (`screenwriter.run_scenes_pipeline` refinement+reversal only): Re-runs refinement and reversal pass on an already-generated raw episode JSON (`animation_episode_scenes_NNN.json`) without re-querying keyframes. Requires `SCENE=N`.
 6. **`consistency`** (`director.run_continuity_pass`): Enriches ref JSONs from scene/location usage; re-aligns `visual_start`/`visual_end`/`lights_and_camera` to approved references. Default `--dry-run` enriches JSONs only — run `make refs` after to regenerate PNGs. Pass `--no-dry-run` to regenerate PNGs in one step.
 7. **`storyboard`** (`artist.render_scene_grids` / `render_panels`): Generates grid images or individual panel PNGs
 7b. **`panel-by-panel-with-qa`** (`artist.render_panel` + `critic` inline): Renders each panel one at a time, runs QA, and refines in-place up to `--max-attempts` times. Requires `SCENE=N`; optional `PANEL=N` to target one panel.
-8. **`qa`** (`critic.run_quality_gate`): Visual fidelity/consistency scoring; writes `quality_report.json`
+8. **`qa`** (`critic.run_quality_gate`): Visual fidelity/consistency scoring; writes `quality_report.json`. Reports include `suggest_mirror: true` + `mirror_reason` when a horizontal flip is the only fix needed (spatial direction reversal) — cheaper than full refinement.
 9. **`apply-qa`** / **`refinement`** (`editor.refine_panel`): Regenerates flagged panels using reference images
 10. **`accept-qa`**: Promotes refined PNGs into `panels/`, backs up originals
 11. **`rebuild-storyboard`**: Rebuilds grid images from current `panels/`
@@ -167,6 +172,10 @@ chapter_summary.txt                 # AI context summary for next chapter
 ref_thriller/
   character-name.png   # Reference portrait
   character-name.json  # Character visual metadata
+  location-View-From-Entrance.png   # Per-view split (after remake-room-refs)
+  location-View-From-Entrance.json
+  location-View-To-Entrance.png
+  location-View-To-Entrance.json
 ```
 
 ### Rate Limiting
