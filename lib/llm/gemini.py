@@ -145,9 +145,7 @@ class GeminiLLM(BaseLLM):
                     }
                 )
                 if resp.parts and resp.parts[0].inline_data:
-                    with BytesIO() as buf:
-                        resp.parts[0].as_image().save(buf, format="PNG")
-                        return buf.getvalue()
+                    return resp.parts[0].inline_data.data
                 raise RuntimeError("Empty image response from Gemini — no inline_data in response parts")
             except Exception as e:
                 logger.error(f"❌ Gemini image error: {e}")
@@ -200,9 +198,7 @@ class GeminiLLM(BaseLLM):
                     config=gen_config,
                 )
                 if resp.parts and resp.parts[0].inline_data:
-                    with BytesIO() as buf:
-                        resp.parts[0].as_image().save(buf, format="PNG")
-                        return buf.getvalue()
+                    return resp.parts[0].inline_data.data
                 raise RuntimeError("Empty edit_image response from Gemini — no inline_data in response parts")
             except Exception as e:
                 logger.error(f"❌ Gemini edit_image error: {e}")
