@@ -8,6 +8,8 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+TARGET_LANGUAGE = os.getenv("TARGET_LANGUAGE", "English")
+
 _LIB_ROOT = Path(__file__).resolve().parent.parent.parent  # code repo root (stable even when lib/ is symlinked)
 
 PROMPTS_DIR = Path.cwd() / "prompts"              # project-local legacy fallback
@@ -49,7 +51,7 @@ def load_prompts(style: str = 'vertical_9_16_microdrama') -> tuple[dict, dict]:
         for name in PROMPT_FILES:
             path = source_dir / f"{name}.md"
             if path.exists():
-                prompts[name] = path.read_text(encoding='utf-8')
+                prompts[name] = path.read_text(encoding='utf-8').replace("{target_language}", TARGET_LANGUAGE)
             else:
                 prompts[name] = ""
         config_path = source_dir / 'config.json'
@@ -64,7 +66,7 @@ def load_prompts(style: str = 'vertical_9_16_microdrama') -> tuple[dict, dict]:
     for name in PROMPT_FILES:
         path = style_dir / f"{name}.md"
         if path.exists():
-            prompts[name] = path.read_text(encoding='utf-8')
+            prompts[name] = path.read_text(encoding='utf-8').replace("{target_language}", TARGET_LANGUAGE)
         else:
             logger.debug(f"  {name}.md not in {style_dir.name}/ (expected from custom_prompts/)")
             prompts[name] = ""
@@ -75,7 +77,7 @@ def load_prompts(style: str = 'vertical_9_16_microdrama') -> tuple[dict, dict]:
             override_path = CUSTOM_PROMPTS_DIR / f"{name}.md"
             if override_path.exists():
                 logger.info(f"  📝 Override: {name}.md from custom_prompts/")
-                prompts[name] = override_path.read_text(encoding='utf-8')
+                prompts[name] = override_path.read_text(encoding='utf-8').replace("{target_language}", TARGET_LANGUAGE)
 
     # Load base config from style dir
     config_path = style_dir / 'config.json'

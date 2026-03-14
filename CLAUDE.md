@@ -31,6 +31,7 @@ export AI_ASPECT_RATIO="9:16"                          # image aspect ratio over
 export AI_IMAGE_SIZE="2K"                              # image resolution override (default: per config/preset)
 export AI_REF_ASPECT_RATIO="9:16"                      # reference portrait aspect ratio override
 export AI_VIDEO_TIMEOUT="600"                          # Veo polling hard limit in seconds (default: 600)
+export TARGET_LANGUAGE="English"                       # dialogue/voiceover/caption language (default: English)
 ```
 
 ## Manual Workflow (Claude Code Skills)

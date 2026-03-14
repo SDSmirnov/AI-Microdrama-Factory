@@ -12,6 +12,7 @@ from PIL import Image
 
 from lib.commands.common import _make_llm, _make_vision_llm
 from lib.core.project import Project, load_project
+from lib.core.prompts import TARGET_LANGUAGE
 from lib.core.schemas import SCENE_SCHEMA
 from lib.core.utils import atomic_write, grid_dims, load_metadata
 from lib.llm.base import retry_on_errors
@@ -354,7 +355,7 @@ NEVER write "same as before", "same POV", "continues from", etc.
 
 Return a single scene (scene_id={args.scene}) containing exactly 1 panel (panel_index=1).
 Match camera_master and lighting_master from context above verbatim in lights_and_camera.
-All dialogues, voiceovers and captions MUST be in English.
+All dialogues, voiceovers and captions MUST be in {TARGET_LANGUAGE}.
 """
 
     @retry_on_errors(max_retries=3, backoff_factor=2)

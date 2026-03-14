@@ -131,7 +131,7 @@ In motion_prompt, name the match explicitly: "visual_end: [subject]'s arm sweeps
 MANDATORY: plan at least one match_cut transition per episode in the escalation zone (panels 3–5).
 
 DIALOGUE: ≤8 words, delivered in CU on speaker's face. Populate both `dialogue` and sync `voiceover` for inner counterpoint.
-VOICEOVER: inner monologue revealing what the image cannot show. English language.
+VOICEOVER: inner monologue revealing what the image cannot show. {target_language} language.
 
 SOUND DESIGN (sound_design) — required for EVERY panel:
 - Capture the sonic atmosphere of this exact panel moment, separate from dialogue/voiceover.
