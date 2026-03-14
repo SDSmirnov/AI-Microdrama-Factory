@@ -231,6 +231,43 @@ RETURN JSON, CONTENTS IN RUSSIAN:
     logger.info(f"✅ Summary written to {out_path}")
 
 
+def cmd_suno_prompt(args):
+    project, _, _ = load_project(style=args.style)
+    llm = _make_llm(args.llm, project)
+
+    episodes_path = project.output_dir / "animation_episodes.json"
+    if not episodes_path.exists():
+        logger.error("❌ animation_episodes.json not found — run 'make screenplay' first")
+        sys.exit(1)
+
+    episodes_raw = episodes_path.read_text(encoding='utf-8')
+
+    prompt = f"""Need single Suno Instrumental prompt for this episode, for full 90 seconds.
+{episodes_raw}
+
+Generate ONE Suno AI music prompt (instrumental only, no vocals) that:
+- Fits the overall tone, locations, and emotional arc of the full episode
+- Is 90 seconds long (specify tempo, structure, and dynamic arc)
+- Uses Suno-compatible style tags: genre, instruments, mood, tempo, energy progression
+- Starts with a hook, builds through the episode, ends with a resolution or cliffhanger sting
+- Is concise: 1-3 sentences or a comma-separated tag list that Suno understands
+
+RETURN JSON:
+{{"suno_prompt": "the complete Suno prompt string"}}
+"""
+
+    result = llm.make_json(prompt)
+    if not result or 'suno_prompt' not in result:
+        logger.error("❌ LLM returned empty or invalid response")
+        sys.exit(1)
+
+    suno = result['suno_prompt']
+    out_path = Path(args.output)
+    out_path.write_text(suno, encoding='utf-8')
+    print(suno)
+    logger.info(f"✅ Suno prompt written to {out_path}")
+
+
 def cmd_reverse_refine(args):
     """Refine + reversal pass on an already-generated raw episode JSON, then upsert into metadata."""
     try:
@@ -340,6 +377,11 @@ def register(sub):
     p.add_argument('--dry-run', action=argparse.BooleanOptionalAction, default=True,
                    help='Skip image regeneration (default: on); use --no-dry-run to render refs')
     p.set_defaults(func=cmd_consistency)
+
+    p = sub.add_parser('suno-prompt', help='Generate a Suno instrumental prompt for the current episode')
+    p.add_argument('--output', default='suno_prompt.txt',
+                   help='Output path (default: suno_prompt.txt)')
+    p.set_defaults(func=cmd_suno_prompt)
 
     p = sub.add_parser('summary', help='Generate context summary for the next chapter')
     p.add_argument('novel', help='Path to the current chapter text file (e.g. s01e01.txt)')

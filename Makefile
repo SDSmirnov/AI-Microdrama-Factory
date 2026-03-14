@@ -32,7 +32,7 @@ NARRATIVE      ?=
 INDEX          ?=
 
 .PHONY: help init workdirs styles casting refs remake-room-refs screenplay scenes reverse-refine consistency storyboard qa apply-qa accept-qa rebuild-storyboard refinement animation \
-        autocut imgedit tts voiceover dub duck summary split-book panel-by-panel-with-qa extra-panel
+        autocut imgedit tts voiceover dub duck summary split-book panel-by-panel-with-qa extra-panel suno-prompt
 
 help:  ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-16s %s\n", $$1, $$2}'
@@ -113,6 +113,9 @@ duck:  ## Duck original audio in VIDEO wherever DUBBED track speaks → OUTPUT m
 
 summary:  ## Generate chapter_summary.txt context for the next chapter
 	python cli.py --llm $(LLM) summary $(NOVEL) --output chapter_summary.txt
+
+suno-prompt:  ## Generate Suno instrumental prompt from animation_episodes.json → suno_prompt.txt
+	python cli.py --llm $(LLM) suno-prompt
 
 split-book:  ## Split BOOK into filmable 3-POV episode chunks → BOOK_OUT/s0SeNNN.txt (BOOK=file STYLE=... SEASON=N)
 	python cli.py --llm $(LLM) --style $(STYLE) split-book $(BOOK) --output-dir $(BOOK_OUT) --season $(SEASON)
