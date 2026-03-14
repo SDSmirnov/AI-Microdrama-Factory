@@ -47,11 +47,18 @@ def cmd_animation(args):
         if hasattr(args, 'scene') and args.scene and args.scene != 'all':
             scene_filter = f"{int(args.scene):03d}"
 
+        panel_filter = None
+        if hasattr(args, 'panel') and args.panel and args.panel != 'all':
+            panel_filter = f"{int(args.panel):02d}"
+
         if static_files:
             for i, start_path in enumerate(static_files):
                 parts = start_path.stem.split("_")
                 if scene_filter and parts[0] != scene_filter:
                     continue
+                if panel_filter and parts[1] != panel_filter:
+                    continue
+
                 key = "_".join(parts[:2])
                 panel_meta = lookup.get(key, {})
                 animator.animate(start_path, None, panel_meta, i, out_dir)

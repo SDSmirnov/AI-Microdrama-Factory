@@ -141,7 +141,7 @@ Response format, JSON:
 
         config: dict = {
             'duration_seconds': 4,
-            'aspect_ratio': "16:9",
+            'aspect_ratio': "9:16",
             'resolution': self.resolution,
         }
 
@@ -167,7 +167,7 @@ Response format, JSON:
 
                 gen_config = types.GenerateVideosConfig(
                     duration_seconds=config['duration_seconds'],
-                    aspect_ratio="16:9",
+                    aspect_ratio="9:16",
                     resolution=self.resolution,
                     reference_images=formatted_refs,
                 )
