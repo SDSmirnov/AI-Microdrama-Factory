@@ -193,8 +193,8 @@ For each NEW reference, provide:
 
 CRITICAL — Rooms and Vehicles MUST be split into separate per-view entries (see casting instructions above).
 NEVER create a single monolithic entry with type=Room or type=Vehicle.
-A bare "Room-Name" entry with type=Room is WRONG — always use "{Room-Name}-View-From-Entrance" and "{Room-Name}-View-To-Entrance".
-A bare "Vehicle-Name" entry with type=Vehicle is WRONG — always use "{Vehicle-Name}-Exterior", "{Vehicle-Name}-Interior-From-Entrance", "{Vehicle-Name}-Interior-To-Entrance".
+A bare "Room-Name" entry with type=Room is WRONG — always use "{{Room-Name}}-View-From-Entrance" and "{{Room-Name}}-View-To-Entrance".
+A bare "Vehicle-Name" entry with type=Vehicle is WRONG — always use "{{Vehicle-Name}}-Exterior", "{{Vehicle-Name}}-Interior-From-Entrance", "{{Vehicle-Name}}-Interior-To-Entrance".
 visual_desc for each view entry must describe ONE camera angle only — no TOP/BOTTOM panels, no multi-panel layouts.
 
 Text:
