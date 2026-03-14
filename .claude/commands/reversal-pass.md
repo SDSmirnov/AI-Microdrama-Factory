@@ -37,11 +37,34 @@ Write `motion_prompt_reversed` describing the **forward-playing clip** that the 
 - The motion_prompt_reversed describes this forward transition (reveal → obscure)
 - When this clip is played in reverse by the pipeline, the viewer sees: obscure → reveal ✓
 
+## RETROGRADE MOTION TECHNIQUE
+
+This pass uses the **Retrograde Motion** technique from practical filmmaking: shoot the action forward, then reverse the clip in post. The I2V model only sees forward motion — never reverse instructions. Your job is to find the natural forward physics that, when reversed, produces the desired reveal.
+
+**Forward (what you write) → Reversed (what the viewer sees)**
+
+| Write this (forward)                     | Reverses to (viewer sees)              |
+|------------------------------------------|----------------------------------------|
+| fog / smoke rolls in, thickens           | fog / smoke disperses, clears          |
+| fire ignites, flames grow from ember     | fire extinguishes                      |
+| character sinks / crouches / falls down  | character rises dramatically           |
+| petals / leaves / ash fall downward      | petals / leaves fly upward             |
+| water spills outward from vessel         | water gathers, flows into vessel       |
+| crowd gathers, closes in around subject  | crowd disperses, opens up              |
+| wound opens, blood spreads outward       | wound closes, heals                    |
+| shards / glass scatter outward           | shards fly together, reassemble        |
+| door closes, darkness fills room         | door opens, light floods in            |
+| paint / ink spreads and covers surface   | paint peels back, surface revealed     |
+| sand / snow drifts in, buries object     | sand / snow retreats, object emerges   |
+| curtain / veil draws closed              | curtain / veil parts, scene revealed   |
+
+**Vocabulary rule**: every verb must be physically plausible as a forward-playing clip. If a verb sounds like "un-doing" or reversal (disperses, fades out, retreats, rises-from-ground unnaturally), rewrite it using the forward-physics equivalent from the table above or by close analogy.
+
 ## RULES FOR motion_prompt_reversed
 
 - **100+ words minimum**, very detailed and specific
 - Use timestamps: "At 0s...", "At 2s...", "At 5s...", "At 6s..."
-- Motion must be **physically plausible as a forward-playing clip** (fog rolling IN, not dispersing)
+- Every motion verb must pass the **Retrograde Motion** test: plausible as natural forward physics
 - Do NOT invent new visual elements — only describe the transition between the two provided states
 - Preserve all lighting and camera details from `lights_and_camera` exactly
 - The clip duration is 7 seconds
