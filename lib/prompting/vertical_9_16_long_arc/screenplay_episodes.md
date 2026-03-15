@@ -24,7 +24,7 @@ A single hook-to-cliffhanger arc across __EPISODES_COUNT__ episodes feels like a
 
 **Episode types (set per episode in the screenplay):**
 - `arc_open` — first episode of the unit. Panels: cold_open → … → arc_bridge.
-- `arc_mid` — middle episode(s) only in N=3 arcs. Panels: arc_pickup → … → arc_bridge.
+- `arc_mid` — middle episode(s) in N≥3 arcs (one per middle slot). Panels: arc_pickup → … → arc_bridge. Each successive arc_mid must escalate beyond the previous one.
 - `arc_close` — final episode of the unit. Panels: arc_pickup → … → cliffhanger.
 - `transition` — atmosphere-only bridge between two arc units, no character conflict.
 
@@ -57,6 +57,43 @@ arc_close (Ep3, P1–9):  arc_pickup → confrontation_build → confrontation_p
                          consequence → cliffhanger
 ```
 
+### 4-EPISODE ARC (N=4, 36 panels, ~108s finished edit)
+
+```
+arc_open  (Ep1, P1–9):  cold_open → verbal_hook → context → first_escalation →
+                         emotional_capture → rising_action → atm_insert →
+                         mid_revelation → arc_bridge
+arc_mid   (Ep2, P1–9):  arc_pickup → escalation_return → complication →
+                         rising_pressure → pivot → new_revelation →
+                         stakes_raised → pre_confrontation → arc_bridge
+arc_mid   (Ep3, P1–9):  arc_pickup → deepening_complication → second_revelation →
+                         countdown_pressure → pivot → point_of_no_return →
+                         convergence → final_approach → arc_bridge
+arc_close (Ep4, P1–9):  arc_pickup → confrontation_build → confrontation_peak →
+                         peak_intensity → atm_insert → twist → reversal →
+                         consequence → cliffhanger
+```
+
+### 5-EPISODE ARC (N=5, 45 panels, ~135s finished edit)
+
+```
+arc_open  (Ep1, P1–9):  cold_open → verbal_hook → context → first_escalation →
+                         emotional_capture → rising_action → atm_insert →
+                         mid_revelation → arc_bridge
+arc_mid   (Ep2, P1–9):  arc_pickup → escalation_return → complication →
+                         rising_pressure → pivot → new_revelation →
+                         stakes_raised → pre_confrontation → arc_bridge
+arc_mid   (Ep3, P1–9):  arc_pickup → deepening_complication → second_revelation →
+                         countdown_pressure → pivot → point_of_no_return →
+                         convergence → final_approach → arc_bridge
+arc_mid   (Ep4, P1–9):  arc_pickup → last_chance → ultimatum →
+                         desperation_move → pivot → cost_revealed →
+                         forced_choice → threshold_crossed → arc_bridge
+arc_close (Ep5, P1–9):  arc_pickup → confrontation_build → confrontation_peak →
+                         peak_intensity → atm_insert → twist → reversal →
+                         consequence → cliffhanger
+```
+
 ## PANEL POSITION REFERENCE
 
 ### arc_open (always identical regardless of N)
@@ -73,18 +110,16 @@ arc_close (Ep3, P1–9):  arc_pickup → confrontation_build → confrontation_p
 | P8 | mid_revelation | — |
 | P9 | arc_bridge | arc_bridge |
 
-### arc_mid (only in N=3 arcs)
+### arc_mid (N≥3: one per middle slot; each must escalate beyond the previous)
+
+Each arc_mid episode — whether the 1st, 2nd, or 3rd middle episode — shares this P1/P9 skeleton. Inner panels P2–P8 must introduce at least one new narrative element not present in any prior arc_mid or arc_open. The deeper the arc_mid position, the closer to physical inevitability the confrontation must feel by P8.
 
 | Panel | Role | Hook Type |
 |-------|------|-----------|
 | P1 | arc_pickup | arc_pickup |
-| P2 | escalation_return | — |
-| P3 | complication | — |
-| P4 | rising_pressure | — |
-| P5 | pivot | — |
-| P6 | new_revelation | — |
-| P7 | stakes_raised | — |
-| P8 | pre_confrontation | — |
+| P2–P8 | escalating complications, new revelations (see arc map above for per-position labels) | — |
+| P5 | pivot (always) | — |
+| P8 | pre_confrontation / convergence / threshold (deepens per mid position) | — |
 | P9 | arc_bridge | arc_bridge |
 
 ### arc_close (always identical regardless of N)
@@ -154,7 +189,7 @@ Note intended shot scale (ECU / CU / MS / WIDE) for each panel in screenplay_ins
 Establish one visual motif (object, gesture, framing, color) in arc_open.
 Tag in visual_continuity_rules as "MOTIF: [description]".
 Call it back in arc_close.p9 (cliffhanger) — same framing, transformed meaning.
-In N=3 arcs: echo the motif briefly in arc_mid as well (without payoff — just recognition).
+In N≥3 arcs: echo the motif briefly in each arc_mid (without payoff — just recognition; each echo slightly more charged than the last).
 
 **Continuity:** Every state change (location, costume, prop, injury) in one episode must propagate into the next episode's visual_continuity_rules.
 
@@ -162,14 +197,14 @@ In N=3 arcs: echo the motif briefly in arc_mid as well (without payoff — just 
 
 1. Quote raw narrative text verbatim for context — do not shorten.
 2. Screenplay instructions drive AI image generation and animation. Be very direct and verbose.
-3. Each arc unit covers ~54s (N=2) or ~81s (N=3) of real-time action in the finished edit.
+3. Each arc unit covers ~54s (N=2), ~81s (N=3), ~108s (N=4), or ~135s (N=5) of real-time action in the finished edit.
 4. Mark hook_type for: cold_open, verbal_hook, emotional_capture, arc_bridge, arc_pickup, cliffhanger panels.
 5. arc_open.p7, arc_mid.p5, and arc_close.p5 are pivot panels: ECU reaction shot, no dialogue, duration 3–4s.
 6. In visual_continuity_rules, tag any visual motif with "MOTIF:" prefix.
 7. arc_bridge panel (any episode): sound_design=silence; motion_prompt ends before action completes.
 8. arc_pickup panel (any episode): visual_start continues from previous arc_bridge visual_end — same location, same physical moment.
 9. arc_close in N=2: confrontation must accelerate across panels 2–4 since no arc_mid pre-warmed it. Start arc_close.p2 with immediate escalation, not a slow pickup.
-10. arc_mid (N=3 only): must introduce at least one new narrative element (revelation, character, location, information) that reframes arc_open's events and makes arc_close's confrontation inevitable.
+10. arc_mid (N≥3): each arc_mid must introduce at least one new narrative element (revelation, character, location, information) not present in any earlier episode of the arc. Each successive arc_mid escalates pressure — by the final arc_mid (N=4: Ep3; N=5: Ep4), confrontation must feel physically inevitable at P8.
 11. SCREENPLAY_INSTRUCTIONS FORMAT SPEC — mandatory for all arc_open/arc_mid/arc_close episodes. (Transition episodes: visual rhyme and sonic texture only — no per-panel structure needed.)
 
 FORBIDDEN in screenplay_instructions: shorthand codes. These communicate nothing to the scene generator and produce panels that fail QA:

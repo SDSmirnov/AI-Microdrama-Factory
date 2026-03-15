@@ -190,6 +190,45 @@ def _build_duel_instruction(duel_cfg: dict, prompts: dict, episodes_count: int) 
             "                         consequence[A+B] → cliffhanger[A+B: ambiguous]\n"
             "```\n"
         )
+    elif episodes_count == 4:
+        arc_map = (
+            "### DUEL ARC — 4-EPISODE STRUCTURE\n\n"
+            "```\n"
+            "arc_open  (Ep1, P1–9):  cold_open[A+B] → first_demand[A] → first_counter[B] →\n"
+            "                         escalation[A] → emotional_capture[B] → rising_action[A] →\n"
+            "                         pivot → near_collapse[B] → arc_bridge[A+B]\n"
+            "arc_mid   (Ep2, P1–9):  arc_pickup[A+B] → pressure_exchange → complication →\n"
+            "                         rising_pressure[B] → pivot → new_weapon[A] →\n"
+            "                         counter_offensive[B] → pre_collapse[A] → arc_bridge[A+B]\n"
+            "arc_mid   (Ep3, P1–9):  arc_pickup[A+B] → deepening_complication → revelation[B] →\n"
+            "                         escalating_cost[A] → pivot → point_of_no_return[A] →\n"
+            "                         final_gambit[B] → convergence[A+B] → arc_bridge[A+B]\n"
+            "arc_close (Ep4, P1–9):  arc_pickup[A+B] → collapse_point → reversal →\n"
+            "                         aftermath → pivot → twist → cost[A+B] →\n"
+            "                         consequence[A+B] → cliffhanger[A+B: ambiguous]\n"
+            "```\n"
+        )
+    elif episodes_count == 5:
+        arc_map = (
+            "### DUEL ARC — 5-EPISODE STRUCTURE\n\n"
+            "```\n"
+            "arc_open  (Ep1, P1–9):  cold_open[A+B] → first_demand[A] → first_counter[B] →\n"
+            "                         escalation[A] → emotional_capture[B] → rising_action[A] →\n"
+            "                         pivot → near_collapse[B] → arc_bridge[A+B]\n"
+            "arc_mid   (Ep2, P1–9):  arc_pickup[A+B] → pressure_exchange → complication →\n"
+            "                         rising_pressure[B] → pivot → new_weapon[A] →\n"
+            "                         counter_offensive[B] → pre_collapse[A] → arc_bridge[A+B]\n"
+            "arc_mid   (Ep3, P1–9):  arc_pickup[A+B] → deepening_complication → revelation[B] →\n"
+            "                         escalating_cost[A] → pivot → point_of_no_return[A] →\n"
+            "                         final_gambit[B] → convergence[A+B] → arc_bridge[A+B]\n"
+            "arc_mid   (Ep4, P1–9):  arc_pickup[A+B] → last_chance[A] → ultimatum[B] →\n"
+            "                         desperation_move[A] → pivot → cost_revealed[A+B] →\n"
+            "                         forced_choice[B] → threshold_crossed[A] → arc_bridge[A+B]\n"
+            "arc_close (Ep5, P1–9):  arc_pickup[A+B] → collapse_point → reversal →\n"
+            "                         aftermath → pivot → twist → cost[A+B] →\n"
+            "                         consequence[A+B] → cliffhanger[A+B: ambiguous]\n"
+            "```\n"
+        )
     else:
         arc_map = (
             "### DUEL ARC — 3-EPISODE STRUCTURE\n\n"
@@ -276,7 +315,7 @@ def analyze_episodes_master(text: str, prompts: dict, config: dict, llm: BaseLLM
     episodes_rules = episodes_rules.replace('__TRANSITIONS_INSTRUCTION__', transitions_instruction)
     episodes_count = config.get('episodes_count', 2)
     arc_panels = episodes_count * 9
-    arc_duration_map = {2: '~54s', 3: '~81s'}
+    arc_duration_map = {2: '~54s', 3: '~81s', 4: '~108s', 5: '~135s'}
     arc_duration = arc_duration_map.get(episodes_count, f'~{episodes_count * 27}s')
     duel_cfg = config.get('duel', {})
     duel_instruction = _build_duel_instruction(duel_cfg, prompts, episodes_count) if duel_cfg.get('enabled') else ''

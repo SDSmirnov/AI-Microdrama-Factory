@@ -1,6 +1,6 @@
 ## EPISODE TYPE: arc_open — FIRST EPISODE OF THE ARC UNIT
 
-This is always the first episode of the arc unit (N=2 or N=3).
+This is always the first episode of the arc unit (N=2, 3, 4, or 5).
 Single POV — one character's perspective throughout all episodes in the unit.
 
 **Arc position:** panels 1–9 of the full arc.
@@ -26,6 +26,6 @@ This line hangs unanswered until arc_close. It is a demand, not an explanation.
 Establish one visual motif (object, gesture, framing, or color) in this episode.
 Tag in visual_continuity_rules as "MOTIF: [description]."
 It will be called back in arc_close.p9 (cliffhanger) — same framing, transformed meaning.
-In N=3 arcs, it will echo briefly in arc_mid without payoff.
+In N≥3 arcs, it will echo briefly in each arc_mid without payoff.
 
 **Continuity forward:** All state changes (location, costume, prop, injury) must be listed in visual_continuity_rules for the next episode to maintain.
