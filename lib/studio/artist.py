@@ -600,7 +600,14 @@ def _build_grid_prompt(scene: dict, prompts: dict, config: dict) -> str:
     resolution = config['image_generation'].get('image_size', '2K')
 
     prompt = _build_prompt_header(scene, prompts)
-    prompt += f"\nIMPORTANT: Generate SINGLE {resolution} {aspect_ratio} image with panels in grid layout.\n"
+    n_panels = len(scene.get('panels', []))
+    cols = 3
+    rows = (n_panels + cols - 1) // cols
+    prompt += (
+        f"\nIMPORTANT: Generate ONE SINGLE {resolution} {aspect_ratio} composite image containing a {cols}x{rows} grid of {n_panels} panels. "
+        f"Panels are arranged left-to-right, top-to-bottom: Panel 1 is top-left, Panel {n_panels} is bottom-right. "
+        f"The entire grid is a single continuous micro-story within one location.\n"
+    )
 
     for p in scene['panels']:
         prompt += f"\nPanel {p['panel_index']}:\n"
