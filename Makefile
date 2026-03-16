@@ -44,7 +44,7 @@ workdirs:  ## Create video working directories
 	mkdir -p video/scenes video/music video/sound video/clips
 
 styles:  ## Generate custom_prompts/ for STYLE preset
-	python cli.py --llm $(LLM) styles $(NOVEL) --style $(STYLE)
+	python cli.py --llm $(LLM) --style $(STYLE) styles $(NOVEL)
 
 casting:  ## Identify characters/locations and save reference JSONs
 	python cli.py --llm $(LLM) --style $(STYLE) casting $(NOVEL)
