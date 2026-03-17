@@ -70,6 +70,13 @@ WRONG: "character stands facing camera, jaw tightens, eyes shift left"
 RIGHT: "At 0s Alisa strides from the door to the table, 3 quick steps. At 3s she leans forward and plants both hands flat on the surface. At 5s she locks eyes with him."
 Default: at least one full-body or large-limb movement per panel.
 
+**MOTION BUDGET — 6 seconds is a large amount of real time. Use it:**
+A real human takes 0.2s to press a button, 0.5s to pick up a phone, 1s to stand up from a chair, 2s to cross a small room, 4–6s to run 30 meters. The AI defaults to writing one micro-gesture and stretching it to fill the clip — this produces near-static footage. Plan the motion_prompt as a complete physical arc that REALISTICALLY takes ~6s to execute:
+- 6s budget: enter a room (1s) + approach someone (1.5s) + grab their wrist (0.5s) + force them to look at you (1s) + deliver line (2s)
+- NOT: "slowly, deliberately raises the phone toward his ear over 6 seconds"
+- NOT: "holds finger over the send button, hesitating, for the duration of the clip"
+Fill the time. If the core action takes 1s, add what happens before and after — the approach, the reaction, the consequence. A panel where nothing new happens between second 1 and second 5 is a failed panel. Each timestamped beat in motion_prompt must describe a DIFFERENT physical state than the previous beat.
+
 **motion_prompt HESITATION — use ONLY for a single life-altering decision moment (≤1 panel per episode, never P1–P3):**
 Reserve for the exact instant a character faces a choice that changes everything. Maximum 3 seconds of deliberation before the action resolves.
 WRONG: applying hesitation to confrontation, argument, revelation, or any panel where narrative momentum must continue.
@@ -197,12 +204,14 @@ MANDATORY: plan the arc_bridge → arc_pickup seam as a match_cut across the epi
 
 ## SOUND
 
+VOICE BUDGET (hard technical limit): 16 characters per second × panel duration = maximum characters for dialogue + voiceover COMBINED. For a 6s panel: 96 chars total. For a 4s panel: 64 chars total. Exceeding this budget causes TTS to either truncate or produce garbled audio in I2V rendering — the line will not fit the clip. Count characters before writing. If dialogue uses 50 chars, voiceover has ≤46 chars remaining. If a panel has no dialogue, voiceover may use the full budget. A panel with both a full dialogue line AND a full voiceover line will almost always exceed budget — choose one or split across panels.
+
 DIALOGUE: ≤8 words, CU on speaker's face. Populate both `dialogue` and `voiceover` for inner counterpoint.
 VOICEOVER: inner monologue revealing what the image cannot show. {target_language} language.
 
 SOUND DESIGN (sound_design) — required for EVERY panel:
-- Deliberate sonic contrast: sustained silence broken by a sharp sound > continuous noise.
-- MANDATORY: at least one panel per episode must have sound_design="silence" as setup for the next panel's sonic event.
+- Deliberate sonic contrast: sustained silence broken by a sharp sound > continuous noise — for the 20-40% watching with audio. For the 60-80% watching muted, silence = nothing. Never design a beat that only lands if the viewer can hear the absence of sound.
+- Sonic contrast panels (sound_design=silence) are valid ONLY when the same panel also has a voiceover line. A silent panel without voiceover is a dead screen for muted viewers. Do NOT mandate silence panels — use them only when they serve both audio-on AND audio-off audiences simultaneously.
 - arc_bridge (any): sound_design=silence — the episode cut is a sonic reset.
 - arc_pickup (any): begins into silence, then rebuilds.
 - For j_cut: describe the next panel's audio that bleeds in.

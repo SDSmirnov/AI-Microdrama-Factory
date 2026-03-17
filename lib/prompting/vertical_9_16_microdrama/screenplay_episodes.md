@@ -37,6 +37,16 @@ COLD OPEN FORBIDDEN PATTERNS (the AI defaults to these — reject them all):
 COLD OPEN REQUIRED: Something is ALREADY HAPPENING. A hand already extended with money. Eyes already locked in challenge. A door already mid-slam. An argument already mid-sentence. Drop into the episode's first moment of active conflict — if that moment is panel 3 in story chronology, OPEN ON PANEL 3 FIRST, then continue forward.
 P1 MOTION REQUIREMENT: at 0s in motion_prompt, the action is already in progress. "At 0s: [ongoing action]" — not "At 0s: [character stands / sits / looks]". If the motion_prompt[0s] describes a static position, P1 will fail — it produces dead screen for the first 2–4s after autocut.
 
+**YOUTUBE MID-SEASON ENTRY TEST (every episode, not just ep1):**
+YouTube algorithm delivers mid-season episodes to cold audiences — viewers who have never seen the series. Unlike ReelShort/DramaBox where viewers commit from episode 1, a YouTube viewer can land on episode 7 or 14 with zero prior context. If they cannot read the situation within panels 1–3, they scroll.
+Every episode must pass this test: a viewer with NO prior episode knowledge must be able to read — from environment, immediate behavior, and visible reactions alone — WHO these people are (social dynamic, power relation), WHERE they are (location visible or implied by props/light), and WHAT conflict is active RIGHT NOW.
+This is NOT exposition. DO NOT add explanatory dialogue or on-screen text. Use:
+- Environment as character: location and props that signal status, threat, or relationship
+- Body language that broadcasts the power dynamic without words
+- Reactions that reveal what already happened (face of someone who just heard something, hand gripping an object that matters)
+FORBIDDEN: panels 1–2 that require episode backstory to decode — "the viewer already knows she betrayed him" is not visible on screen without context. Make the betrayal PHYSICALLY READABLE through posture, distance, and object placement.
+Test: cover the voiceover and dialogue. Can a stranger read who has power and what is at stake? If not, rewrite the visual.
+
 **Micro-Act Structure (per episode, 9 panels):**
 - Panels 1–2: HOOK + CONTEXT [0–7s zone — maximum drop-off zone]. P1 hard cap: 3s. P2 hard cap: 4s. Every extra second in this zone is viewers lost. Drop into active interaction at 0s — no build-up, no zoom-in approach, no establishing moment. The action is already 50%+ complete at frame 0. Do not exceed 5s for P3.
 - Panel 3: ESCALATION [15s DEPTH TEST]. First pressure or obstacle. Must be self-contained as a second entry point (see 15-Second Depth Test). Target duration: 4–5s.
@@ -54,9 +64,9 @@ Note the intended shot scale (ECU / CU / MS / WIDE) for each panel position in s
 **Voiceover Contract:** Inner monologue or sparse narrator. Synced to visual. Reveals subtext (fear, memory, desire) — never describes what we see.
 
 **Sonic Arc — plan the episode's sound journey in screenplay_instructions:**
-Map explicitly where silence lives, where the sonic hit lands, and where the crescendo peaks. Example structure:
-"Panels 1–3: low ambient hum, tension. Panel 4: sudden silence. Panel 5: sharp crack on cut. Panels 6–7: music crescendo. Panel 8: drop to silence. Panel 9: single heartbeat, then cut."
-Silence is more powerful than noise. One sonic hit after sustained silence is worth ten continuous sound events.
+Map explicitly where sonic contrast lives, where the hit lands, and where the crescendo peaks. Example structure:
+"Panels 1–3: low ambient hum, tension. Panel 4: near-silence under VO. Panel 5: sharp crack on cut. Panels 6–7: music crescendo. Panel 8: low hum + VO inner monologue. Panel 9: single heartbeat, then cut."
+Silence broken by a sharp sonic hit is powerful — for the 20-40% watching with audio. For the 60-80% watching muted, silence = nothing. RULE: every panel where sound_design is silence or near-silence MUST carry a voiceover line — the inner monologue is the subtitle that keeps muted viewers engaged. A frozen face with no text = dead screen = swipe.
 
 **Visual Motif — seed and pay off across episodes:**
 In episode 1, establish at least one recurring visual element: a specific object, gesture, framing, or color.

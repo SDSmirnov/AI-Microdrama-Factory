@@ -56,6 +56,13 @@ WRONG: "character stands facing camera, jaw tightens, eyes shift left"
 RIGHT: "At 0s Alisa strides from the door toward the table, 3 quick steps. At 3s she stops 80cm away, leans forward, plants both hands flat on the table surface. At 5s she locks eyes with him without breaking contact."
 Default motion: at least one full-body or large-limb movement. Facial detail augments movement — never replaces it.
 
+**MOTION BUDGET — 6 seconds is a large amount of real time. Use it:**
+A real human takes 0.2s to press a button, 0.5s to pick up a phone, 1s to stand up from a chair, 2s to cross a small room, 4–6s to run 30 meters. The AI defaults to writing one micro-gesture and stretching it to fill the clip — this produces near-static footage. Plan the motion_prompt as a complete physical arc that REALISTICALLY takes ~6s to execute:
+- 6s budget: enter a room (1s) + approach someone (1.5s) + grab their wrist (0.5s) + force them to look at you (1s) + deliver line (2s)
+- NOT: "slowly, deliberately raises the phone toward his ear over 6 seconds"
+- NOT: "holds finger over the send button, hesitating, for the duration of the clip"
+Fill the time. If the core action takes 1s, add what happens before and after — the approach, the reaction, the consequence. A panel where nothing new happens between second 1 and second 5 is a failed panel. Each timestamped beat in motion_prompt must describe a DIFFERENT physical state than the previous beat.
+
 **motion_prompt HESITATION — use ONLY for a single life-altering decision moment (≤1 panel per episode, never P1–P3):**
 Reserve for the exact instant a character faces a choice that changes everything: a trigger they may or may not pull, a call they may or may not make, a door they may or may not open. Maximum 3 seconds of visible deliberation before action resolves.
 WRONG: applying hesitation to confrontation, argument, revelation, or any panel where narrative momentum must continue.
@@ -158,13 +165,15 @@ Concrete shape pairs to plan deliberately:
 In motion_prompt, name the match explicitly: "visual_end: [subject]'s arm sweeps upward in an arc — MATCH CUT via upward diagonal to next panel."
 MANDATORY: plan at least one match_cut transition per episode in the escalation zone (panels 3–5).
 
+VOICE BUDGET (hard technical limit): 16 characters per second × panel duration = maximum characters for dialogue + voiceover COMBINED. For a 6s panel: 96 chars total. For a 4s panel: 64 chars total. Exceeding this budget causes TTS to either truncate or produce garbled audio in I2V rendering — the line will not fit the clip. Count characters before writing. If dialogue uses 50 chars, voiceover has ≤46 chars remaining. If a panel has no dialogue, voiceover may use the full budget. A panel with both a full dialogue line AND a full voiceover line will almost always exceed budget — choose one or split across panels.
+
 DIALOGUE: ≤8 words, delivered in CU on speaker's face. Populate both `dialogue` and sync `voiceover` for inner counterpoint.
 VOICEOVER: inner monologue revealing what the image cannot show. {target_language} language.
 
 SOUND DESIGN (sound_design) — required for EVERY panel:
 - Capture the sonic atmosphere of this exact panel moment, separate from dialogue/voiceover.
-- Plan sonic contrast deliberately: sustained silence broken by a sharp sound is more powerful than continuous noise.
-- MANDATORY: at least one panel per scene must have sound_design="silence" as deliberate setup for the next panel's sonic event. Pair with transition_to_next=smash_cut on the following panel.
+- Plan sonic contrast deliberately: sustained silence broken by a sharp sound is more powerful than continuous noise — for the 20-40% watching with audio. For the 60-80% watching muted, silence = nothing. Never design a beat that only lands if the viewer can hear the absence of sound.
+- Sonic contrast panels (sound_design=silence) are valid ONLY when the same panel also has a voiceover line. A silent panel without voiceover is a dead screen for muted viewers. Do NOT mandate silence panels — use them only when they serve both audio-on AND audio-off audiences simultaneously.
 - For j_cut transitions: describe the next scene's audio that bleeds in ("J-cut: rain ambient from next scene starts at 5s mark").
 - Examples: "silence", "low-frequency hum builds", "amplified footstep at 2s, then silence", "heartbeat rises to bass drop on cut", "glass crack at 4s, then pin-drop silence", "distant thunder, growing".
 

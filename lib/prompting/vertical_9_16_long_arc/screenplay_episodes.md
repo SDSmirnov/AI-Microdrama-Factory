@@ -161,7 +161,8 @@ COLD OPEN REQUIRED: Characters in active interaction — arguing mid-sentence, p
 NOT a cliffhanger. The arc_bridge is a moment of *chosen suspension* — the character is at the threshold, not over it.
 A decision not yet made, a word not yet spoken, a hand raised but not yet descended.
 The drama belongs to the next episode, not this one.
-- sound_design: silence (always — the episode boundary is a sonic reset)
+- sound_design: silence (always — the episode boundary is a sonic reset for audio-on viewers)
+- voiceover: MANDATORY — one line of inner monologue, the character's held thought at the threshold. This is the subtitle that keeps muted viewers (60-80%) engaged during the silent freeze. Without it, arc_bridge = frozen face + no text = dead screen = swipe.
 - motion_prompt ends before the action completes
 - visual_end: the hand is 1cm from the target, the mouth open but the word unspoken
 - Must plan a match_cut shape in visual_end that connects to the next episode's arc_pickup visual_start
@@ -171,6 +172,16 @@ NOT a cold_open. Same location, same moment, 1–2 seconds later in narrative ti
 - Viewer who came from the previous episode feels zero gap
 - Viewer who starts here must read stakes through action and image, never exposition
 - Voiceover carries the character's inner decision at the moment of crossing
+
+**YOUTUBE MID-SEASON ENTRY TEST (every arc_open and arc_pickup, not just the series opener):**
+YouTube algorithm delivers mid-season arcs to cold audiences — viewers who have never seen the series. Unlike ReelShort/DramaBox where viewers commit from episode 1, a YouTube viewer can land on arc 4 with zero prior context. If they cannot read the situation within panels 1–3 of the arc_open (or arc_pickup), they scroll.
+Every arc_open and every arc_pickup must pass this test: a viewer with NO prior episode knowledge must be able to read — from environment, immediate behavior, and visible reactions alone — WHO these people are (social dynamic, power relation), WHERE they are (location visible or implied by props/light), and WHAT conflict is active RIGHT NOW.
+This is NOT exposition. DO NOT add explanatory dialogue or on-screen text. Use:
+- Environment as character: location and props that signal status, threat, or relationship
+- Body language that broadcasts the power dynamic without words
+- Reactions that reveal what already happened (face of someone who just heard something, hand gripping an object that matters)
+FORBIDDEN: arc_open.p1 or arc_pickup.p1 that require arc history to decode — "the viewer already knows she betrayed him" is not visible on screen without context. Make the current conflict state PHYSICALLY READABLE through posture, distance, and object placement.
+Test: cover the voiceover and dialogue. Can a stranger read who has power and what is at stake? If not, rewrite the visual.
 
 **True Cliffhanger (arc_close.p9 only):**
 Freeze on maximum unresolved tension. One visible element with two possible interpretations.
@@ -185,9 +196,10 @@ Note intended shot scale (ECU / CU / MS / WIDE) for each panel in screenplay_ins
 **Voiceover Contract:** Inner monologue. Reveals subtext — never narrates the visible.
 
 **Sonic Arc — plan across all N episodes in screenplay_instructions:**
-- Every arc_bridge panel: sound_design=silence (the episode cut is a sonic reset)
-- Every arc_pickup panel: begins into silence, then rebuilds
+- Every arc_bridge panel: sound_design=silence (the episode cut is a sonic reset) — but MUST include a voiceover line; a frozen face with silence and no text is dead screen for muted viewers
+- Every arc_pickup panel: begins into near-silence, then rebuilds — MUST include a voiceover line
 - Name exactly where the crescendo lives (must be in arc_close.p3–p4)
+- Silence is a sound design note for the 20-40% watching with audio. For the 60-80% watching muted, voiceover subtitles carry all dramatic weight during low/no audio panels.
 
 **Visual Motif — seed in arc_open, pay off in arc_close:**
 Establish one visual motif (object, gesture, framing, color) in arc_open.
