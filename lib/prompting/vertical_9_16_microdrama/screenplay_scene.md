@@ -50,11 +50,17 @@ VISUAL DRAMATIC INTENSITY — WHAT GOES IN EVERY NARRATIVE FRAME:
 - A contradiction revealed: the suppressed smile when they should be devastated, the flash of real fear behind a performed confidence.
 - NEVER write visual_end as "the action is done." visual_end is a NEW UNSTABLE STATE — it demands resolution in the next panel.
 
-**motion_prompt DRAMATIC PHYSICS — hesitation and micro-decision carry more drama than the action itself:**
-The moment before the action: the 0.5s of held breath, the hand that moves toward and slows, the eyes that almost look away but don't. Write these as timestamped physical events. The withdrawal IS the drama. The held pause IS the tension.
-WRONG: "He picks up the phone and calls."
-RIGHT: "At 0s phone sits on table, hand rests 10cm to the right. At 1.5s fingers move left, stop 3cm from phone. At 3.0s index finger contacts screen but does not press. At 5.0s hand withdraws into a fist on the table — phone uncalled."
-The physical hesitation tells the viewer everything about the character's internal state without a single word.
+**motion_prompt DEFAULT — characters move. Every panel must have visible full-body physical action:**
+People walk across rooms, gesture emphatically, turn away, step closer, grab objects, push past someone, sit down hard, stand up fast. A 6-second clip is a movie clip — something must visibly happen in physical space. Micro-expressions alone are dead screen.
+WRONG: "character stands facing camera, jaw tightens, eyes shift left"
+RIGHT: "At 0s Alisa strides from the door toward the table, 3 quick steps. At 3s she stops 80cm away, leans forward, plants both hands flat on the table surface. At 5s she locks eyes with him without breaking contact."
+Default motion: at least one full-body or large-limb movement. Facial detail augments movement — never replaces it.
+
+**motion_prompt HESITATION — use ONLY for a single life-altering decision moment (≤1 panel per episode, never P1–P3):**
+Reserve for the exact instant a character faces a choice that changes everything: a trigger they may or may not pull, a call they may or may not make, a door they may or may not open. Maximum 3 seconds of visible deliberation before action resolves.
+WRONG: applying hesitation to confrontation, argument, revelation, or any panel where narrative momentum must continue.
+RIGHT: "At 0s hand hovers 5cm above the phone. At 2s finger descends and presses call. At 3s phone is already at ear — decision made."
+If you are tempted to write hesitation for any other reason: don't. Move the character instead.
 
 9-PANEL MICRO-ACT STRUCTURE (mandatory rhythm for pov_a / pov_b / confrontation episodes):
 (TRANSITION episodes override this entirely — see episode_type block. All 9 panels are environmental with no dialogue, no character conflict structure.)

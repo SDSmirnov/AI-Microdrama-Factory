@@ -64,9 +64,17 @@ visual_start continues from the previous episode's arc_bridge visual_end: same l
 motion_prompt begins from where the bridge ended — the action now completes.
 Voiceover carries the character's inner decision at the moment of crossing.
 
-**motion_prompt DRAMATIC PHYSICS — hesitation and micro-decision carry more drama than the action itself:**
-WRONG: "He picks up the phone and calls."
-RIGHT: "At 0s phone sits on table, hand rests 10cm to the right. At 1.5s fingers move left, stop 3cm from phone. At 3.0s index finger contacts screen but does not press. At 5.0s hand withdraws into a fist — phone uncalled."
+**motion_prompt DEFAULT — characters move. Every panel must have visible full-body physical action:**
+People walk, gesture, turn, approach, retreat, grab objects, lean in, stand up, sit down. A 6-second clip must show something visibly happening in physical space. Micro-expressions alone are dead screen.
+WRONG: "character stands facing camera, jaw tightens, eyes shift left"
+RIGHT: "At 0s Alisa strides from the door to the table, 3 quick steps. At 3s she leans forward and plants both hands flat on the surface. At 5s she locks eyes with him."
+Default: at least one full-body or large-limb movement per panel.
+
+**motion_prompt HESITATION — use ONLY for a single life-altering decision moment (≤1 panel per episode, never P1–P3):**
+Reserve for the exact instant a character faces a choice that changes everything. Maximum 3 seconds of deliberation before the action resolves.
+WRONG: applying hesitation to confrontation, argument, revelation, or any panel where narrative momentum must continue.
+RIGHT: "At 0s hand hovers 5cm above the phone. At 2s finger descends and presses call. At 3s phone is at ear — decision made."
+If tempted to write hesitation for any other reason: don't. Move the character instead.
 
 ## 9-PANEL STRUCTURE BY EPISODE TYPE
 
