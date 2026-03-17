@@ -73,14 +73,18 @@ RIGHT: "At 0s phone sits on table, hand rests 10cm to the right. At 1.5s fingers
 ### arc_open — First Episode of the Arc Unit
 
 Mandatory panel structure:
-- P1: cold_open — IN MEDIAS RES. The viewer drops into mid-action, mid-confrontation, or mid-consequence. Something is ALREADY HAPPENING when the frame opens. Choose one of five hook archetypes that fits the source scene:
-  * STATUS REVERSAL: protagonist caught in humiliation or subjugation — the viewer asks "how will they turn this around?" (exploits the human drive for justice)
-  * IMPOSSIBLE SITUATION: no visible exit — the viewer asks "how do they get out of this?"
-  * HIDDEN IDENTITY: someone in frame is not who they appear — the viewer asks "who is this really?"
-  * TICKING CLOCK: a deadline or countdown is already in motion — the viewer asks "will they make it?"
-  * SHOCKING REVELATION: something just happened off-frame — the viewer asks "what was that?"
-  Record the chosen hook archetype in hook_type as: cold_open/status_reversal, cold_open/impossible_situation, cold_open/hidden_identity, cold_open/ticking_clock, or cold_open/revelation. A hand already extended with money. Eyes already locked in a challenge. A door that just slammed. An object mid-fall. The opening image must make the viewer ask "what the hell is happening RIGHT NOW?" — not "I wonder what will happen." The cold_open is NOT necessarily the chronological start of the episode: if the source scene opens with travel, setup, or neutral context, SKIP IT and open on the arc's first moment of tension or power shift instead. REQUIRED: a visible power dynamic (who is exerting pressure, who is cornered), a stake object already in play, or a micro-action already in motion — face showing strain, hand mid-gesture, body already reacting. FORBIDDEN for cold_open: character sitting/looking/waiting/traveling without active conflict; establishing location shots; beauty-without-stakes (reflections in windows, city lights on a passive face, a character at rest); any shot where the answer to "what is at stake right now?" is "nothing yet." hook_type: cold_open. [≈0–6s]
-- P2: verbal_hook — character speaks the arc's central conflict in ≤8 words: ultimatum, threat, confession, or challenge. CU on speaker's face. hook_type: verbal_hook. [≈7s mark]
+- P1: cold_open — EXPLANATION HOOK, interaction already in progress. The viewer sees something happening and needs to understand it: "what IS this?", "who IS this person?", "why ARE they doing that?". Duration: 3s hard cap.
+  TECHNICAL CONSTRAINT: after autocut, only 2–4s of the 6s clip is visible. motion_prompt[0s] MUST describe an ongoing physical action — NOT a character position or setup pose. "At 0s: [action already in progress]".
+  Choose one of five hook archetypes:
+  * STATUS REVERSAL: protagonist caught in humiliation or subjugation — the viewer asks "why is this happening to them?"
+  * IMPOSSIBLE SITUATION: no visible exit — the viewer asks "how did they end up here?"
+  * HIDDEN IDENTITY: someone acting in an unexpected way — the viewer asks "who IS this person really?"
+  * TICKING CLOCK: a deadline or countdown already running — the viewer asks "what happens when it hits zero?"
+  * SHOCKING REVELATION: someone reacting to something we haven't seen — the viewer asks "what did they just find out?"
+  Record hook archetype in hook_type as: cold_open/status_reversal, cold_open/impossible_situation, cold_open/hidden_identity, cold_open/ticking_clock, or cold_open/revelation.
+  REQUIRED in visual_start: characters actively doing something — arguing mid-sentence, mid-physical interaction, mid-reaction.
+  FORBIDDEN: character sitting/looking/waiting; establishing shots; beauty-without-stakes; anticipation poses (hand hovering, "about to" act); any shot where the answer to "what is happening RIGHT NOW?" is "nothing yet." hook_type: cold_open. [≈0–3s, hard cap 4s]
+- P2: verbal_hook — character delivers the arc's central conflict mid-confrontation in ≤8 words: ultimatum, threat, confession, or challenge. CU on speaker's face. Already mid-delivery at 0s. Duration hard cap: 4s. hook_type: verbal_hook. [≈4–7s]
 - P3: context — orient the viewer through action, not exposition. One MS or WIDE shot.
 - P4: first_escalation — first obstacle, complication, or pressure arrives.
 - P5: emotional_capture — point of no return: an action taken, a line crossed, a secret revealed. hook_type: emotional_capture. [≈30s mark]

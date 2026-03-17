@@ -10,8 +10,9 @@ MUTED VIEWING LAW: 80% of viewers watch with sound off. Every panel must convey 
 
 ## VERTICAL MICRODRAMA DRAMATURGY
 
-**The 3-Second Law:** Episode opens in medias res — the most visually arresting moment, zero explanation.
-The viewer asks "what is happening?" THAT question keeps them watching.
+**The 3-Second Law:** Episode opens mid-action — a physical event ALREADY 50% COMPLETE, zero explanation.
+NOT a visually arresting static image. NOT a mystery pose. An EXPLANATION HOOK: something is already happening and the viewer needs to understand it — "what IS this?", "who IS this person?", "why ARE they doing that?". Forward-pull toward understanding an ongoing action, not backward-pull toward a withheld cause.
+CRITICAL TECHNICAL CONSTRAINT: each 6s clip produces only 2–4s of usable footage after autocut. If the action starts at 2s in the clip, the viewer sees only static. Motion must be front-loaded to frame 0. A panel where "he slowly reaches for the phone" is dead screen for the first 3s of the episode.
 
 **The 7-Second Verbal Hook:** By the second panel (≈7s mark), a character must speak a line that crystallizes the episode's entire conflict in ≤8 words — an ultimatum, threat, confession, or challenge. This is NOT exposition. It is a verbal demand the viewer has not yet heard answered. The question hangs in the air. Examples: "You have until midnight." / "I know what you did." / "Choose: her or me."
 
@@ -21,21 +22,23 @@ The viewer asks "what is happening?" THAT question keeps them watching.
 
 **The 30-Second Crystallization (YouTube completion predictor):** Panel 5 (≈27–33s mark) is YouTube's algorithm completion-prediction checkpoint: viewers who reach 30s finish the episode at high rates, which drives recommendations. This panel must contain the episode's POINT OF NO RETURN — the irreversible action or revelation that makes abandonment feel like loss. It is NOT the climax; it is the moment the stakes become visceral. Additionally, this panel must be designed as the episode's strongest standalone thumbnail candidate: compositionally legible as a static image, no key action in text-overlay zones, face in CU or ECU with a recognizable but ambiguous emotion.
 
-**Cold Open = IN MEDIAS RES + Visual Question Mark:** The cold_open is NOT an arresting image — it is an unanswered question delivered mid-action.
-Show CONSEQUENCE before CAUSE: the reaction before the stimulus, the wound before the weapon, the running before the threat.
-The viewer must be asking "what the hell is happening RIGHT NOW?" — that unresolved tension is the hook.
-Never open on exposition, establishing shot, or character introduction. Open on a fragment that demands completion.
+**Cold Open = EXPLANATION HOOK, not Mystery Hook:** The cold_open is an interaction already in progress that the viewer needs to decode.
+Show ACTION before CONTEXT: two people mid-argument before the viewer knows who they are; a character doing something unexpected before the viewer knows why; an object mid-use before the viewer knows what it means.
+The viewer must be asking "what IS this / who IS this / WHY are they doing that?" — the pull to understand ongoing action, not to see a withheld reveal.
+Never open on exposition, establishing shot, or a character posed for the camera.
 
 COLD OPEN FORBIDDEN PATTERNS (the AI defaults to these — reject them all):
 - Character in transit: riding, looking out a window, waiting, arriving, walking without active conflict
 - Contemplative beauty: face in reflection, city lights on a passive face, character alone thinking
-- Setup/orientation: any shot where the answer to "what is at stake right now?" is "nothing yet"
+- Setup/orientation: any shot where the answer to "what is happening RIGHT NOW?" is "nothing yet"
 - Character introduction: first visual of character without immediate conflict context
+- Anticipation pose: hand hovering, finger poised, body about to act — the ABOUT TO is dead screen
 
-COLD OPEN REQUIRED: Something is ALREADY HAPPENING. A hand already extended with money. Eyes already locked. An object already mid-flight. A jaw already set to refuse. Drop into the episode's first moment of power shift — if that moment is panel 3 in story chronology, OPEN ON PANEL 3 FIRST, then rewind or continue forward.
+COLD OPEN REQUIRED: Something is ALREADY HAPPENING. A hand already extended with money. Eyes already locked in challenge. A door already mid-slam. An argument already mid-sentence. Drop into the episode's first moment of active conflict — if that moment is panel 3 in story chronology, OPEN ON PANEL 3 FIRST, then continue forward.
+P1 MOTION REQUIREMENT: at 0s in motion_prompt, the action is already in progress. "At 0s: [ongoing action]" — not "At 0s: [character stands / sits / looks]". If the motion_prompt[0s] describes a static position, P1 will fail — it produces dead screen for the first 2–4s after autocut.
 
 **Micro-Act Structure (per episode, 9 panels):**
-- Panels 1–2: HOOK + CONTEXT [3–7s zone]. Drop into chaos, then orient. Target panel duration: 4–5s each — accelerate through the highest drop-off zone. Do not exceed 5s for P1-P3.
+- Panels 1–2: HOOK + CONTEXT [0–7s zone — maximum drop-off zone]. P1 hard cap: 3s. P2 hard cap: 4s. Every extra second in this zone is viewers lost. Drop into active interaction at 0s — no build-up, no zoom-in approach, no establishing moment. The action is already 50%+ complete at frame 0. Do not exceed 5s for P3.
 - Panel 3: ESCALATION [15s DEPTH TEST]. First pressure or obstacle. Must be self-contained as a second entry point (see 15-Second Depth Test). Target duration: 4–5s.
 - Panel 4: EMOTIONAL CAPTURE [21s LOCK]. Point of no return — the action, revelation, or commitment the viewer cannot abandon. Expand to 6s.
 - Panel 5: CRYSTALLIZATION [30s COMPLETION TRIGGER]. Stakes become visceral and irreversible. Strongest thumbnail candidate. 6–7s.

@@ -140,14 +140,18 @@ Each arc_mid episode — whether the 1st, 2nd, or 3rd middle episode — shares 
 
 ## KEY DRAMATIC MECHANICS
 
-**The 3-Second Law:** arc_open opens IN MEDIAS RES — something is ALREADY HAPPENING when the frame opens.
+**The 3-Second Law — EXPLANATION HOOK, not Mystery Hook:** arc_open P1 opens mid-action — a physical event already 50% complete.
+NOT a visually arresting static image. NOT a mystery pose. An EXPLANATION HOOK: something is already happening and the viewer needs to understand it — "what IS this?", "who IS this person?", "why ARE they doing that?".
+TECHNICAL CONSTRAINT: each 6s clip produces only 2–4s of usable footage after autocut. If the action starts at 2s in the clip, the viewer sees only static. motion_prompt[0s] MUST describe an ongoing physical event — NOT a character position.
+
 COLD OPEN FORBIDDEN PATTERNS (the AI defaults to these — reject them all):
 - Character in transit: riding, looking out a window, waiting, arriving, walking without active conflict
 - Contemplative beauty: face in reflection, city lights on a passive face, character alone thinking
-- Setup/orientation: any shot where the answer to "what is at stake right now?" is "nothing yet"
+- Setup/orientation: any shot where the answer to "what is happening RIGHT NOW?" is "nothing yet"
 - Character introduction: first visual of character without immediate conflict context
+- Anticipation pose: hand hovering, finger poised, body "about to" act — the ABOUT TO is dead screen
 
-COLD OPEN REQUIRED: A visible power dynamic, a stake object already in play, or a micro-action already in motion. If the source scene opens with passive setup, skip it — open on the arc's first moment of tension or power shift. That moment may be story-chronological panel 3 or 4: open there first.
+COLD OPEN REQUIRED: Characters in active interaction — arguing mid-sentence, pushing/pulling an object, mid-reaction to an event. motion_prompt[0s]: "At 0s: [ongoing action already in progress]". If the source scene opens with passive setup, skip it — open on the arc's first moment of active conflict. P1 duration hard cap: 3s.
 
 **The 7-Second Verbal Hook:** By arc_open.p2, a character crystallises the entire arc's conflict in ≤8 words — an ultimatum, threat, confession, or challenge. This question hangs unanswered until arc_close.
 
