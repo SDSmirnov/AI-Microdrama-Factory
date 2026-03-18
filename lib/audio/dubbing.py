@@ -135,7 +135,7 @@ def transcribe_video(
     segments_raw, _ = model.transcribe(
         temp_wav,
         beam_size=10,
-        language="en",
+        language="ru",
         word_timestamps=True,
         vad_filter=True,
         vad_parameters=dict(min_silence_duration_ms=100),
