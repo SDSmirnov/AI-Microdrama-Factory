@@ -289,6 +289,67 @@ def burn_subtitles(video_path: str, ass_path: str, output_path: str) -> None:
     subprocess.run(cmd, check=True)
 
 
+def _probe_duration(video_path: str) -> float:
+    try:
+        out = subprocess.run(
+            ["ffprobe", "-v", "error", "-show_entries", "format=duration",
+             "-of", "csv=p=0", video_path],
+            capture_output=True, text=True, check=True,
+        ).stdout.strip()
+        return float(out)
+    except Exception:
+        logger.warning("Could not probe video duration, defaulting to 60s")
+        return 60.0
+
+
+def render_subtitle_overlay(
+    ass_path: str,
+    width: int,
+    height: int,
+    duration: float,
+    output_path: str,
+    fps: int = 30,
+) -> None:
+    """Render karaoke subtitles onto a transparent background — no source video baked in.
+
+    Output codec is chosen by extension:
+      .mov  → ProRes 4444 (yuva444p10le) — best Shotcut/Resolve compatibility
+      .webm → VP9 (yuva420p)             — open format, slightly lossy alpha
+    Import the resulting file into Shotcut as a track above your video clip.
+    """
+    abs_ass = str(Path(ass_path).resolve())
+    out = Path(output_path)
+    ext = out.suffix.lower()
+
+    if ext == ".mp4":
+        output_path = str(out.with_suffix(".mov"))
+        logger.warning("MP4 does not support alpha — writing to %s instead", output_path)
+        ext = ".mov"
+
+    # Explicit RGBA zeroing before ass filter ensures non-subtitle pixels stay transparent.
+    # Without format=rgba+geq, lavfi color source may output RGB (no alpha channel),
+    # causing ass filter to composite onto opaque black.
+    if ext == ".webm":
+        pix_fmt = "yuva420p"
+        vf = f"format=rgba,geq=r=0:g=0:b=0:a=0,ass={abs_ass},format={pix_fmt}"
+        codec_args = ["-c:v", "libvpx-vp9", "-pix_fmt", pix_fmt, "-b:v", "0", "-crf", "18", "-an"]
+    else:  # .mov — use qtrle (QuickTime RLE): lossless, argb, universally supported with alpha
+        pix_fmt = "argb"
+        vf = f"format=rgba,geq=r=0:g=0:b=0:a=0,ass={abs_ass},format={pix_fmt}"
+        codec_args = ["-c:v", "qtrle", "-pix_fmt", pix_fmt, "-an"]
+
+    cmd = [
+        "ffmpeg", "-y",
+        "-f", "lavfi", "-i", f"color=black@0.0:size={width}x{height}:rate={fps}",
+        "-t", str(duration),
+        "-vf", vf,
+        *codec_args,
+        output_path,
+    ]
+    logger.info("Rendering transparent subtitle overlay: %s", " ".join(cmd))
+    subprocess.run(cmd, check=True)
+
+
 # ---------------------------------------------------------------------------
 # Transcribe video → SRT (for manual editing before dynamic-subtitles)
 # ---------------------------------------------------------------------------
@@ -332,8 +393,14 @@ def run_dynamic_subtitles(
     whisper_language: str | None = None,
     font_size: int = 68,
     margin_v: int = 120,
+    overlay_only: bool = False,
+    overlay_fps: int = 30,
 ) -> None:
-    """End-to-end: video + SRT → video with karaoke subtitle overlay + word-level SRT."""
+    """End-to-end: video + SRT → video with karaoke subtitle overlay (or transparent overlay).
+
+    overlay_only=True: output is a transparent ProRes 4444 / VP9 file (no source video baked in).
+    Import it as a track above your video in Shotcut/Resolve.
+    """
     logger.info("Step 1: Parsing SRT %s...", srt_path)
     phrases = parse_srt(srt_path)
     logger.info("  %d phrases", len(phrases))
@@ -361,6 +428,11 @@ def run_dynamic_subtitles(
     Path(word_srt_path).write_text(build_word_srt(phrases), encoding="utf-8")
     logger.info("  Word SRT → %s", word_srt_path)
 
-    logger.info("Step 5: Burning subtitles...")
-    burn_subtitles(video_path, ass_path, output_path)
+    if overlay_only:
+        logger.info("Step 5: Rendering transparent subtitle overlay...")
+        duration = _probe_duration(video_path)
+        render_subtitle_overlay(ass_path, width, height, duration, output_path, fps=overlay_fps)
+    else:
+        logger.info("Step 5: Burning subtitles...")
+        burn_subtitles(video_path, ass_path, output_path)
     logger.info("Done → %s", output_path)

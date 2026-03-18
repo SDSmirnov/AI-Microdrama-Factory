@@ -117,6 +117,9 @@ duck:  ## Duck original audio in VIDEO wherever DUBBED track speaks → OUTPUT m
 dynamic-subtitles:  ## Burn karaoke subtitles: INPUT=x.mp4 OUTPUT=x.sub.mp4 SRT=x.srt
 	python cli.py dynamic-subtitles $(INPUT) $(OUTPUT) --srt $(SRT)
 
+dynamic-subtitles-overlay:  ## Transparent subtitle overlay: INPUT=x.mp4 OUTPUT=x.overlay.mov SRT=x.srt
+	python cli.py dynamic-subtitles $(INPUT) $(OUTPUT) --srt $(SRT) --overlay-only
+
 summary:  ## Generate chapter_summary.txt context for the next chapter
 	python cli.py --llm $(LLM) summary $(NOVEL) --output chapter_summary.txt
 

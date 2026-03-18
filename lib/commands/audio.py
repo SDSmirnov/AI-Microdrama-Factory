@@ -116,8 +116,10 @@ def cmd_dynamic_subtitles(args):
         whisper_language=args.language,
         font_size=args.font_size,
         margin_v=args.margin_v,
+        overlay_only=args.overlay_only,
+        overlay_fps=args.overlay_fps,
     )
-    logger.info(f"\n✅ Dynamic subtitles done: {args.output}")
+    logger.info("\n✅ Dynamic subtitles done: %s", args.output)
 
 
 def cmd_duck(args):
@@ -185,6 +187,11 @@ def register(sub):
     p.add_argument('--ass-output', default=None, help='Save generated ASS file to this path')
     p.add_argument('--word-srt-output', default=None,
                    help='Save word-level SRT to this path')
+    p.add_argument('--overlay-only', action='store_true',
+                   help='Output transparent overlay instead of burning onto source video. '
+                        'Use .mov (ProRes 4444) or .webm (VP9) as output extension.')
+    p.add_argument('--overlay-fps', type=int, default=30,
+                   help='FPS for transparent overlay video (default: 30)')
     p.set_defaults(func=cmd_dynamic_subtitles)
 
     p = sub.add_parser('duck', help='Auto-duck original audio during dubbed speech')
