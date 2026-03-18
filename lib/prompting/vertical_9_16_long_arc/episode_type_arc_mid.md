@@ -34,7 +34,10 @@ State in screenplay_instructions: what physical motion or positioning signals th
 - The bridge must feel more urgent than the previous episode's bridge — the stakes are higher, the threshold closer to violence or collapse. Each successive arc_mid bridge should feel like a tighter spring than the last.
 
 **Motif echo (mandatory, place at P5):** The visual motif from arc_open must appear at the P5 pivot panel — same framing, same object or gesture, but with a slightly different emotional charge (no payoff — just recognition that the motif is building). Without payoff: the viewer feels it accumulate; save the transformation for arc_close.P9.
-State in screenplay_instructions: "MOTIF ECHO (P5): [original motif from arc_open] — [where it appears in this pivot, slightly more charged than arc_open, but no resolution]."
-Note in visual_continuity_rules: "MOTIF ECHO: [motif] — [brief appearance in P5 pivot, no transformation]."
+
+The motif MUST appear in `visual_start` of P5 as a described visual element — not only in voiceover or implied context. If the motif is "hands", then hands must be explicitly described in the P5 visual composition (e.g., "his hand rests on the armchair, knuckles just visible"). A voiceover reference to the motif without a visual anchor is a HARD FAILURE — the image model renders only what is written in visual_start/visual_end, not what is implied by audio.
+
+State in screenplay_instructions: "MOTIF ECHO (P5): [original motif] — [exact visual placement in P5 visual_start, slightly more charged than arc_open, no resolution]."
+Note in visual_continuity_rules: "MOTIF ECHO: [motif] — [visual_start description in P5, no transformation]."
 
 **Continuity:** All state changes must propagate to arc_close's visual_continuity_rules.

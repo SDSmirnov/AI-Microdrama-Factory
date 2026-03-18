@@ -224,13 +224,16 @@ VOICE BUDGET (hard technical limit): 16 characters per second × panel duration 
 DIALOGUE: ≤8 words per speaker line, CU on speaker's face. Populate both `dialogue` and `voiceover` for inner counterpoint.
 VOICEOVER: inner monologue revealing what the image cannot show. {target_language} language.
 
-DIALOGUE EXCHANGE CONTINUITY — HARD RULE (confrontation panels: confrontation_build, confrontation_peak, peak_intensity, twist, consequence, cliffhanger):
-A dialogue panel that shows a question, challenge, or ultimatum MUST include the response within the same panel OR the immediately following panel. NEVER cut away after a line that demands a reaction without showing that reaction first.
+DIALOGUE EXCHANGE CONTINUITY — HARD RULE (applies to ALL panels with dialogue, not just confrontation zone):
+Any line of dialogue that is a direct question, demand, or a statement addressed to a specific person in the scene MUST receive its verbal response within the same panel OR the immediately following panel. NEVER cut away after a line that demands a verbal reply without showing that reply first.
+
+This applies regardless of hook_type — emotional_capture, rising_action, complication, confrontation, all of them. If a character speaks TO another character and that other character would realistically say something back, the reply cannot be silently replaced by voiceover or a reaction ECU.
 
 Patterns that create "broken dialogue" — FORBIDDEN:
-- Panel A: Character X asks a question → Panel B: Character Y reacts in silence, question visually unanswered
+- Panel A: Character X asks a question → Panel B: Character Y reacts in silence or only in voiceover, question visually unanswered
 - Panel A: Character X makes a demand → Panel B: Cut to a different emotional beat entirely, demand never answered
-- Panel A: Character Y reveals information → Panel B: Character X reacts, but their VERBAL response to the revelation is dropped (voiceover doesn't count — the viewer expects X to SAY something)
+- Panel A: Character Y reveals information → Panel B: Character X reacts, but their VERBAL response to the revelation is dropped (voiceover doesn't count — the viewer expects X to SAY something aloud)
+- Panel A: Character X addresses Character Y directly → Panel B: Character Y's voiceover carries the response that should be spoken dialogue — HARD FAILURE: move it to dialogue
 
 HOW TO HANDLE MULTI-TURN EXCHANGES:
 1. SHORT EXCHANGE (Q+A, ≤2 turns, total ≤80 chars): pack both sides into one panel's `dialogue` field.
