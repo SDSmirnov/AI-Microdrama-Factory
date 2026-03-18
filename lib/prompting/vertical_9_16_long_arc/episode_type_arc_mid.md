@@ -33,6 +33,8 @@ State in screenplay_instructions: what physical motion or positioning signals th
 - visual_end must contain a match_cut shape connecting to arc_close's arc_pickup visual_start.
 - The bridge must feel more urgent than the previous episode's bridge — the stakes are higher, the threshold closer to violence or collapse. Each successive arc_mid bridge should feel like a tighter spring than the last.
 
-**Motif echo (mandatory):** The visual motif from arc_open must appear briefly in this episode (not as payoff — as recognition). Note in visual_continuity_rules: "MOTIF ECHO: [motif] — [where it appears, briefly, without transformation]."
+**Motif echo (mandatory, place at P5):** The visual motif from arc_open must appear at the P5 pivot panel — same framing, same object or gesture, but with a slightly different emotional charge (no payoff — just recognition that the motif is building). Without payoff: the viewer feels it accumulate; save the transformation for arc_close.P9.
+State in screenplay_instructions: "MOTIF ECHO (P5): [original motif from arc_open] — [where it appears in this pivot, slightly more charged than arc_open, but no resolution]."
+Note in visual_continuity_rules: "MOTIF ECHO: [motif] — [brief appearance in P5 pivot, no transformation]."
 
 **Continuity:** All state changes must propagate to arc_close's visual_continuity_rules.

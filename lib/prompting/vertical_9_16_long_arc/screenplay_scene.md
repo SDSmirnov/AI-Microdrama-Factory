@@ -18,6 +18,18 @@ For arc_pickup panels: `visual_start` must resume from the previous arc_bridge `
 
 If `screenplay_instructions` lacks a blueprint entry for a panel (e.g. transition episodes), infer from narrative context.
 
+## YOUTUBE COLD AUDIENCE TEST (mandatory for every arc_open.P1 and arc_pickup.P1)
+
+YouTube delivers mid-season arcs to cold audiences — viewers who have never seen this series. They can land on arc 4, episode 1 with zero prior context. If they cannot read the situation within 3 seconds of P1, they scroll.
+
+Cover the voiceover and dialogue in your mental image of P1's visual_start. Can a complete stranger read:
+1. **WHO has power?** — visible through spatial position, posture, distance, or prop ownership. Not through backstory.
+2. **WHERE are they?** — one visible environmental detail (desk + skyline = office, rain-streaked window = cafe, steering wheel = car).
+3. **WHAT conflict is active RIGHT NOW?** — a physical action or reaction visible in the frame. Not backstory tension — current tension.
+
+If any answer requires knowledge of prior episodes: rewrite visual_start.
+FORBIDDEN: "the viewer already knows she betrayed him" — not visible on screen without context. Make the current conflict state PHYSICALLY READABLE through posture, distance, object placement, and immediate action.
+
 ## INDEPENDENCE PROTOCOL — NON-NEGOTIABLE
 Each panel is rendered by a separate image-generation model that receives ONLY that panel's text — no history, no context, no memory.
 - FORBIDDEN: "same as before", "same POV", "same framing", "same appearance", "as in panel N", "continues from", "identical to", "as established".
@@ -82,14 +94,17 @@ Reserve for the exact instant a character faces a choice that changes everything
 WRONG: applying hesitation to confrontation, argument, revelation, or any panel where narrative momentum must continue.
 RIGHT: "At 0s hand hovers 5cm above the phone. At 2s finger descends and presses call. At 3s phone is at ear — decision made."
 If tempted to write hesitation for any other reason: don't. Move the character instead.
+HARD ENFORCEMENT: If a single gesture or held position spans more than 3 seconds without a physical state change in the motion_prompt — HARD FAILURE. A thumb hovering for 6 seconds is 3 seconds of usable footage wasted. Add what happens before (approach) and after (contact, response) to fill the clip.
 
 ## 9-PANEL STRUCTURE BY EPISODE TYPE
 
 ### arc_open — First Episode of the Arc Unit
 
 Mandatory panel structure:
-- P1: cold_open — EXPLANATION HOOK, interaction already in progress. The viewer sees something happening and needs to understand it: "what IS this?", "who IS this person?", "why ARE they doing that?". Duration: 3s hard cap.
-  TECHNICAL CONSTRAINT: after autocut, only 2–4s of the 6s clip is visible. motion_prompt[0s] MUST describe an ongoing physical action — NOT a character position or setup pose. "At 0s: [action already in progress]".
+- P1: cold_open — EXPLANATION HOOK, interaction already in progress. The viewer sees something happening and needs to understand it: "what IS this?", "who IS this person?", "why ARE they doing that?". Duration: 3s HARD CAP — set `duration: 3`, never 4, never 6.
+  TECHNICAL CONSTRAINT: after autocut, only 1–2s of the 3s clip is visible. motion_prompt[0s] MUST describe an ongoing physical action — NOT a character position or setup pose. "At 0s: [action already in progress]".
+  SELF-AUDIT: if motion_prompt[0s] contains "stands motionless", "sits still", "is perfectly still", "waits", "gazes", "stares" as primary state → HARD FAILURE. Rewrite.
+  YOUTUBE ENTRY TEST: cover voiceover and dialogue. Can a stranger identify power, location, and active conflict from visual_start alone? If not, rewrite.
   Choose one of five hook archetypes:
   * STATUS REVERSAL: protagonist caught in humiliation or subjugation — the viewer asks "why is this happening to them?"
   * IMPOSSIBLE SITUATION: no visible exit — the viewer asks "how did they end up here?"
@@ -104,7 +119,7 @@ Mandatory panel structure:
 - P4: first_escalation — first obstacle, complication, or pressure arrives.
 - P5: emotional_capture — point of no return: an action taken, a line crossed, a secret revealed. hook_type: emotional_capture. [≈30s mark]
 - P6: rising_action — stakes raised further. A new obstacle or revelation that makes escape impossible.
-- P7: pivot — ECU reaction shot at peak pressure, before the revelation. Duration 3–4s.
+- P7: pivot — ECU reaction shot at peak pressure, before the revelation. Duration 3–4s. No dialogue — but voiceover is MANDATORY: one line of inner monologue. Without it: a silent face with no text = dead screen for 80% of muted viewers = swipe. HARD FAILURE if voiceover is empty on any pivot panel.
 - P8: mid_revelation — new information changes the context of everything shown so far. Sets up what follows.
 - P9: arc_bridge — hook_type: arc_bridge. Physical suspension: action frozen mid-motion at the threshold. sound_design: silence. motion_prompt ends before the action resolves.
 
@@ -115,7 +130,7 @@ Mandatory panel structure:
 - P2: escalation_return — pressure from arc_open returns with increased force.
 - P3: complication — a new obstacle, dimension, or character reframes the situation.
 - P4: rising_pressure — the complication compounds; no clear exit visible.
-- P5: pivot — ECU reaction shot at peak pressure, before the new revelation. Duration 3–4s.
+- P5: pivot — ECU reaction shot at peak pressure, before the new revelation. Duration 3–4s. No dialogue — voiceover MANDATORY (inner monologue). HARD FAILURE if voiceover is empty.
 - P6: new_revelation — information that reframes arc_open's events and makes arc_close's confrontation inevitable.
 - P7: stakes_raised — the cost of the new revelation becomes visible and irreversible.
 - P8: pre_confrontation — the collision between forces is now inevitable; characters are on the collision course, closing distance.
@@ -140,7 +155,7 @@ The confrontation is already boiling. Arrive at it immediately.
 - P4: peak_intensity — the confrontation at its absolute summit before it breaks.
 
 **Panels P5–P9 are identical regardless of N:**
-- P5: pivot — ECU reaction shot after peak confrontation, before the twist. Duration 3–4s. Transition in via smash_cut.
+- P5: pivot — ECU reaction shot after peak confrontation, before the twist. Duration 3–4s. Transition in via smash_cut. No dialogue — voiceover MANDATORY (inner monologue). HARD FAILURE if voiceover is empty.
 - P6: twist — one fact changes everything. Arrives visually: a prop, a reflection, a door opening.
 - P7: reversal — power dynamic inverts. Delivered through physical action or discovery.
 - P8: consequence — the visible, irreversible cost of the reversal. Not resolution — the aftermath is still open.
@@ -208,6 +223,19 @@ VOICE BUDGET (hard technical limit): 16 characters per second × panel duration 
 
 DIALOGUE: ≤8 words, CU on speaker's face. Populate both `dialogue` and `voiceover` for inner counterpoint.
 VOICEOVER: inner monologue revealing what the image cannot show. {target_language} language.
+
+CAPTION CONTRACT (caption field — required for EVERY panel):
+`caption` is a persistent bottom-third text overlay, always visible regardless of audio state. It is a HOOK, not a summary.
+Rules:
+- ≤40 characters
+- NEVER narrates the action currently visible on screen (WRONG: "He called her number." — the viewer can see this)
+- Delivers the emotional punch, subtext, or an open question that makes the viewer need to see what happens next
+- RIGHT: "Thirty-one nights. One cracked screen." — adds subtext invisible on screen
+- RIGHT: "She laughed. With someone else." — delivers the emotional wound
+- SELF-TEST: if a stranger saw only the image + caption, would they pause their scroll? If not, rewrite.
+- For silent panels with no voiceover (a hard failure on its own — see above): the caption is the ONLY text the muted viewer sees. It must carry full emotional weight.
+
+sound_design=silence CLARIFICATION: `sound_design=silence` means the ambient/music/SFX channels are zeroed. The voiceover TTS track plays independently and is NOT silenced. NEVER write "complete silence" or "no sound" when a voiceover is present — write "ambient silence, voiceover only." Complete silence = audio team will mute TTS = caption is the only thing muted viewers see.
 
 SOUND DESIGN (sound_design) — required for EVERY panel:
 - Deliberate sonic contrast: sustained silence broken by a sharp sound > continuous noise — for the 20-40% watching with audio. For the 60-80% watching muted, silence = nothing. Never design a beat that only lands if the viewer can hear the absence of sound.

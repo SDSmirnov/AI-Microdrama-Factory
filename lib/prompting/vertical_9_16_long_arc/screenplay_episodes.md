@@ -36,10 +36,10 @@ __DUEL_INSTRUCTION__
 
 ```
 arc_open  (Ep1, P1–9):  cold_open → verbal_hook → context → escalation →
-                         emotional_capture → rising_action → atm_insert →
+                         emotional_capture → rising_action → pivot →
                          mid_revelation → arc_bridge
 arc_close (Ep2, P1–9):  arc_pickup → escalation_return → confrontation_build →
-                         confrontation_peak → atm_insert → twist → reversal →
+                         confrontation_peak → pivot → twist → reversal →
                          consequence → cliffhanger
 ```
 
@@ -47,13 +47,13 @@ arc_close (Ep2, P1–9):  arc_pickup → escalation_return → confrontation_bui
 
 ```
 arc_open  (Ep1, P1–9):  cold_open → verbal_hook → context → first_escalation →
-                         emotional_capture → rising_action → atm_insert →
+                         emotional_capture → rising_action → pivot →
                          mid_revelation → arc_bridge
 arc_mid   (Ep2, P1–9):  arc_pickup → escalation_return → complication →
-                         rising_pressure → atm_insert → new_revelation →
+                         rising_pressure → pivot → new_revelation →
                          stakes_raised → pre_confrontation → arc_bridge
 arc_close (Ep3, P1–9):  arc_pickup → confrontation_build → confrontation_peak →
-                         peak_intensity → atm_insert → twist → reversal →
+                         peak_intensity → pivot → twist → reversal →
                          consequence → cliffhanger
 ```
 
@@ -61,7 +61,7 @@ arc_close (Ep3, P1–9):  arc_pickup → confrontation_build → confrontation_p
 
 ```
 arc_open  (Ep1, P1–9):  cold_open → verbal_hook → context → first_escalation →
-                         emotional_capture → rising_action → atm_insert →
+                         emotional_capture → rising_action → pivot →
                          mid_revelation → arc_bridge
 arc_mid   (Ep2, P1–9):  arc_pickup → escalation_return → complication →
                          rising_pressure → pivot → new_revelation →
@@ -70,7 +70,7 @@ arc_mid   (Ep3, P1–9):  arc_pickup → deepening_complication → second_revel
                          countdown_pressure → pivot → point_of_no_return →
                          convergence → final_approach → arc_bridge
 arc_close (Ep4, P1–9):  arc_pickup → confrontation_build → confrontation_peak →
-                         peak_intensity → atm_insert → twist → reversal →
+                         peak_intensity → pivot → twist → reversal →
                          consequence → cliffhanger
 ```
 
@@ -78,7 +78,7 @@ arc_close (Ep4, P1–9):  arc_pickup → confrontation_build → confrontation_p
 
 ```
 arc_open  (Ep1, P1–9):  cold_open → verbal_hook → context → first_escalation →
-                         emotional_capture → rising_action → atm_insert →
+                         emotional_capture → rising_action → pivot →
                          mid_revelation → arc_bridge
 arc_mid   (Ep2, P1–9):  arc_pickup → escalation_return → complication →
                          rising_pressure → pivot → new_revelation →
@@ -90,7 +90,7 @@ arc_mid   (Ep4, P1–9):  arc_pickup → last_chance → ultimatum →
                          desperation_move → pivot → cost_revealed →
                          forced_choice → threshold_crossed → arc_bridge
 arc_close (Ep5, P1–9):  arc_pickup → confrontation_build → confrontation_peak →
-                         peak_intensity → atm_insert → twist → reversal →
+                         peak_intensity → pivot → twist → reversal →
                          consequence → cliffhanger
 ```
 
@@ -150,8 +150,13 @@ COLD OPEN FORBIDDEN PATTERNS (the AI defaults to these — reject them all):
 - Setup/orientation: any shot where the answer to "what is happening RIGHT NOW?" is "nothing yet"
 - Character introduction: first visual of character without immediate conflict context
 - Anticipation pose: hand hovering, finger poised, body "about to" act — the ABOUT TO is dead screen
+- Power display through inaction: a powerful character demonstrating status by NOT reacting while another person waits, speaks, or performs. Sitting still while someone prattles. Staring past someone dismissively. Refusing to acknowledge. These show power through ABSENCE of action — they are passive setups dressed as drama. Power in a cold open MUST be shown through an action that provokes a visible, physical reaction from another character in the same frame.
 
-COLD OPEN REQUIRED: Characters in active interaction — arguing mid-sentence, pushing/pulling an object, mid-reaction to an event. motion_prompt[0s]: "At 0s: [ongoing action already in progress]". If the source scene opens with passive setup, skip it — open on the arc's first moment of active conflict. P1 duration hard cap: 3s.
+COLD OPEN SELF-AUDIT — HARD CHECK before writing motion_prompt:
+If motion_prompt[0s] contains any of these as the primary state: "stands motionless", "sits still", "is perfectly still", "waits", "holds position", "gazes", "stares" — HARD FAILURE. Rewrite: open mid-action, something already physically happening. The first word after "At 0s" must be a verb of motion or active exchange.
+
+COLD OPEN REQUIRED: Characters in active interaction — arguing mid-sentence, pushing/pulling an object, mid-reaction to an event. motion_prompt[0s]: "At 0s: [ongoing action already in progress]". If the source scene opens with passive setup, skip it — open on the arc's first moment of active conflict.
+P1 DURATION HARD CAP: 3 seconds. Not 4. Not 6. After autocut, only 1–2s of this clip reaches the viewer. Set `duration: 3`.
 
 **The 7-Second Verbal Hook:** By arc_open.p2, a character crystallises the entire arc's conflict in ≤8 words — an ultimatum, threat, confession, or challenge. This question hangs unanswered until arc_close.
 
@@ -224,7 +229,7 @@ In N≥3 arcs: echo the motif briefly in each arc_mid (without payoff — just r
 11. SCREENPLAY_INSTRUCTIONS FORMAT SPEC — mandatory for all arc_open/arc_mid/arc_close episodes. (Transition episodes: visual rhyme and sonic texture only — no per-panel structure needed.)
 
 FORBIDDEN in screenplay_instructions: shorthand codes. These communicate nothing to the scene generator and produce panels that fail QA:
-  ✗ Role codes: "neutral", "context", "arc_pickup", "arc_bridge", "atm_insert"
+  ✗ Role codes: "neutral", "context", "arc_pickup", "arc_bridge", "pivot"
   ✗ Beat labels without content: "first_escalation", "rising_action", "pivot"
   ✗ Any label that names the beat but doesn't describe its visual content
 
