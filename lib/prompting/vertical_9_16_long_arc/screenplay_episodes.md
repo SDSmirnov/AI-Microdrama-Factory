@@ -197,7 +197,11 @@ The viewer rewinds because the image contains information they missed. End mid-b
 **Shot Scale Rhythm:** After 2–3 consecutive ECU/CU panels, insert MS or WIDE to re-establish spatial context.
 Note intended shot scale (ECU / CU / MS / WIDE) for each panel in screenplay_instructions.
 
-**Dialogue Contract:** Max 8 words per line. Interruptions. Silence.
+**Dialogue Contract:** Max 8 words per speaker line. Interruptions. Silence.
+**Dialogue Exchange Rule — confrontation zones only (confrontation_build through cliffhanger):**
+When the source contains a multi-turn exchange (A: challenge → B: response → A: counter), the DIALOGUE SEED must capture BOTH sides of each turn, not just the initiating line. A seed that shows only one side of a verbal exchange will produce a panel where the question hangs unanswered on screen — broken dialogue that the viewer reads as a production error.
+Format for exchange seeds: `A: "line" / B: "line"` — the scene generator will assign the right face CU for each.
+If a turn doesn't fit the panel's voice budget: allocate a second consecutive panel for the response. Do NOT drop the response. The confrontation arc is built from exchanges, not monologues.
 **Voiceover Contract:** Inner monologue. Reveals subtext — never narrates the visible.
 
 **Sonic Arc — plan across all N episodes in screenplay_instructions:**

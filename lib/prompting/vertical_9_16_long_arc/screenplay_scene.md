@@ -221,8 +221,28 @@ MANDATORY: plan the arc_bridge → arc_pickup seam as a match_cut across the epi
 
 VOICE BUDGET (hard technical limit): 16 characters per second × panel duration = maximum characters for dialogue + voiceover COMBINED. For a 6s panel: 96 chars total. For a 4s panel: 64 chars total. Exceeding this budget causes TTS to either truncate or produce garbled audio in I2V rendering — the line will not fit the clip. Count characters before writing. If dialogue uses 50 chars, voiceover has ≤46 chars remaining. If a panel has no dialogue, voiceover may use the full budget. A panel with both a full dialogue line AND a full voiceover line will almost always exceed budget — choose one or split across panels.
 
-DIALOGUE: ≤8 words, CU on speaker's face. Populate both `dialogue` and `voiceover` for inner counterpoint.
+DIALOGUE: ≤8 words per speaker line, CU on speaker's face. Populate both `dialogue` and `voiceover` for inner counterpoint.
 VOICEOVER: inner monologue revealing what the image cannot show. {target_language} language.
+
+DIALOGUE EXCHANGE CONTINUITY — HARD RULE (confrontation panels: confrontation_build, confrontation_peak, peak_intensity, twist, consequence, cliffhanger):
+A dialogue panel that shows a question, challenge, or ultimatum MUST include the response within the same panel OR the immediately following panel. NEVER cut away after a line that demands a reaction without showing that reaction first.
+
+Patterns that create "broken dialogue" — FORBIDDEN:
+- Panel A: Character X asks a question → Panel B: Character Y reacts in silence, question visually unanswered
+- Panel A: Character X makes a demand → Panel B: Cut to a different emotional beat entirely, demand never answered
+- Panel A: Character Y reveals information → Panel B: Character X reacts, but their VERBAL response to the revelation is dropped (voiceover doesn't count — the viewer expects X to SAY something)
+
+HOW TO HANDLE MULTI-TURN EXCHANGES:
+1. SHORT EXCHANGE (Q+A, ≤2 turns, total ≤80 chars): pack both sides into one panel's `dialogue` field.
+   Format: `"Speaker1 (voice): Line1\nSpeaker2 (voice): Line2"`
+   The camera holds on the LISTENER's face during the reaction turn — the emotional beat is in the face, not the speaker.
+2. LONGER EXCHANGE (3–4 turns): allocate two consecutive panels, one turn per panel. Panel N shows the challenge (CU on speaker), Panel N+1 shows the counter (CU on responder). Do NOT skip the counter to advance the emotional arc — the counter IS the emotional arc.
+3. REVELATION EXCHANGE ("Кто это?" / "Мой брат."): the trigger question has narrative value — include it. The revelation lands harder when the viewer sees the question that caused it. Both question and answer fit in one panel (total ≤40 chars).
+
+EXCHANGE COMPLETENESS CHECK (before finalizing any confrontation panel):
+- Does this panel's dialogue leave an open question that the next panel doesn't answer? → HARD FAILURE: include the answer in the next panel's dialogue.
+- Does the next panel's dialogue line presuppose an exchange the viewer never heard? → HARD FAILURE: include the trigger line in this panel.
+- Is the voiceover carrying a response that should be spoken dialogue? → HARD FAILURE: move it to dialogue. Inner monologue supplements speech; it never replaces it when the character would realistically speak.
 
 CAPTION CONTRACT (caption field — required for EVERY panel):
 `caption` is a persistent bottom-third text overlay, always visible regardless of audio state. It is a HOOK, not a summary.
