@@ -105,11 +105,17 @@ tts:  ## Generate audio: TYPE=speech TEXT="..." OUTPUT=out.wav  or  TYPE=sfx TEX
 voiceover:  ## Generate VOICEOVER_SH script with tts calls for all panel voiceovers
 	python cli.py voiceover --out-dir $(VOICEOVER_DIR) --output $(VOICEOVER_SH)
 
+srt:  ## Transcribe VIDEO with Whisper → OUTPUT SRT for manual editing
+	python cli.py srt $(VIDEO) $(OUTPUT)
+
 dub:  ## Smart-dub VIDEO → OUTPUT mp3 (optionally guided by CONTEXT file)
 	python cli.py dub $(VIDEO) $(OUTPUT) $(CONTEXT)
 
 duck:  ## Duck original audio in VIDEO wherever DUBBED track speaks → OUTPUT mp3
 	python cli.py duck $(VIDEO) $(DUBBED) $(OUTPUT)
+
+dynamic-subtitles:  ## Burn karaoke subtitles: INPUT=x.mp4 OUTPUT=x.sub.mp4 SRT=x.srt
+	python cli.py dynamic-subtitles $(INPUT) $(OUTPUT) --srt $(SRT)
 
 summary:  ## Generate chapter_summary.txt context for the next chapter
 	python cli.py --llm $(LLM) summary $(NOVEL) --output chapter_summary.txt

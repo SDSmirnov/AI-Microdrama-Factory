@@ -1,4 +1,4 @@
-"""Audio commands: tts, dub, voiceover, duck."""
+"""Audio commands: tts, dub, voiceover, duck, dynamic-subtitles."""
 import json
 import logging
 import re
@@ -93,6 +93,33 @@ def cmd_voiceover(args):
     logger.info(f"✅ {script_path} written: {count} voiceover(s)")
 
 
+def cmd_srt(args):
+    from lib.audio.dynamic_subtitles import run_transcribe_srt
+    run_transcribe_srt(
+        video_path=args.video,
+        output_path=args.output,
+        transcription_cache=args.transcription_cache,
+    )
+    logger.info(f"\n✅ SRT saved: {args.output}")
+
+
+def cmd_dynamic_subtitles(args):
+    from lib.audio.dynamic_subtitles import run_dynamic_subtitles
+    run_dynamic_subtitles(
+        video_path=args.input,
+        srt_path=args.srt,
+        output_path=args.output,
+        whisper_cache=args.whisper_cache,
+        ass_output=args.ass_output,
+        word_srt_output=args.word_srt_output,
+        use_whisper=not args.no_whisper,
+        whisper_language=args.language,
+        font_size=args.font_size,
+        margin_v=args.margin_v,
+    )
+    logger.info(f"\n✅ Dynamic subtitles done: {args.output}")
+
+
 def cmd_duck(args):
     run_ducking(
         video_path=args.video,
@@ -134,6 +161,31 @@ def register(sub):
     p.add_argument('--output', default='voiceover.sh',
                    help='Path for the generated shell script (default: voiceover.sh)')
     p.set_defaults(func=cmd_voiceover)
+
+    p = sub.add_parser('srt', help='Transcribe video with Whisper → SRT file for manual editing')
+    p.add_argument('video', help='Input video (MP4)')
+    p.add_argument('output', help='Output SRT file')
+    p.add_argument('--transcription-cache', default='transcription_cache.json',
+                   help='Whisper transcription cache file')
+    p.set_defaults(func=cmd_srt)
+
+    p = sub.add_parser('dynamic-subtitles', help='Burn karaoke-style dynamic subtitles onto video')
+    p.add_argument('input', help='Input video (MP4)')
+    p.add_argument('output', help='Output video with subtitle overlay (MP4)')
+    p.add_argument('--srt', required=True, help='Input SRT subtitle file (phrase-level)')
+    p.add_argument('--no-whisper', action='store_true',
+                   help='Skip Whisper alignment, use even word split')
+    p.add_argument('--language', default=None,
+                   help='Audio language for Whisper, e.g. "en", "ru" (auto-detect if omitted)')
+    p.add_argument('--font-size', type=int, default=68, help='Subtitle font size (default: 68)')
+    p.add_argument('--margin-v', type=int, default=120,
+                   help='Vertical margin from bottom in pixels (default: 120)')
+    p.add_argument('--whisper-cache', default='dynamic_subtitles_words.json',
+                   help='Whisper word timestamps cache file')
+    p.add_argument('--ass-output', default=None, help='Save generated ASS file to this path')
+    p.add_argument('--word-srt-output', default=None,
+                   help='Save word-level SRT to this path')
+    p.set_defaults(func=cmd_dynamic_subtitles)
 
     p = sub.add_parser('duck', help='Auto-duck original audio during dubbed speech')
     p.add_argument('video', help='Input MP4 with original audio')

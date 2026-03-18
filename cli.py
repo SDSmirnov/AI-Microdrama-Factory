@@ -24,8 +24,10 @@ Usage:
     python cli.py tts speech "Female [tone sad]: Hello world" out.wav
     python cli.py tts sfx "Loud explosion" 3 expl.mp3
     python cli.py voiceover [--out-dir cinematic_render/voiceover] [--output voiceover.sh]
+    python cli.py srt video.mp4 output.srt
     python cli.py dub video.mp4 output.mp3 [context.txt]
     python cli.py duck video.mp4 dubbed.mp3 output.mp3
+    python cli.py dynamic-subtitles input.mp4 output.mp4 --srt input.srt
     python cli.py summary s01e01.txt [--output summary.txt]
     python cli.py --llm openrouter --style vertical_9_16_microdrama split-book fullbook.txt [--output-dir book-split] [--season 1]
 """
