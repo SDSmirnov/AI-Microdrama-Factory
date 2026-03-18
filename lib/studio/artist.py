@@ -14,7 +14,7 @@ from typing import Optional
 
 from PIL import Image
 
-from lib.core.schemas import CHARACTER_SCHEMA, ENRICHMENT_SCHEMA, GRID_QA_SCHEMA
+from lib.core.schemas import ANCHOR_SCHEMA, CHARACTER_SCHEMA, ENRICHMENT_SCHEMA, GRID_QA_SCHEMA
 from lib.core.project import Project
 from lib.core.utils import grid_dims, is_portrait, panel_boxes, safe_name
 from lib.llm.base import BaseLLM
@@ -568,6 +568,100 @@ def remake_room_refs(config: dict, llm: BaseLLM, project: Project):
         logger.info(f"  ✅ Split complete: {name} → {len(views)} views")
 
     logger.info("  ✅ remake-room-refs done.")
+
+
+# ---------------------------------------------------------------------------
+# Room anchor generation
+# ---------------------------------------------------------------------------
+
+def _generate_room_anchors(ref: dict, llm: BaseLLM) -> dict:
+    """Call LLM to derive anchor_points from a View-From-Entrance room's visual_desc.
+
+    Returns anchor dict on success, empty dict on failure.
+    """
+    name = ref.get('name', '?')
+    desc = ref.get('visual_desc', '').strip()
+    if not desc:
+        logger.warning(f"  ⚠️  {name}: empty visual_desc — skipping anchor generation")
+        return {}
+
+    prompt = (
+        f"You are a spatial layout analyst. Convert the room description below into a precise "
+        f"coordinate anchor system for use by a cinematography AI.\n\n"
+        f"Room reference: {name}\n"
+        f"Camera view: View-From-Entrance (camera stands at the entrance looking INTO the room).\n\n"
+        f"VISUAL DESCRIPTION:\n{desc}\n\n"
+        f"INSTRUCTIONS:\n"
+        f"1. Define a 2D coordinate origin at the entrance door center (floor level). "
+        f"   X positive = East (right when entering). Y positive = into the room (South). Z positive = up.\n"
+        f"2. Estimate room_m = [width_x, depth_y] in meters from the description.\n"
+        f"3. Map every significant furniture item, fixture, wall feature as a named object anchor. "
+        f"   Use kebab-case ids (e.g. 'bar-counter', 'marble-table-1'). "
+        f"   Include 'notes' for tables to describe which side is left vs right from the entrance camera.\n"
+        f"4. Define named zones (functional areas: seating clusters, bar, entrance area, etc.). "
+        f"   For each zone write a visual_disposition_hint — a self-contained natural-language phrase "
+        f"   that pins a character to that zone without using coordinates. "
+        f"   The phrase must reference landmark objects so an image model can place the character correctly. "
+        f"   Example: 'seated on the LEFT side of the marble table (West chair), back to the brick wall, "
+        f"   gilded mirror centered in background'.\n"
+        f"5. Add an axes string that a downstream LLM can paste into a scene prompt.\n"
+        f"6. NOTE for downstream use: in View-To-Entrance perspective all X coordinates are negated "
+        f"   (180° turn — left and right swap). State this in the axes string.\n\n"
+        f"Return compact JSON only."
+    )
+    try:
+        result = llm.make_json(prompt, schema=ANCHOR_SCHEMA)
+        if result and result.get('zones'):
+            return result
+        logger.warning(f"  ⚠️  {name}: LLM returned empty anchor data")
+        return {}
+    except Exception as e:
+        logger.warning(f"  ⚠️  {name}: anchor generation failed: {e}")
+        return {}
+
+
+def run_room_anchors(project: Project, llm: BaseLLM):
+    """Generate anchor_points for all View-From-Entrance room refs that lack them.
+
+    Writes anchor_points field back into each ref's JSON file.
+    Idempotent: skips refs that already have anchor_points.
+    """
+    load_character_refs(project)
+
+    targets = [
+        (name, info)
+        for name, info in project.character_info.items()
+        if info.get('type') == 'Room'
+        and name.endswith('-View-From-Entrance')
+        and not info.get('anchor_points')
+    ]
+
+    if not targets:
+        logger.info("  ✅ All View-From-Entrance room refs already have anchor_points.")
+        return
+
+    logger.info(f"  📐 Generating anchor_points for {len(targets)} room ref(s).")
+
+    for name, info in targets:
+        logger.info(f"  🔍 {name} ...")
+        anchors = _generate_room_anchors(info, llm)
+        if not anchors:
+            continue
+
+        sname = safe_name(name)
+        json_path = project.ref_dir / f"{sname}.json"
+        try:
+            current = json.loads(json_path.read_text(encoding='utf-8'))
+            current['anchor_points'] = anchors
+            json_path.write_text(json.dumps(current, indent=2), encoding='utf-8')
+            project.character_info[name]['anchor_points'] = anchors
+            n_zones = len(anchors.get('zones', []))
+            n_obj = len(anchors.get('objects', []))
+            logger.info(f"  ✅ {name}: {n_zones} zones, {n_obj} objects")
+        except Exception as e:
+            logger.warning(f"  ⚠️  Failed to save anchors for {name}: {e}")
+
+    logger.info("  ✅ room-anchors done.")
 
 
 # ---------------------------------------------------------------------------

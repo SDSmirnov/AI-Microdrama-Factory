@@ -31,7 +31,7 @@ VOICEOVER_SH   ?= voiceover.sh
 NARRATIVE      ?=
 INDEX          ?=
 
-.PHONY: help init workdirs styles casting refs remake-room-refs screenplay scenes reverse-refine consistency storyboard qa apply-qa accept-qa rebuild-storyboard refinement animation \
+.PHONY: help init workdirs styles casting refs remake-room-refs room-anchors screenplay scenes reverse-refine consistency storyboard qa apply-qa accept-qa rebuild-storyboard refinement animation \
         autocut imgedit tts voiceover dub duck summary split-book panel-by-panel-with-qa extra-panel suno-prompt
 
 help:  ## Show this help
@@ -54,6 +54,9 @@ refs:  ## Render missing character reference portraits from existing JSONs
 
 remake-room-refs:  ## Split Room/Vehicle refs into separate per-view refs and render them
 	python cli.py --llm $(LLM) --style $(STYLE) remake-room-refs
+
+room-anchors:  ## Generate spatial anchor_points for View-From-Entrance room refs
+	python cli.py --llm $(LLM) --style $(STYLE) room-anchors
 
 screenplay:  ## Run full screenplay + scene keyframe pipeline
 	python cli.py --llm $(LLM) --style $(STYLE) screenplay $(NOVEL)

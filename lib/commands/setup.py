@@ -5,7 +5,7 @@ from pathlib import Path
 
 from lib.commands.common import _make_llm
 from lib.core.project import Project, load_project
-from lib.studio.artist import auto_cast_characters, remake_room_refs, render_character_refs
+from lib.studio.artist import auto_cast_characters, remake_room_refs, render_character_refs, run_room_anchors
 from lib.studio.stylist import analyze_novel, generate_custom_prompts
 
 logger = logging.getLogger(__name__)
@@ -63,6 +63,13 @@ def cmd_remake_room_refs(args):
     logger.info(f"\n✅ Done. Split view PNGs in {project.ref_dir}/")
 
 
+def cmd_room_anchors(args):
+    project, prompts, config = load_project(style=args.style)
+    llm = _make_llm(args.llm, project, system_prompt=prompts['screenplay'])
+    run_room_anchors(project, llm)
+    logger.info(f"\n✅ Done. Anchor points written to ref JSONs in {project.ref_dir}/")
+
+
 def register(sub):
     sub.add_parser('init', help='Validate env and create directories').set_defaults(func=cmd_init)
 
@@ -82,3 +89,9 @@ def register(sub):
         help='Split Room/Vehicle refs into separate per-view refs and render them',
     )
     p.set_defaults(func=cmd_remake_room_refs)
+
+    p = sub.add_parser(
+        'room-anchors',
+        help='Generate spatial anchor_points for View-From-Entrance room refs (idempotent)',
+    )
+    p.set_defaults(func=cmd_room_anchors)

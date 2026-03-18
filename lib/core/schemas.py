@@ -254,6 +254,66 @@ UPDATED_REF_SCHEMA = {
     "required": ["visual_desc", "video_visual_desc"]
 }
 
+ANCHOR_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "axes": {
+            "type": "string",
+            "description": (
+                "Coordinate system definition. Example: "
+                "'Origin (0,0) = entrance door center at floor level. "
+                "X positive = East (right when entering). "
+                "Y positive = South (into room, away from entrance). "
+                "Z positive = up. "
+                "NOTE: View-To-Entrance mirrors all X coordinates (left↔right swap).'"
+            ),
+        },
+        "room_m": {
+            "type": "array",
+            "items": {"type": "number"},
+            "description": "[width_x, depth_y] in meters",
+        },
+        "objects": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "id": {"type": "string", "description": "kebab-case identifier, e.g. 'marble-table-south'"},
+                    "label": {"type": "string"},
+                    "x": {"type": "number"},
+                    "y": {"type": "number"},
+                    "z": {"type": "number"},
+                    "notes": {"type": "string", "description": "Seating sides, orientation, structural notes"},
+                },
+                "required": ["id", "label", "x", "y", "z"],
+            },
+        },
+        "zones": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "id": {"type": "string", "description": "kebab-case zone id, e.g. 'bar-area'"},
+                    "label": {"type": "string"},
+                    "x": {"type": "number"},
+                    "y": {"type": "number"},
+                    "visual_disposition_hint": {
+                        "type": "string",
+                        "description": (
+                            "Natural-language anchor phrase for visual_disposition panel field. "
+                            "Must NOT use coordinates. Use landmark references instead. "
+                            "Example: 'seated on the left side of the marble table, back to the brick wall, "
+                            "gilded mirror centered behind'. Must be copy-pasteable into a panel prompt."
+                        ),
+                    },
+                },
+                "required": ["id", "label", "x", "y", "visual_disposition_hint"],
+            },
+        },
+    },
+    "required": ["axes", "room_m", "objects", "zones"],
+}
+
 SCENE_REWRITE_SCHEMA = {
     "type": "object",
     "properties": {
