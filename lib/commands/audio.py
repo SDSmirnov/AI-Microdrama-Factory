@@ -180,8 +180,8 @@ def register(sub):
     p.add_argument('--language', default=None,
                    help='Audio language for Whisper, e.g. "en", "ru" (auto-detect if omitted)')
     p.add_argument('--font-size', type=int, default=68, help='Subtitle font size (default: 68)')
-    p.add_argument('--margin-v', type=int, default=120,
-                   help='Vertical margin from bottom in pixels (default: 120)')
+    p.add_argument('--margin-v', type=int, default=340,
+                   help='Vertical margin from bottom in pixels (default: 340 ≈ 82%% from top, above YouTube Shorts UI)')
     p.add_argument('--whisper-cache', default='dynamic_subtitles_words.json',
                    help='Whisper word timestamps cache file')
     p.add_argument('--ass-output', default=None, help='Save generated ASS file to this path')

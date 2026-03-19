@@ -197,7 +197,7 @@ def build_ass(
     video_width: int = 1080,
     video_height: int = 1920,
     font_size: int = 68,
-    margin_v: int = 120,
+    margin_v: int = 340,
 ) -> str:
     """Build ASS subtitle content with \\kf karaoke fill tags.
 
