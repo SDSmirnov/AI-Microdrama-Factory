@@ -16,7 +16,7 @@ from PIL import Image
 
 from lib.core.schemas import ANCHOR_SCHEMA, CHARACTER_SCHEMA, ENRICHMENT_SCHEMA, GRID_QA_SCHEMA
 from lib.core.project import Project
-from lib.core.utils import grid_dims, is_portrait, panel_boxes, safe_name
+from lib.core.utils import atomic_write, grid_dims, is_portrait, panel_boxes, safe_name
 from lib.llm.base import BaseLLM
 
 logger = logging.getLogger(__name__)
@@ -352,6 +352,29 @@ def _render_single_ref(char: dict, config: dict, project: Project, llm: BaseLLM,
             img.close()
 
 
+def _topo_sort_refs(to_render: list) -> list:
+    """Sort (char, json_path) pairs so style_reference dependencies render before dependents."""
+    by_name = {c['name']: (c, jp) for c, jp in to_render}
+    visited: set = set()
+    result: list = []
+
+    def visit(name: str) -> None:
+        if name in visited:
+            return
+        visited.add(name)
+        pair = by_name.get(name)
+        if pair is None:
+            return
+        dep = pair[0].get('style_reference', '')
+        if dep and dep != name and dep in by_name:
+            visit(dep)
+        result.append(pair)
+
+    for name in list(by_name):
+        visit(name)
+    return result
+
+
 def render_character_refs(prompts: dict, config: dict, llm: BaseLLM, project: Project):
     """Render missing character reference portraits from ref_dir/*.json"""
     logger.info("\n🎭 RENDER REFS: Generating missing character reference portraits...")
@@ -373,6 +396,7 @@ def render_character_refs(prompts: dict, config: dict, llm: BaseLLM, project: Pr
         logger.info("  ✅ All character references already rendered.")
         return
 
+    to_render = _topo_sort_refs(to_render)
     logger.info(f"  📋 {len(to_render)} references to render.")
     failed = []
     for c, json_path in to_render:
@@ -382,7 +406,7 @@ def render_character_refs(prompts: dict, config: dict, llm: BaseLLM, project: Pr
             failed.append(c.get('name', '?'))
         elif c.get('needs_regenerate'):
             c.pop('needs_regenerate')
-            json_path.write_text(json.dumps(c, indent=2), encoding='utf-8')
+            atomic_write(json_path, json.dumps(c, indent=2))
 
     if failed:
         logger.warning(f"  ⚠️  {len(failed)}/{len(to_render)} ref(s) failed to render: {failed}. Run 'python cli.py refs' to retry.")
@@ -578,6 +602,11 @@ def remake_room_refs(config: dict, llm: BaseLLM, project: Project):
             prev_view_name = view_name
 
         logger.info(f"  ✅ Split complete: {name} → {len(views)} views")
+        # Clear any stale needs_regenerate from the monolithic ref — it's superseded by views.
+        if info.get('needs_regenerate'):
+            mono_json_path = project.ref_dir / f"{safe_name(name)}.json"
+            info.pop('needs_regenerate')
+            atomic_write(mono_json_path, json.dumps(info, indent=2))
 
     logger.info("  ✅ remake-room-refs done.")
 

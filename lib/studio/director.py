@@ -158,15 +158,14 @@ def enrich_and_regenerate_reference(
 
     ref_data['visual_desc'] = updated_desc['visual_desc']
     ref_data['video_visual_desc'] = updated_desc['video_visual_desc']
+    # Always mark before any write — cleared only on successful PNG render.
+    # Ensures make refs can retry if a crash occurs between JSON write and PNG render.
+    ref_data['needs_regenerate'] = True
+    atomic_write(json_path, json.dumps(ref_data, ensure_ascii=False, indent=2))
 
     if dry_run:
-        ref_data['needs_regenerate'] = True
-        atomic_write(json_path, json.dumps(ref_data, ensure_ascii=False, indent=2))
         logger.info(f"  ⏭️  Dry-run: skipping PNG regeneration for {ref_name} (run `make refs` to render)")
         return
-
-    # Keep needs_regenerate in JSON until render succeeds — cleared on success below.
-    atomic_write(json_path, json.dumps(ref_data, ensure_ascii=False, indent=2))
 
     logger.info(f"  🎨 Regenerating PNG for {ref_name}...")
     ref_prompt = (
