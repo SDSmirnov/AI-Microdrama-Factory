@@ -29,7 +29,7 @@ Apply to all characters visible at CU or closer:
 
 ## Location Color Signatures (use the matching signature per scene location)
 
-Visual variety across a 27-panel arc is not optional — monotone color grade kills mid-video retention. Each location type has its own color key. The contrast between signatures is what makes location changes VISIBLE IN THE EDIT without any title card.
+Visual variety across an 18-panel arc is not optional — monotone color grade kills mid-video retention. Each location type has its own color key. The contrast between signatures is what makes location changes VISIBLE IN THE EDIT without any title card.
 
 **CORPORATE / POWER SPACES** (offices, boardrooms, banks, lobbies):
 - Dominant: cool silver-blue + deep black
