@@ -172,7 +172,17 @@ def enrich_and_regenerate_reference(
 
     refs = []
     opened_imgs = []
-    if ref_data.get('style_reference') and ref_data['style_reference'] != ref_name:
+
+    # Backup existing PNG and use it as style anchor so regeneration preserves visual identity.
+    backup_path = ref_dir / f"{sname}-before-refinement.png"
+    if png_path.exists():
+        shutil.copy2(png_path, backup_path)
+        logger.info(f"  💾 Backed up existing PNG → {backup_path.name}")
+        refs.append(f"## Visual Style reference for {ref_name} (existing portrait — preserve identity)")
+        img = Image.open(backup_path)
+        opened_imgs.append(img)
+        refs.append(img)
+    elif ref_data.get('style_reference') and ref_data['style_reference'] != ref_name:
         style_path = ref_dir / f"{safe_name(ref_data['style_reference'])}.png"
         if style_path.exists():
             refs.append(f"## Visual Style reference for {ref_data['style_reference']}")
