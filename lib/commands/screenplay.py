@@ -13,8 +13,8 @@ from lib.core.utils import atomic_write
 from lib.studio.artist import export_image_prompt, load_character_refs
 from lib.studio.director import run_continuity_pass
 from lib.studio.screenwriter import (
-    analyze_scenes_master, merge_scenes, process_single_scene, run_scenes_pipeline,
-    _write_episode_checkpoint,
+    analyze_scenes_master, apply_spatial_disposition_pass, merge_scenes,
+    process_single_scene, run_scenes_pipeline, _write_episode_checkpoint,
 )
 
 logger = logging.getLogger(__name__)
@@ -331,6 +331,86 @@ def cmd_reverse_refine(args):
     logger.info(f"✅ animation_metadata.json updated: {len(metadata['scenes'])} total scene(s)")
 
 
+def cmd_disposition(args):
+    """Spatial disposition pass: assign visual_disposition to panels using room anchor_points."""
+    try:
+        ep_num = int(args.scene)
+    except (ValueError, TypeError):
+        logger.error("❌ SCENE must be an integer episode number.")
+        sys.exit(1)
+
+    project, prompts, config = load_project(style=args.style)
+    llm = _make_llm(args.llm, project, system_prompt=prompts['screenplay'])
+    load_character_refs(project)
+
+    refined_path = project.output_dir / f"animation_episode_scenes_{ep_num:03d}_refined.json"
+    if not refined_path.exists():
+        logger.error(
+            f"❌ {refined_path.name} not found. Run 'make reverse-refine SCENE={ep_num}' first."
+        )
+        sys.exit(1)
+
+    data = json.loads(refined_path.read_text(encoding='utf-8'))
+    scenes = data.get('scenes', [])
+    if not scenes:
+        logger.error(f"❌ No scenes in {refined_path.name}.")
+        sys.exit(1)
+
+    # Build {base_location_name: anchor_points} from View-From-Entrance refs
+    anchor_by_location: dict = {}
+    for name, info in project.character_info.items():
+        if info.get('type') == 'Room' and name.endswith('-View-From-Entrance'):
+            ap = info.get('anchor_points')
+            if ap:
+                base = name[: -len('-View-From-Entrance')]
+                anchor_by_location[base] = ap
+
+    if not anchor_by_location:
+        logger.error("❌ No room refs with anchor_points found. Run 'make room-anchors' first.")
+        sys.exit(1)
+
+    processed = 0
+    for scene in scenes:
+        location = scene.get('location', '')
+        anchor_points = anchor_by_location.get(location) or anchor_by_location.get(
+            location.replace(' ', '-')
+        )
+        if not anchor_points:
+            logger.warning(
+                f"  ⚠️  Scene {scene.get('scene_id', '?')} [{location}]: "
+                f"no anchor_points found — skipping. "
+                f"Available: {list(anchor_by_location)}"
+            )
+            continue
+        logger.info(f"  📐 Scene {scene.get('scene_id', '?')} [{location}] ...")
+        apply_spatial_disposition_pass(scene, anchor_points, llm)
+        processed += 1
+
+    if not processed:
+        logger.warning("  ⚠️  No scenes processed — check that location names match room ref names.")
+        return
+
+    out_path = project.output_dir / f"animation_episode_scenes_{ep_num:03d}_spatial.json"
+    atomic_write(out_path, json.dumps({'scenes': scenes}, ensure_ascii=False, indent=2))
+    logger.info(f"✅ Wrote {out_path.name} ({processed} scene(s) with visual_disposition)")
+
+    meta_path = project.output_dir / "animation_metadata.json"
+    if meta_path.exists():
+        try:
+            metadata = json.loads(meta_path.read_text(encoding='utf-8'))
+        except json.JSONDecodeError as e:
+            logger.error(f"❌ Corrupt animation_metadata.json: {e}.")
+            sys.exit(1)
+    else:
+        metadata = {}
+
+    new_ep_ids = {s.get('episode_id') for s in scenes if s.get('episode_id')}
+    metadata['scenes'] = merge_scenes(metadata, scenes, new_ep_ids, project.panels_dir)
+    metadata.setdefault('config', config)
+    atomic_write(meta_path, json.dumps(metadata, ensure_ascii=False, indent=2))
+    logger.info(f"✅ animation_metadata.json updated: {len(metadata['scenes'])} total scene(s)")
+
+
 def cmd_split_book(args):
     from lib.studio.bookbinder import split_book
 
@@ -372,6 +452,13 @@ def register(sub):
     p = sub.add_parser('reverse-refine', help='Refinement + reversal pass on existing raw episode JSON')
     p.add_argument('scene', type=int, help='Episode number (e.g. 2 → reads animation_episode_scenes_002.json)')
     p.set_defaults(func=cmd_reverse_refine)
+
+    p = sub.add_parser(
+        'disposition',
+        help='Spatial disposition pass: write visual_disposition per panel using room anchor_points',
+    )
+    p.add_argument('scene', type=int, help='Episode number (reads animation_episode_scenes_NNN_refined.json)')
+    p.set_defaults(func=cmd_disposition)
 
     p = sub.add_parser('consistency', help='Run continuity enforcer')
     p.add_argument('--dry-run', action=argparse.BooleanOptionalAction, default=True,

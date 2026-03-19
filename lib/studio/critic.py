@@ -119,7 +119,12 @@ def analyze_panel(
     visual_desc = panel_meta.get("visual_start", "") or panel_meta.get("visual_end", "")
     panel_type = panel_meta.get("panel_type", "narrative")
     prev_panels = [
-        {'panel_index': p['panel_index'], 'visual_desc': p['visual_end'], 'lights_and_camera': p.get('lights_and_camera', '')}
+        {
+            'panel_index': p['panel_index'],
+            'visual_desc': p['visual_end'],
+            'lights_and_camera': p.get('lights_and_camera', ''),
+            **({'visual_disposition': p['visual_disposition']} if p.get('visual_disposition') else {}),
+        }
         for p in scene_meta.get('panels', [])
         if p['panel_index'] < panel_meta['panel_index']
     ]
@@ -197,7 +202,7 @@ Lighting master: {scene_meta.get('lighting_master', 'N/A')}
 
 ## ANALYZED PANEL {panel_id} DESCRIPTION
 Visual: {visual_desc}
-Camera/Lighting: {panel_meta.get('lights_and_camera', '')}
+{f"Disposition: {panel_meta['visual_disposition']}" + chr(10) if panel_meta.get('visual_disposition') else ""}Camera/Lighting: {panel_meta.get('lights_and_camera', '')}
 Motion intent: {panel_meta.get('motion_prompt', '')[:300]}
 Expected characters/objects: {', '.join(ref_names) if ref_names else 'None specified'}
 

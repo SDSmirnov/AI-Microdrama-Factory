@@ -107,12 +107,14 @@ def _regenerate_t2i(
     aspect_ratio: str,
 ) -> bytes:
     """Full T2I regeneration for panels too broken for I2I editing."""
+    disposition = panel.get('visual_disposition', '')
     prompt = (
         f"Generate a SINGLE portrait {aspect_ratio} cinematic panel. "
         f"Location: {scene.get('location', '')}. "
         f"Scene: {scene.get('pre_action_description', '')}. "
         f"Visual: {visual_desc}. "
-        f"Camera/Lighting: {panel.get('lights_and_camera', '')}. "
+        + (f"Disposition: {disposition}. " if disposition else "")
+        + f"Camera/Lighting: {panel.get('lights_and_camera', '')}. "
         "Photorealistic, cinematic quality. NO CAPTIONS. NO TEXT OVERLAYS."
     )
     return llm.make_image(prompt, refs=char_refs, aspect_ratio=aspect_ratio, image_size='1K')
@@ -203,10 +205,12 @@ def refine_panel(
             img_bytes = _regenerate_t2i(llm, scene, panel, visual_desc, char_refs, aspect_ratio)
         else:
             logger.info(f"🎨 I2I refinement (fidelity={fidelity}, using {len(loaded_refs)} refs)...")
+            disposition = panel.get('visual_disposition', '')
             correction = panel_specific.strip() or (
                 f"Refine character appearances to match the provided references. "
                 f"Fix face, hair, clothing, accessories, and location details. "
                 f"Panel description: {visual_desc}"
+                + (f" Spatial disposition: {disposition}" if disposition else "")
             )
             correction = (
                 "Apply cinematic beauty standard: dewy skin, sharp catchlights, volumetric rim light, "

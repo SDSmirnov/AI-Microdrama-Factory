@@ -706,6 +706,8 @@ def _build_grid_prompt(scene: dict, prompts: dict, config: dict) -> str:
     for p in scene['panels']:
         prompt += f"\nPanel {p['panel_index']}:\n"
         prompt += f"  Visual: {p.get('visual_start', p.get('visual_end', ''))}\n"
+        if p.get('visual_disposition'):
+            prompt += f"  Disposition: {p['visual_disposition']}\n"
         if 'lights_and_camera' in p:
             prompt += f"  Camera: {p['lights_and_camera']}\n"
 
@@ -950,6 +952,8 @@ def _build_panel_prompt(scene: dict, panel: dict, frame_type: str, prompts: dict
         tags.append(panel['emotional_beat'])
     tag_str = f" [{' | '.join(tags)}]" if tags else ""
 
+    disposition_line = f"\nDisposition: {panel['visual_disposition']}" if panel.get('visual_disposition') else ""
+
     prompt = f"""{style_prompt}
 
 {imagery_prompt}
@@ -964,7 +968,7 @@ NO CAPTIONS. NO TEXT OVERLAYS. NO WATERMARKS. NO TEARS. NO SPITTING.
 Generate a SINGLE portrait image ({aspect_ratio}) for:
 Panel {panel['panel_index']} — {frame_type.upper()} frame{tag_str}
 
-Visual: {visual}
+Visual: {visual}{disposition_line}
 Camera / Lighting: {panel.get('lights_and_camera', '')}
 
 {"**IMPORTANT: THIS IS VERTICAL PORTRAIT IMAGE, IT SHOULD BE VIEWED NORMALLY, WITHOUT ROTATION**" if is_portrait(aspect_ratio) else ""}
@@ -1203,6 +1207,8 @@ def _build_image_prompt(scene: dict, prompts: dict, config: dict) -> str:
             prompt += f" [{p['emotional_beat']}]"
         prompt += "\n"
         prompt += f"  Visual: {p.get('visual_start', p.get('visual_end', ''))}\n"
+        if p.get('visual_disposition'):
+            prompt += f"  Disposition: {p['visual_disposition']}\n"
         if 'lights_and_camera' in p:
             prompt += f"  Camera: {p['lights_and_camera']}\n"
         if config['dialogue']['enabled'] and p.get('dialogue'):

@@ -1,12 +1,13 @@
-NOVEL          ?= s01e03.txt
+NOVEL          ?= s01e23.txt
+TARGET_LANGUAGE ?= Russian
 BOOK           ?= $(NOVEL)
 BOOK_OUT       ?= book-split
 SEASON         ?= 1
-STYLE          ?= vertical_9_16_microdrama
+STYLE          ?= vertical_9_16_long_arc
 SCENE     ?= all
 PANEL     ?= all
-PROVIDER  ?= veo
-LLM       ?= openrouter
+PROVIDER  ?= grok
+LLM       ?= gemini
 
 # Post-production defaults
 JSON        ?= cinematic_render/animation_metadata.json
@@ -31,7 +32,7 @@ VOICEOVER_SH   ?= voiceover.sh
 NARRATIVE      ?=
 INDEX          ?=
 
-.PHONY: help init workdirs styles casting refs remake-room-refs room-anchors screenplay scenes reverse-refine consistency storyboard qa apply-qa accept-qa rebuild-storyboard refinement animation \
+.PHONY: help init workdirs styles casting refs remake-room-refs room-anchors screenplay scenes reverse-refine disposition consistency storyboard qa apply-qa accept-qa rebuild-storyboard refinement animation \
         autocut imgedit tts voiceover dub duck summary split-book panel-by-panel-with-qa extra-panel suno-prompt
 
 help:  ## Show this help
@@ -66,6 +67,9 @@ scenes:  ## Generate keyframes for episode SCENE (or all)
 
 reverse-refine:  ## Refinement + reversal pass on existing raw episode JSON (SCENE=N required)
 	python cli.py --llm $(LLM) --style $(STYLE) reverse-refine $(SCENE)
+
+disposition:  ## Spatial disposition pass: write visual_disposition per panel (SCENE=N required)
+	python cli.py --llm $(LLM) --style $(STYLE) disposition $(SCENE)
 
 consistency:  ## Run continuity enforcer to sync references (dry-run by default; use RENDER=--no-dry-run to regenerate PNGs)
 	python cli.py --llm $(LLM) --style $(STYLE) consistency $(RENDER)

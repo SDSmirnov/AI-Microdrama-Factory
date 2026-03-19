@@ -14,7 +14,7 @@ from threading import Lock
 
 
 from lib.core.prompts import TARGET_LANGUAGE
-from lib.core.schemas import SCREENPLAY_SCHEMA, SCENE_SCHEMA, REVERSAL_SCHEMA
+from lib.core.schemas import SCREENPLAY_SCHEMA, SCENE_SCHEMA, REVERSAL_SCHEMA, SPATIAL_DISPOSITION_SCHEMA
 from lib.core.state import ProjectState
 from lib.core.utils import DEFAULT_OUTPUT_DIR, is_portrait
 from lib.llm.base import BaseLLM, retry_on_errors
@@ -638,6 +638,97 @@ PANELS TO PROCESS:
 
 
 # ---------------------------------------------------------------------------
+# Spatial disposition pass
+# ---------------------------------------------------------------------------
+def apply_spatial_disposition_pass(scene: dict, anchor_points: dict, llm: BaseLLM) -> dict:
+    """Write visual_disposition for each panel, grounded in room anchor_points.
+
+    Reads panels from scene, calls LLM once per scene with anchor coordinate context,
+    writes visual_disposition back into each panel dict in-place.
+    Skips panels where LLM returns no result; never raises.
+    """
+    scene_id = scene.get('scene_id', '?')
+    panels = scene.get('panels', [])
+    if not panels:
+        return scene
+
+    panels_context = [
+        {
+            'panel_index': p.get('panel_index'),
+            'visual_start': p.get('visual_start', ''),
+            'visual_end': p.get('visual_end', ''),
+            'motion_prompt': p.get('motion_prompt', ''),
+            'references': p.get('references', []),
+            'location_references': p.get('location_references', []),
+            'dialogue': p.get('dialogue', ''),
+        }
+        for p in panels
+    ]
+
+    prompt = f"""You are a spatial continuity supervisor for an AI-generated vertical drama series.
+
+Your task: write a visual_disposition field for EACH panel in the scene.
+
+visual_disposition is a compact natural-language string that pins every character present
+in the panel to a specific zone or anchor object in the room.
+It is injected verbatim into the image generation prompt alongside visual_start.
+It must be SELF-CONTAINED — no "same as before", no panel references.
+
+ROOM LOCATION: {scene.get('location', '')}
+
+ANCHOR POINTS (coordinate system + named zones with copy-paste hints):
+{json.dumps(anchor_points, ensure_ascii=False, indent=2)}
+
+RULES:
+1. Identify which characters are present from visual_start, visual_end, references, dialogue.
+2. Assign each character to the most appropriate zone from anchor_points.zones.
+   Use visual_disposition_hint verbatim or adapt it slightly to name the character explicitly.
+   For moving panels (non-empty motion_prompt): state BOTH the origin zone (visual_start) and
+   destination zone (visual_end), e.g. "Alisa moves FROM [table zone] TOWARD [bar zone]".
+3. Enforce cross-panel consistency: if a character is on the RIGHT side of a table in panel 1,
+   they stay on the RIGHT in all subsequent panels unless motion_prompt explicitly moves them.
+   Track position continuity across all panels before writing any.
+4. For tables: always state LEFT or RIGHT side from the entrance camera perspective.
+   Consult anchor_points.objects[].notes for seat-side definitions.
+5. If a panel uses View-To-Entrance (camera looking toward door): left↔right is mirrored —
+   state "MIRROR VIEW:" at the start and swap all left/right references.
+6. For single-character or no-character panels: state their distance from camera
+   (foreground / mid-ground / background) and which anchor object is behind them.
+7. Keep each visual_disposition under 80 words.
+
+SCENE PANELS:
+{json.dumps(panels_context, ensure_ascii=False, indent=2)}
+
+Return a JSON array: [{{"panel_index": N, "visual_disposition": "..."}}, ...]"""
+
+    @retry_on_errors(max_retries=3, backoff_factor=2)
+    def _call_api():
+        return llm.make_json(prompt, SPATIAL_DISPOSITION_SCHEMA)
+
+    result = _call_api()
+    if not result:
+        logger.error(f"      ❌ Spatial disposition LLM call returned empty for scene {scene_id}")
+        return scene
+
+    items = result if isinstance(result, list) else result.get('items', [])
+    disp_map = {
+        item['panel_index']: item['visual_disposition']
+        for item in items
+        if item.get('visual_disposition')
+    }
+
+    updated = 0
+    for p in panels:
+        idx = p.get('panel_index')
+        if idx in disp_map:
+            p['visual_disposition'] = disp_map[idx]
+            updated += 1
+
+    logger.info(f"      ✅ Spatial disposition: {updated}/{len(panels)} panels for scene {scene_id}")
+    return scene
+
+
+# ---------------------------------------------------------------------------
 # Checkpoint writer
 # ---------------------------------------------------------------------------
 def _write_episode_checkpoint(episode_counter: int, scenes: list, output_dir: Path):
@@ -687,6 +778,7 @@ def process_single_scene(
         panel.setdefault('transition_to_next', 'hard_cut')
         panel.setdefault('sound_design', 'silence')
         panel.setdefault('location_references', [])
+        panel.setdefault('visual_disposition', '')
 
     scene = refine_scenes_for_episode(scene, prompts, config, llm, character_info, prev_scene_terminal)
     scene = apply_reversal_pass(scene, prompts, config, llm)
