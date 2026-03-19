@@ -74,7 +74,7 @@ Plan a match_cut shape in visual_end that will connect to the next episode's arc
 **ARC PICKUP EXCEPTION — any episode's first panel (arc_pickup):**
 visual_start continues from the previous episode's arc_bridge visual_end: same location, same character, same physical position, 1–2 seconds later.
 motion_prompt begins from where the bridge ended — the action now completes.
-Voiceover carries the character's inner decision at the moment of crossing.
+Voiceover carries the character's inner decision at the moment of crossing — 4–5 words max.
 
 **motion_prompt DEFAULT — characters move. Every panel must have visible full-body physical action:**
 People walk, gesture, turn, approach, retreat, grab objects, lean in, stand up, sit down. A 6-second clip must show something visibly happening in physical space. Micro-expressions alone are dead screen.
@@ -119,18 +119,18 @@ Mandatory panel structure:
 - P4: first_escalation — first obstacle, complication, or pressure arrives.
 - P5: emotional_capture — point of no return: an action taken, a line crossed, a secret revealed. hook_type: emotional_capture. [≈30s mark]
 - P6: rising_action — stakes raised further. A new obstacle or revelation that makes escape impossible.
-- P7: pivot — ECU reaction shot at peak pressure, before the revelation. Duration 3–4s. No dialogue — but voiceover is MANDATORY: one line of inner monologue. Without it: a silent face with no text = dead screen for 80% of muted viewers = swipe. HARD FAILURE if voiceover is empty on any pivot panel.
+- P7: pivot — ECU reaction shot at peak pressure, before the revelation. Duration 3–4s. No dialogue — voiceover MANDATORY: 4–5 words of inner monologue, nothing more. Without it: a silent face with no text = dead screen for 80% of muted viewers = swipe. HARD FAILURE if voiceover is empty OR exceeds 5 words on any pivot panel.
 - P8: mid_revelation — new information changes the context of everything shown so far. Sets up what follows.
 - P9: arc_bridge — hook_type: arc_bridge. Physical suspension: action frozen mid-motion at the threshold. sound_design: silence. motion_prompt ends before the action resolves.
 
 ### arc_mid — Middle Episode (only in N=3 arcs)
 
 Mandatory panel structure:
-- P1: arc_pickup — hook_type: arc_pickup. Same location/moment as previous arc_bridge, 1–2 seconds later. Voiceover carries the inner decision.
+- P1: arc_pickup — hook_type: arc_pickup. Same location/moment as previous arc_bridge, 1–2 seconds later. Voiceover carries the inner decision — 4–5 words max.
 - P2: escalation_return — pressure from arc_open returns with increased force.
 - P3: complication — a new obstacle, dimension, or character reframes the situation.
 - P4: rising_pressure — the complication compounds; no clear exit visible.
-- P5: pivot — ECU reaction shot at peak pressure, before the new revelation. Duration 3–4s. No dialogue — voiceover MANDATORY (inner monologue). HARD FAILURE if voiceover is empty.
+- P5: pivot — ECU reaction shot at peak pressure, before the new revelation. Duration 3–4s. No dialogue — voiceover MANDATORY: 4–5 words of inner monologue, nothing more. HARD FAILURE if voiceover is empty OR exceeds 5 words.
 - P6: new_revelation — information that reframes arc_open's events and makes arc_close's confrontation inevitable.
 - P7: stakes_raised — the cost of the new revelation becomes visible and irreversible.
 - P8: pre_confrontation — the collision between forces is now inevitable; characters are on the collision course, closing distance.
@@ -155,7 +155,7 @@ The confrontation is already boiling. Arrive at it immediately.
 - P4: peak_intensity — the confrontation at its absolute summit before it breaks.
 
 **Panels P5–P9 are identical regardless of N:**
-- P5: pivot — ECU reaction shot after peak confrontation, before the twist. Duration 3–4s. Transition in via smash_cut. No dialogue — voiceover MANDATORY (inner monologue). HARD FAILURE if voiceover is empty.
+- P5: pivot — ECU reaction shot after peak confrontation, before the twist. Duration 3–4s. Transition in via smash_cut. No dialogue — voiceover MANDATORY: 4–5 words of inner monologue, nothing more. HARD FAILURE if voiceover is empty OR exceeds 5 words.
 - P6: twist — one fact changes everything. Arrives visually: a prop, a reflection, a door opening.
 - P7: reversal — power dynamic inverts. Delivered through physical action or discovery.
 - P8: consequence — the visible, irreversible cost of the reversal. Not resolution — the aftermath is still open.
@@ -222,7 +222,7 @@ MANDATORY: plan the arc_bridge → arc_pickup seam as a match_cut across the epi
 VOICE BUDGET (hard technical limit): 16 characters per second × panel duration = maximum characters for dialogue + voiceover COMBINED. For a 6s panel: 96 chars total. For a 4s panel: 64 chars total. Exceeding this budget causes TTS to either truncate or produce garbled audio in I2V rendering — the line will not fit the clip. Count characters before writing. If dialogue uses 50 chars, voiceover has ≤46 chars remaining. If a panel has no dialogue, voiceover may use the full budget. A panel with both a full dialogue line AND a full voiceover line will almost always exceed budget — choose one or split across panels.
 
 DIALOGUE: ≤8 words per speaker line, CU on speaker's face. Populate both `dialogue` and `voiceover` for inner counterpoint.
-VOICEOVER: inner monologue revealing what the image cannot show. {target_language} language.
+VOICEOVER: inner monologue revealing what the image cannot show. {target_language} language. HARD LIMIT: 4–5 words only. It is a reactive flash — a thought that crosses the face before the character acts. Longer inner monologue is a novel; this is a phone screen.
 
 DIALOGUE EXCHANGE CONTINUITY — HARD RULE (applies to ALL panels with dialogue, not just confrontation zone):
 Any line of dialogue that is a direct question, demand, or a statement addressed to a specific person in the scene MUST receive its verbal response within the same panel OR the immediately following panel. NEVER cut away after a line that demands a verbal reply without showing that reply first.
