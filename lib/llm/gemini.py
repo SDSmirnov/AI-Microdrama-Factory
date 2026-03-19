@@ -137,6 +137,7 @@ class GeminiLLM(BaseLLM):
                     contents=contents,
                     config={
                         'response_modalities': ['Image'],
+                        'temperature': temperature,
                         'image_config': {
                             'aspect_ratio': aspect_ratio,
                             'image_size': image_size,

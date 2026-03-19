@@ -333,82 +333,90 @@ def cmd_reverse_refine(args):
 
 def cmd_disposition(args):
     """Spatial disposition pass: assign visual_disposition to panels using room anchor_points."""
-    try:
-        ep_num = int(args.scene)
-    except (ValueError, TypeError):
-        logger.error("❌ SCENE must be an integer episode number.")
-        sys.exit(1)
+    scene_arg = args.scene
+    scene_filter = None
+    if scene_arg != 'all':
+        try:
+            scene_filter = int(scene_arg)
+        except (ValueError, TypeError):
+            logger.error("❌ SCENE must be an integer scene_id or 'all'.")
+            sys.exit(1)
 
     project, prompts, config = load_project(style=args.style)
     llm = _make_llm(args.llm, project, system_prompt=prompts['screenplay'])
     load_character_refs(project)
 
-    refined_path = project.output_dir / f"animation_episode_scenes_{ep_num:03d}_refined.json"
-    if not refined_path.exists():
-        logger.error(
-            f"❌ {refined_path.name} not found. Run 'make reverse-refine SCENE={ep_num}' first."
-        )
+    meta_path = project.output_dir / "animation_metadata.json"
+    if not meta_path.exists():
+        logger.error("❌ animation_metadata.json not found. Run 'make scenes' first.")
+        sys.exit(1)
+    try:
+        metadata = json.loads(meta_path.read_text(encoding='utf-8'))
+    except json.JSONDecodeError as e:
+        logger.error(f"❌ Corrupt animation_metadata.json: {e}.")
         sys.exit(1)
 
-    data = json.loads(refined_path.read_text(encoding='utf-8'))
-    scenes = data.get('scenes', [])
+    all_scenes = metadata.get('scenes', [])
+    scenes = all_scenes if scene_filter is None else [s for s in all_scenes if s.get('scene_id') == scene_filter]
     if not scenes:
-        logger.error(f"❌ No scenes in {refined_path.name}.")
+        target = 'any scene' if scene_filter is None else f"scene {scene_filter}"
+        logger.error(f"❌ No {target} found in animation_metadata.json.")
         sys.exit(1)
 
-    # Build {base_location_name: anchor_points} from View-From-Entrance refs
-    anchor_by_location: dict = {}
-    for name, info in project.character_info.items():
-        if info.get('type') == 'Room' and name.endswith('-View-From-Entrance'):
-            ap = info.get('anchor_points')
-            if ap:
-                base = name[: -len('-View-From-Entrance')]
-                anchor_by_location[base] = ap
+    # Index anchor_points by full View-From-Entrance ref name for direct lookup.
+    # scene['location'] is free-style text — never use it for matching.
+    # Instead, scan panel['location_references'] which contains exact ref names.
+    anchors_by_ref: dict = {
+        name: info['anchor_points']
+        for name, info in project.character_info.items()
+        if info.get('type') == 'Room'
+        and name.endswith('-View-From-Entrance')
+        and info.get('anchor_points')
+    }
 
-    if not anchor_by_location:
+    if not anchors_by_ref:
         logger.error("❌ No room refs with anchor_points found. Run 'make room-anchors' first.")
         sys.exit(1)
 
     processed = 0
+    prev_terminal_disposition = ''
+    prev_anchor_ref = None
     for scene in scenes:
-        location = scene.get('location', '')
-        anchor_points = anchor_by_location.get(location) or anchor_by_location.get(
-            location.replace(' ', '-')
-        )
+        scene_room_refs = {
+            ref
+            for panel in scene.get('panels', [])
+            for ref in panel.get('location_references', [])
+            if ref.endswith('-View-From-Entrance') and ref in anchors_by_ref
+        }
+        anchor_ref = next(iter(scene_room_refs), None)
+        anchor_points = anchors_by_ref[anchor_ref] if anchor_ref else None
         if not anchor_points:
             logger.warning(
-                f"  ⚠️  Scene {scene.get('scene_id', '?')} [{location}]: "
-                f"no anchor_points found — skipping. "
-                f"Available: {list(anchor_by_location)}"
+                f"  ⚠️  Scene {scene.get('scene_id', '?')}: no anchor_points in "
+                f"location_references — skipping. "
+                f"Refs present: {[r for p in scene.get('panels', []) for r in p.get('location_references', [])]}"
             )
+            prev_terminal_disposition = ''
+            prev_anchor_ref = None
             continue
-        logger.info(f"  📐 Scene {scene.get('scene_id', '?')} [{location}] ...")
-        apply_spatial_disposition_pass(scene, anchor_points, llm)
+
+        # Pass prev terminal only when same room ref — different room has no spatial continuity
+        terminal_ctx = prev_terminal_disposition if anchor_ref == prev_anchor_ref else ''
+
+        logger.info(f"  📐 Scene {scene.get('scene_id', '?')} [{scene.get('location', '')}] ...")
+        apply_spatial_disposition_pass(scene, anchor_points, llm, terminal_ctx)
         processed += 1
 
+        last_panel = max(scene.get('panels', []), key=lambda p: p.get('panel_index', 0), default=None)
+        prev_terminal_disposition = last_panel.get('visual_disposition', '') if last_panel else ''
+        prev_anchor_ref = anchor_ref
+
     if not processed:
-        logger.warning("  ⚠️  No scenes processed — check that location names match room ref names.")
+        logger.warning("  ⚠️  No scenes processed — check that room-anchors have been generated.")
         return
 
-    out_path = project.output_dir / f"animation_episode_scenes_{ep_num:03d}_spatial.json"
-    atomic_write(out_path, json.dumps({'scenes': scenes}, ensure_ascii=False, indent=2))
-    logger.info(f"✅ Wrote {out_path.name} ({processed} scene(s) with visual_disposition)")
-
-    meta_path = project.output_dir / "animation_metadata.json"
-    if meta_path.exists():
-        try:
-            metadata = json.loads(meta_path.read_text(encoding='utf-8'))
-        except json.JSONDecodeError as e:
-            logger.error(f"❌ Corrupt animation_metadata.json: {e}.")
-            sys.exit(1)
-    else:
-        metadata = {}
-
-    new_ep_ids = {s.get('episode_id') for s in scenes if s.get('episode_id')}
-    metadata['scenes'] = merge_scenes(metadata, scenes, new_ep_ids, project.panels_dir)
-    metadata.setdefault('config', config)
     atomic_write(meta_path, json.dumps(metadata, ensure_ascii=False, indent=2))
-    logger.info(f"✅ animation_metadata.json updated: {len(metadata['scenes'])} total scene(s)")
+    logger.info(f"✅ animation_metadata.json updated: {processed} scene(s) with visual_disposition")
 
 
 def cmd_split_book(args):
@@ -457,7 +465,7 @@ def register(sub):
         'disposition',
         help='Spatial disposition pass: write visual_disposition per panel using room anchor_points',
     )
-    p.add_argument('scene', type=int, help='Episode number (reads animation_episode_scenes_NNN_refined.json)')
+    p.add_argument('scene', nargs='?', default='all', help='Episode number or "all" (default: all)')
     p.set_defaults(func=cmd_disposition)
 
     p = sub.add_parser('consistency', help='Run continuity enforcer')

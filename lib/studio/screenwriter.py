@@ -640,11 +640,29 @@ PANELS TO PROCESS:
 # ---------------------------------------------------------------------------
 # Spatial disposition pass
 # ---------------------------------------------------------------------------
-def apply_spatial_disposition_pass(scene: dict, anchor_points: dict, llm: BaseLLM) -> dict:
+_TO_ENTRANCE_SUFFIXES = ('-View-To-Entrance', '-Interior-To-Entrance')
+
+
+def _panel_view_type(panel: dict) -> str:
+    """Return 'To-Entrance' if this panel's location_references indicate a reversed-axis view."""
+    for ref in panel.get('location_references', []):
+        if any(ref.endswith(s) for s in _TO_ENTRANCE_SUFFIXES):
+            return 'To-Entrance'
+    return 'From-Entrance'
+
+
+def apply_spatial_disposition_pass(
+    scene: dict,
+    anchor_points: dict,
+    llm: BaseLLM,
+    prev_terminal_disposition: str = '',
+) -> dict:
     """Write visual_disposition for each panel, grounded in room anchor_points.
 
     Reads panels from scene, calls LLM once per scene with anchor coordinate context,
     writes visual_disposition back into each panel dict in-place.
+    prev_terminal_disposition: visual_disposition of the last panel of the previous scene
+    in the same location — used to enforce cross-scene anchor consistency.
     Skips panels where LLM returns no result; never raises.
     """
     scene_id = scene.get('scene_id', '?')
@@ -655,6 +673,7 @@ def apply_spatial_disposition_pass(scene: dict, anchor_points: dict, llm: BaseLL
     panels_context = [
         {
             'panel_index': p.get('panel_index'),
+            'view_type': _panel_view_type(p),
             'visual_start': p.get('visual_start', ''),
             'visual_end': p.get('visual_end', ''),
             'motion_prompt': p.get('motion_prompt', ''),
@@ -678,23 +697,41 @@ ROOM LOCATION: {scene.get('location', '')}
 
 ANCHOR POINTS (coordinate system + named zones with copy-paste hints):
 {json.dumps(anchor_points, ensure_ascii=False, indent=2)}
+{f"""
+CROSS-SCENE ANCHOR CONTINUITY:
+The previous scene ended with this spatial disposition for its last panel:
+<PREV_SCENE_TERMINAL_DISPOSITION>
+{prev_terminal_disposition}
+</PREV_SCENE_TERMINAL_DISPOSITION>
+If this scene opens in the same physical location, character anchor assignments MUST be
+identical to the above — same chair, same wall, same zone. Do not reassign characters
+to different anchors unless motion_prompt explicitly moves them in this scene.
+""" if prev_terminal_disposition else ""}
+CRITICAL — USE ONLY PHYSICAL LANDMARKS. NEVER use "screen-left" or "screen-right".
+Screen direction depends on the camera angle in lights_and_camera and changes between panels —
+using screen directions in visual_disposition causes characters to appear to teleport when
+the camera moves. visual_disposition must be camera-agnostic.
+
+Use ONLY: compass walls (East wall / West wall / North wall / South wall),
+named anchor objects (West chair / East chair / bar counter / marble table / entrance door),
+physical relations (back to the brick wall / facing the gilded mirror / standing beside the bar counter).
+
+Each panel has a "view_type" field ("From-Entrance" or "To-Entrance") for your spatial reasoning only.
+Do NOT write "MIRROR VIEW:" or any screen-direction annotation in the output.
 
 RULES:
 1. Identify which characters are present from visual_start, visual_end, references, dialogue.
-2. Assign each character to the most appropriate zone from anchor_points.zones.
-   Use visual_disposition_hint verbatim or adapt it slightly to name the character explicitly.
-   For moving panels (non-empty motion_prompt): state BOTH the origin zone (visual_start) and
-   destination zone (visual_end), e.g. "Alisa moves FROM [table zone] TOWARD [bar zone]".
-3. Enforce cross-panel consistency: if a character is on the RIGHT side of a table in panel 1,
-   they stay on the RIGHT in all subsequent panels unless motion_prompt explicitly moves them.
-   Track position continuity across all panels before writing any.
-4. For tables: always state LEFT or RIGHT side from the entrance camera perspective.
-   Consult anchor_points.objects[].notes for seat-side definitions.
-5. If a panel uses View-To-Entrance (camera looking toward door): left↔right is mirrored —
-   state "MIRROR VIEW:" at the start and swap all left/right references.
-6. For single-character or no-character panels: state their distance from camera
-   (foreground / mid-ground / background) and which anchor object is behind them.
-7. Keep each visual_disposition under 80 words.
+2. Assign each character to the most appropriate zone using only physical landmark language.
+   For moving panels (non-empty motion_prompt): state BOTH the origin anchor (visual_start) and
+   destination anchor (visual_end), e.g. "Alisa moves FROM the marble table TOWARD the East wall bar counter".
+3. Enforce cross-panel consistency: a character in the West chair in panel 1 stays in the West chair
+   in all subsequent panels unless motion_prompt explicitly moves them.
+   Read ALL panels before writing any — assign anchors globally first.
+4. For tables: always name the physical chair (e.g. "West chair" / "East chair") per
+   anchor_points.objects[].notes. Never use screen directions.
+5. For single-character or no-character panels: name the nearest anchor object and depth
+   (close to camera / mid-room / far end of room).
+6. Keep each visual_disposition under 80 words.
 
 SCENE PANELS:
 {json.dumps(panels_context, ensure_ascii=False, indent=2)}
