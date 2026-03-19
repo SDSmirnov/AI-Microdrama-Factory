@@ -404,7 +404,8 @@ def cmd_disposition(args):
         terminal_ctx = prev_terminal_disposition if anchor_ref == prev_anchor_ref else ''
 
         logger.info(f"  📐 Scene {scene.get('scene_id', '?')} [{scene.get('location', '')}] ...")
-        apply_spatial_disposition_pass(scene, anchor_points, llm, terminal_ctx)
+        available_refs = frozenset(project.character_info.keys())
+        apply_spatial_disposition_pass(scene, anchor_points, llm, terminal_ctx, available_refs)
         processed += 1
 
         last_panel = max(scene.get('panels', []), key=lambda p: p.get('panel_index', 0), default=None)

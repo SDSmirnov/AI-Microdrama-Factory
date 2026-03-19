@@ -269,6 +269,18 @@ SPATIAL_DISPOSITION_SCHEMA = {
                     "Self-contained — no 'same as before' or cross-panel references."
                 ),
             },
+            "swap_view": {
+                "type": "boolean",
+                "description": (
+                    "True if the current view_type is cinematically wrong for this panel. "
+                    "Set to true ONLY when the panel requires face visibility "
+                    "(dialogue present, close-up reaction, emotional beat, confrontation) "
+                    "AND the current view_type puts the main character(s) with backs to the camera "
+                    "given their orientation relative to the entrance wall in anchor_points. "
+                    "Never set for intentional rear/silhouette/wide-establishing shots. "
+                    "Omit or false when unsure."
+                ),
+            },
         },
         "required": ["panel_index", "visual_disposition"],
     },

@@ -1,20 +1,15 @@
 {
   "novels": [
-    "s01e24.txt"
+    "s01e01.txt"
   ],
   "scene_files": [
     {
-      "episode": 24,
+      "episode": 1,
       "has_refined": true,
       "has_raw": true
     },
     {
-      "episode": 25,
-      "has_refined": true,
-      "has_raw": true
-    },
-    {
-      "episode": 26,
+      "episode": 2,
       "has_refined": true,
       "has_raw": true
     }

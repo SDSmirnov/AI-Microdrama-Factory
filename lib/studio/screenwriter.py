@@ -641,6 +641,12 @@ PANELS TO PROCESS:
 # Spatial disposition pass
 # ---------------------------------------------------------------------------
 _TO_ENTRANCE_SUFFIXES = ('-View-To-Entrance', '-Interior-To-Entrance')
+_VIEW_SWAP: dict[str, str] = {
+    'View-From-Entrance': 'View-To-Entrance',
+    'View-To-Entrance': 'View-From-Entrance',
+    'Interior-From-Entrance': 'Interior-To-Entrance',
+    'Interior-To-Entrance': 'Interior-From-Entrance',
+}
 
 
 def _panel_view_type(panel: dict) -> str:
@@ -651,11 +657,20 @@ def _panel_view_type(panel: dict) -> str:
     return 'From-Entrance'
 
 
+def _swap_view_ref(ref: str) -> str:
+    """Swap the view-axis suffix of a location ref name. Returns original if no suffix matches."""
+    for old, new in _VIEW_SWAP.items():
+        if ref.endswith(f'-{old}'):
+            return ref[: -len(old)] + new
+    return ref
+
+
 def apply_spatial_disposition_pass(
     scene: dict,
     anchor_points: dict,
     llm: BaseLLM,
     prev_terminal_disposition: str = '',
+    available_refs: frozenset[str] = frozenset(),
 ) -> dict:
     """Write visual_disposition for each panel, grounded in room anchor_points.
 
@@ -663,6 +678,7 @@ def apply_spatial_disposition_pass(
     writes visual_disposition back into each panel dict in-place.
     prev_terminal_disposition: visual_disposition of the last panel of the previous scene
     in the same location — used to enforce cross-scene anchor consistency.
+    available_refs: set of known ref names used to validate swap_view targets before applying.
     Skips panels where LLM returns no result; never raises.
     """
     scene_id = scene.get('scene_id', '?')
@@ -719,6 +735,23 @@ physical relations (back to the brick wall / facing the gilded mirror / standing
 Each panel has a "view_type" field ("From-Entrance" or "To-Entrance") for your spatial reasoning only.
 Do NOT write "MIRROR VIEW:" or any screen-direction annotation in the output.
 
+VIEW VALIDATION (optional field: swap_view):
+Camera axis semantics (derived from anchor_points entrance wall):
+  - "From-Entrance": camera stands AT the entrance looking INTO the room.
+    → Character facing entrance = face toward camera (visible).
+    → Character with back to entrance = back to camera.
+  - "To-Entrance": camera stands inside the room looking TOWARD the entrance.
+    → Character with back to entrance = face toward camera (visible).
+    → Character facing entrance = back to camera.
+For each panel, check whether the current view_type is cinematically correct:
+Set swap_view=true ONLY when ALL of the following are true:
+  1. The panel requires face visibility: dialogue is present, OR visual_start describes
+     a close-up, reaction shot, emotional beat, or confrontation.
+  2. The current view_type puts the main character(s) with backs to the camera given
+     their orientation relative to the entrance wall in anchor_points.
+Do NOT set swap_view=true for intentional rear shots, silhouettes, or wide establishing panels.
+Omit or set false when in doubt.
+
 RULES:
 1. Identify which characters are present from visual_start, visual_end, references, dialogue.
 2. Assign each character to the most appropriate zone using only physical landmark language.
@@ -736,7 +769,8 @@ RULES:
 SCENE PANELS:
 {json.dumps(panels_context, ensure_ascii=False, indent=2)}
 
-Return a JSON array: [{{"panel_index": N, "visual_disposition": "..."}}, ...]"""
+Return a JSON array: [{{"panel_index": N, "visual_disposition": "...", "swap_view": false}}, ...]
+Set swap_view=true only for panels where the view must be flipped (see VIEW VALIDATION above)."""
 
     @retry_on_errors(max_retries=3, backoff_factor=2)
     def _call_api():
@@ -753,15 +787,37 @@ Return a JSON array: [{{"panel_index": N, "visual_disposition": "..."}}, ...]"""
         for item in items
         if item.get('visual_disposition')
     }
+    swap_set = {item['panel_index'] for item in items if item.get('swap_view')}
 
     updated = 0
+    swapped = 0
     for p in panels:
         idx = p.get('panel_index')
         if idx in disp_map:
             p['visual_disposition'] = disp_map[idx]
             updated += 1
+        if idx in swap_set:
+            old_refs = p.get('location_references', [])
+            new_refs = [_swap_view_ref(r) for r in old_refs]
+            if new_refs == old_refs:
+                continue
+            if available_refs:
+                # Only flag refs that actually changed (have a known view suffix) and are absent.
+                missing = [r for r, o in zip(new_refs, old_refs) if r != o and r not in available_refs]
+                if missing:
+                    logger.warning(
+                        f"      ⚠️  Panel {idx}: swap_view=true but target ref(s) not found "
+                        f"— skipping swap. Missing: {missing}"
+                    )
+                    continue
+            p['location_references'] = new_refs
+            swapped += 1
+            logger.info(f"      🔄 Panel {idx}: view swapped {old_refs} → {new_refs}")
 
-    logger.info(f"      ✅ Spatial disposition: {updated}/{len(panels)} panels for scene {scene_id}")
+    logger.info(
+        f"      ✅ Spatial disposition: {updated}/{len(panels)} panels for scene {scene_id}"
+        + (f", {swapped} view(s) corrected" if swapped else "")
+    )
     return scene
 
 
