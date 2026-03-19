@@ -137,7 +137,9 @@ class GeminiLLM(BaseLLM):
                     contents=contents,
                     config={
                         'response_modalities': ['Image'],
-                        'temperature': temperature,
+                        'temperature': (temperature or 0.45),
+                        'seed': int(os.getenv('AI_SEED', '21')),
+                        'top_p': 0.8,
                         'image_config': {
                             'aspect_ratio': aspect_ratio,
                             'image_size': image_size,
@@ -180,7 +182,7 @@ class GeminiLLM(BaseLLM):
         contents.append(_as_content(src_img))
         contents.append(types.Part.from_text(text=f"Edit the last image above: {prompt}"))
 
-        gen_config: dict = {"response_modalities": ["Image"], "safety_settings": SAFETY}
+        gen_config: dict = {"response_modalities": ["Image"], "safety_settings": SAFETY, "temperature": 0.25, "seed": 42, "top_p": 0.8}
         img_cfg = {}
         if aspect_ratio:
             img_cfg['aspect_ratio'] = aspect_ratio

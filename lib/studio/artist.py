@@ -70,16 +70,18 @@ def _existing_refs_context(project: Project) -> str:
     """
     Build a human-readable block describing existing refs for the casting prompt.
 
-    Uses logline_subject_info when available; falls back to a truncated
-    video_visual_desc or visual_desc for backward compatibility with old JSONs.
+    Shows logline_subject_info (role) + video_visual_desc (canonical appearance)
+    so the LLM can enforce appearance inheritance for character variants.
+    Falls back gracefully for old JSONs missing these fields.
     """
     lines = []
     for name, info in project.character_info.items():
-        context = (
-            info.get('logline_subject_info')
-            or info.get('video_visual_desc', '')[:120]
-            or info.get('visual_desc', '')[:120]
-        )
+        role = info.get('logline_subject_info', '')
+        appearance = info.get('video_visual_desc') or info.get('visual_desc', '')
+        if role and appearance:
+            context = f"{role} | appearance: {appearance}"
+        else:
+            context = role or appearance
         lines.append(f"  - {name}: {context}")
     return "\n".join(lines) if lines else "  (none yet)"
 
@@ -182,6 +184,9 @@ DEDUPLICATION RULES — read carefully:
 - Match by IDENTITY, not by name. If a character/place in the text is the same entity as an existing reference (same role, same location, same object) — SKIP IT, even if the name differs slightly.
 - Only add a NEW entry if it is genuinely a different entity not yet covered above.
 - If unsure, prefer reusing an existing reference over creating a new one.
+
+APPEARANCE INHERITANCE — mandatory for character variants:
+- If a new ref is the same person as an existing character (same individual, different outfit/state/context), you MUST copy their physical attributes verbatim from the existing ref's appearance field above: hair color, hair style, face, skin tone, eye color, body type, age. Only describe what actually changes (clothing, accessories, emotional state). Never invent new physical traits that contradict an existing ref.
 
 For each NEW reference, provide:
   - name: short canonical label (letters, digits, hyphens only — no quotes or parentheses)
