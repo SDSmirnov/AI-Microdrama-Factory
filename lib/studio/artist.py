@@ -140,6 +140,7 @@ Text:
         try:
             char = json.loads(json_path.read_text(encoding='utf-8'))
             char['visual_desc'] = f"{char['visual_desc'].rstrip('. ')}. {additions}"
+            char['needs_regenerate'] = True
             json_path.write_text(json.dumps(char, indent=2), encoding='utf-8')
             project.character_info[name] = char
             logger.info(f"  ✏️  Enriched: {name} (+{len(additions)} chars)")
@@ -245,12 +246,12 @@ Text:
 # Character reference image rendering
 # ---------------------------------------------------------------------------
 
-def _render_single_ref(char: dict, config: dict, project: Project, llm: BaseLLM):
+def _render_single_ref(char: dict, config: dict, project: Project, llm: BaseLLM, force: bool = False):
     name = char['name']
     sname = safe_name(name)
     png_path = project.ref_dir / f"{sname}.png"
 
-    if png_path.exists():
+    if png_path.exists() and not force:
         logger.info(f"  ⏭  Skip {name} (PNG exists)")
         return
 
@@ -360,8 +361,11 @@ def render_character_refs(prompts: dict, config: dict, llm: BaseLLM, project: Pr
         try:
             char = json.loads(json_path.read_text(encoding='utf-8'))
             name = char.get('name', '')
-            if name and not (project.ref_dir / f"{safe_name(name)}.png").exists():
-                to_render.append(char)
+            if not name:
+                continue
+            png_missing = not (project.ref_dir / f"{safe_name(name)}.png").exists()
+            if png_missing or char.get('needs_regenerate'):
+                to_render.append((char, json_path))
         except Exception as e:
             logger.warning(f"  ⚠️  Could not read {json_path}: {e}")
 
@@ -371,11 +375,14 @@ def render_character_refs(prompts: dict, config: dict, llm: BaseLLM, project: Pr
 
     logger.info(f"  📋 {len(to_render)} references to render.")
     failed = []
-    for c in to_render:
+    for c, json_path in to_render:
         before = len(project.character_images)
-        _render_single_ref(c, config, project, llm)
+        _render_single_ref(c, config, project, llm, force=bool(c.get('needs_regenerate')))
         if len(project.character_images) == before:
             failed.append(c.get('name', '?'))
+        elif c.get('needs_regenerate'):
+            c.pop('needs_regenerate')
+            json_path.write_text(json.dumps(c, indent=2), encoding='utf-8')
 
     if failed:
         logger.warning(f"  ⚠️  {len(failed)}/{len(to_render)} ref(s) failed to render: {failed}. Run 'python cli.py refs' to retry.")

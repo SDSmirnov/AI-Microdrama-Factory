@@ -158,11 +158,15 @@ def enrich_and_regenerate_reference(
 
     ref_data['visual_desc'] = updated_desc['visual_desc']
     ref_data['video_visual_desc'] = updated_desc['video_visual_desc']
-    atomic_write(json_path, json.dumps(ref_data, ensure_ascii=False, indent=2))
 
     if dry_run:
+        ref_data['needs_regenerate'] = True
+        atomic_write(json_path, json.dumps(ref_data, ensure_ascii=False, indent=2))
         logger.info(f"  ⏭️  Dry-run: skipping PNG regeneration for {ref_name} (run `make refs` to render)")
         return
+
+    # Keep needs_regenerate in JSON until render succeeds — cleared on success below.
+    atomic_write(json_path, json.dumps(ref_data, ensure_ascii=False, indent=2))
 
     logger.info(f"  🎨 Regenerating PNG for {ref_name}...")
     ref_prompt = (
@@ -197,6 +201,8 @@ def enrich_and_regenerate_reference(
         if img_bytes:
             png_path.write_bytes(img_bytes)
             logger.info(f"    ✅ PNG saved: {png_path}")
+            ref_data.pop('needs_regenerate', None)
+            atomic_write(json_path, json.dumps(ref_data, ensure_ascii=False, indent=2))
         else:
             logger.error(f"    ❌ Empty image response for {ref_name}")
     except Exception as e:
