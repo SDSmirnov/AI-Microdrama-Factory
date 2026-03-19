@@ -50,9 +50,11 @@ Core pipeline stages:
 2. `casting`: detect references and write `ref_thriller/*.json`.
 3. `refs`: render missing reference portraits `ref_thriller/*.png`.
 3b. `remake-room-refs`: split Room/Vehicle refs into per-view variants (View-From-Entrance, View-To-Entrance, Exterior, etc.) and render each as a separate PNG.
+3c. `room-anchors`: generate spatial `anchor_points` for View-From-Entrance room refs (doors, windows, furniture landmarks used by the disposition pass).
 4. `screenplay`: generate episodes/scenes/reversal pass and `animation_metadata.json`.
 5. `scenes`: generate keyframes for specific episode(s) with cross-episode continuity rules and upsert into metadata.
 5b. `reverse-refine`: re-run refinement + reversal pass on an existing raw episode JSON without re-querying keyframes. Requires `SCENE=N`.
+5c. `disposition`: spatial disposition pass — writes `visual_disposition` per panel using room `anchor_points`. Requires `SCENE=N` or `all`.
 6. `consistency`: continuity enforcer — enrich ref JSONs from scene/location usage, re-align panel visuals to approved refs. Default: `--dry-run` (JSON only); use `--no-dry-run` or follow with `make refs` to regenerate PNGs.
 7. `storyboard`: render scene grids or individual panel images.
 7b. `panel-by-panel-with-qa`: render each panel one at a time with inline QA + refinement loop (up to `--max-attempts` retries). Requires `SCENE=N`.
@@ -63,8 +65,11 @@ Core pipeline stages:
 12. `refinement`: manually regenerate a specific panel frame.
 13. `animation`: generate clips with `veo` or `grok`.
 14. `autocut`, `voiceover`, `tts`, `dub`, `duck`: post-production helpers.
-15. `extra-panel`: generate a micro-panel not in the original screenplay → `cinematic_render/extra_panels/`.
-16. `summary`: AI-generated context summary of episode data for the next chapter → `chapter_summary.txt`.
+15. `srt`: transcribe video → SRT subtitle file (Whisper).
+16. `dynamic-subtitles`: burn karaoke-style subtitles; word-level or phrase-level timing; optional transparent overlay output.
+17. `suno-prompt`: generate Suno instrumental music prompt from episode metadata → `suno_prompt.txt`.
+18. `extra-panel`: generate a micro-panel not in the original screenplay → `cinematic_render/extra_panels/`.
+19. `summary`: AI-generated context summary of episode data for the next chapter → `chapter_summary.txt`.
 
 ## Install
 
@@ -99,6 +104,7 @@ Optional overrides:
 - `AI_IMAGE_SIZE` — override image resolution (e.g. `2K`)
 - `AI_REF_ASPECT_RATIO` — override reference portrait aspect ratio
 - `AI_VIDEO_TIMEOUT` (default: `600`) — Veo polling hard limit in seconds
+- `TARGET_LANGUAGE` (default: `English`) — dialogue/voiceover/caption language for generated text
 
 Note: `make init` validates `OPENROUTER_API_KEY`.
 
@@ -153,10 +159,11 @@ make animation PROVIDER=veo SCENE=all PANEL=all
 Use `make help` to list all targets. Current targets:
 
 - `init`, `workdirs`
-- `split-book`, `styles`, `casting`, `refs`, `remake-room-refs`, `screenplay`, `scenes`, `reverse-refine`, `consistency`
+- `split-book`, `styles`, `casting`, `refs`, `remake-room-refs`, `room-anchors`
+- `screenplay`, `scenes`, `reverse-refine`, `disposition`, `consistency`
 - `storyboard`, `panel-by-panel-with-qa`, `qa`, `apply-qa`, `accept-qa`, `rebuild-storyboard`, `refinement`, `animation`
-- `autocut`, `voiceover`, `imgedit`, `tts`, `dub`, `duck`
-- `summary`, `webserver`
+- `autocut`, `voiceover`, `imgedit`, `tts`, `dub`, `duck`, `srt`, `dynamic-subtitles`
+- `suno-prompt`, `summary`, `webserver`
 
 Important defaults from `Makefile`:
 
@@ -190,9 +197,11 @@ Commands (all accept `--style <preset>` where relevant; default: `vertical_9_16_
 - `casting <novel>`
 - `refs`
 - `remake-room-refs`
+- `room-anchors`
 - `screenplay <novel>`
 - `scenes [scene|all]`
 - `reverse-refine <scene>`
+- `disposition [scene|all]`
 - `consistency [--dry-run|--no-dry-run]`
 - `storyboard [scene|all] [panel|all]`
 - `qa [--scene N ...] [--panel N ...] [--threshold N]`
@@ -207,8 +216,11 @@ Commands (all accept `--style <preset>` where relevant; default: `vertical_9_16_
 - `imgedit <output> "<instruction>" <image> [ref_image ...]`
 - `tts speech "<voice/tone text>" <output>`
 - `tts sfx "<prompt>" <duration> <output>`
-- `dub <video.mp4> <output.mp3> [context.txt]`
+- `dub <video.mp4> <output.mp3> [context.txt] [--plan-cache FILE] [--transcription-cache FILE]`
 - `duck <video.mp4> <dubbed.mp3> <output.mp3>`
+- `srt <video.mp4> <output.srt> [--transcription-cache FILE]`
+- `dynamic-subtitles <input> <output> --srt <file> [--no-whisper] [--language LANG] [--font-size N] [--margin-v N] [--word-srt-output FILE] [--ass-output FILE] [--overlay-only] [--overlay-fps N]`
+- `suno-prompt`
 - `extra-panel <narrative.txt> --scene N --index N_M`
 - `summary <novel> [--output chapter_summary.txt]`
 
@@ -229,7 +241,6 @@ Primary generated files:
 - `cinematic_render/animation_episode_scenes_NNN.json`
 - `cinematic_render/animation_episode_scenes_NNN_refined.json`
 - `cinematic_render/animation_metadata.json`
-- `cinematic_render/image_prompts/` (per-scene image prompts)
 - `cinematic_render/scene_NNN_grid_combined.png`
 - `cinematic_render/panels/NNN_PP_{static|start|end}.png`
 - `cinematic_render/quality_report.json`
@@ -239,6 +250,7 @@ Primary generated files:
 - `cinematic_render/voiceover/*.wav` + `voiceover.sh` (after `voiceover`)
 - `cinematic_render/extra_panels/NNN_INDEX_static.png` (after `extra-panel`)
 - `chapter_summary.txt` (after `summary`)
+- `suno_prompt.txt` (after `suno-prompt`)
 
 Reference artifacts:
 
@@ -259,7 +271,7 @@ lib/
   studio/      # stylist/screenwriter/artist/critic/director/editor/cutter/retoucher/bookbinder
   commands/    # argparse command registration (setup/screenplay/storyboard/animation/audio)
   animation/   # Veo and Grok animators
-  audio/       # tts/dubbing/ducking
+  audio/       # tts/dubbing/ducking/dynamic_subtitles
 prompts/       # legacy fallback prompts (used only if lib/prompting/<style>/ is missing)
 custom_prompts/ # optional user override files (overlay on top of lib/prompting/<style>/)
 book-split/    # episode chunks written by split-book

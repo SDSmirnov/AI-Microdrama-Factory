@@ -114,7 +114,7 @@ lib/
     bookbinder.py   — split full novel into filmable episode chunks (sliding-window, anchor-based)
   commands/    # argparse command registration modules (setup, screenplay, storyboard, animation, audio)
   animation/   # Veo (Google) and Grok animators
-  audio/       # TTS (Gemini/OpenRouter), SFX (ElevenLabs), dubbing (Whisper→TTS), ducking
+  audio/       # TTS (Gemini/OpenRouter), SFX (ElevenLabs), dubbing (Whisper→TTS), ducking, dynamic subtitles
 ```
 
 ### Pipeline Stages (via `cli.py` subcommands)
@@ -126,9 +126,11 @@ All commands that load prompts accept the global `--style <preset>` flag (defaul
 2. **`casting`** (`artist.auto_cast_characters`): Identifies characters/locations/objects from text; saves reference JSONs to `ref_thriller/`
 3. **`refs`** (`artist.render_character_refs`): Generates missing reference portrait PNGs
 3b. **`remake-room-refs`** (`artist.remake_room_refs`): Splits monolithic Room/Vehicle refs into per-view variants — rooms get `View-From-Entrance` / `View-To-Entrance`; vehicles get `Exterior` / `Interior-From-Entrance` / `Interior-To-Entrance`. Renders each view as a separate PNG using architectural photography style (empty, no people). Run after `refs` when location consistency matters across opposing camera angles.
+3c. **`room-anchors`** (`artist.run_room_anchors`): Generates `anchor_points` for View-From-Entrance room refs — spatial landmarks (doors, windows, furniture positions) used by the disposition pass.
 4. **`screenplay`** (`screenwriter.analyze_scenes_master`): Episodes → scenes → refinement → reversal pass; writes `animation_metadata.json`
 5. **`scenes`** (`screenwriter.run_scenes_pipeline`): Per-episode keyframe generation with cross-episode continuity rules; upserts into `animation_metadata.json`
 5b. **`reverse-refine`** (`screenwriter.run_scenes_pipeline` refinement+reversal only): Re-runs refinement and reversal pass on an already-generated raw episode JSON (`animation_episode_scenes_NNN.json`) without re-querying keyframes. Requires `SCENE=N`.
+5c. **`disposition`** (`screenwriter.apply_spatial_disposition_pass`): Spatial disposition pass — uses room `anchor_points` to write `visual_disposition` per panel (character positions relative to spatial landmarks). Run after `room-anchors`. Requires `SCENE=N` or `all`.
 6. **`consistency`** (`director.run_continuity_pass`): Enriches ref JSONs from scene/location usage; re-aligns `visual_start`/`visual_end`/`lights_and_camera` to approved references. Default `--dry-run` enriches JSONs only — run `make refs` after to regenerate PNGs. Pass `--no-dry-run` to regenerate PNGs in one step.
 7. **`storyboard`** (`artist.render_scene_grids` / `render_panels`): Generates grid images or individual panel PNGs
 7b. **`panel-by-panel-with-qa`** (`artist.render_panel` + `critic` inline): Renders each panel one at a time, runs QA, and refines in-place up to `--max-attempts` times. Requires `SCENE=N`; optional `PANEL=N` to target one panel.
@@ -137,9 +139,12 @@ All commands that load prompts accept the global `--style <preset>` flag (defaul
 10. **`accept-qa`**: Promotes refined PNGs into `panels/`, backs up originals
 11. **`rebuild-storyboard`**: Rebuilds grid images from current `panels/`
 12. **`animation`** (`animation.VeoAnimator` / `GrokAnimator`): Image-to-video per panel
-13. **Post-production**: `autocut`, `voiceover`, `tts`, `dub`, `duck`
+13. **Post-production**: `autocut`, `voiceover`, `tts`, `dub`, `duck`, `srt`, `dynamic-subtitles`
 14. **`extra-panel`** (`artist.render_extra_panel`): Generates a micro-panel not in the original screenplay (e.g., for reaction shots between existing panels); writes to `cinematic_render/extra_panels/`
 15. **`summary`**: AI-generated context summary of current episode data for use in the next chapter prompt; writes to `chapter_summary.txt`
+16. **`suno-prompt`**: Generates a Suno-compatible instrumental music prompt from `animation_episodes.json` metadata; writes `suno_prompt.txt`.
+17. **`srt`**: Transcribes a video with Whisper → SRT subtitle file. Accepts `--transcription-cache` to skip re-transcription.
+18. **`dynamic-subtitles`**: Burns karaoke-style dynamic subtitles onto video (phrase-level or word-level). Supports `--no-whisper` (even word split), `--overlay-only` (transparent .mov/.webm instead of burned video), `--word-srt-output`, `--ass-output`, and `--overlay-fps`.
 
 ### Prompt System
 
@@ -149,7 +154,7 @@ All commands that load prompts accept the global `--style <preset>` flag (defaul
 | `custom_prompts/` | User override files; deep-merged on top of `lib/prompting/<style>/` at runtime |
 | `prompts/` | Legacy fallback only (used if `lib/prompting/<style>/` dir is missing) |
 
-`lib/prompting/<style>/` contains: `style.md`, `casting.md`, `scenery.md`, `imagery.md`, `screenplay.md`, `screenplay_scene.md`, `screenplay_episodes.md`, `qa.md`, `episode_type_pov.md`, `episode_type_confrontation.md`, `episode_type_transition.md`, `episode_type_arc_open.md`, `episode_type_arc_mid.md`, `episode_type_arc_close.md`, `refinement_arc_rule.md`, `config.json`, `book-shrinker.md`
+`lib/prompting/<style>/` contains: `style.md`, `casting.md`, `scenery.md`, `imagery.md`, `screenplay.md`, `screenplay_scene.md`, `screenplay_episodes.md`, `qa.md`, `episode_type_pov.md`, `episode_type_confrontation.md`, `episode_type_transition.md`, `episode_type_arc_open.md`, `episode_type_arc_mid.md`, `episode_type_arc_close.md`, `episode_type_duel.md` (long_arc only), `refinement_arc_rule.md`, `config.json`, `book-shrinker.md`
 
 Available built-in styles: `vertical_9_16_microdrama`, `vertical_9_16_long_arc`
 
@@ -162,20 +167,36 @@ cinematic_render/
   animation_episodes.json           # Master screenplay breakdown
   animation_episode_scenes_NNN.json # Per-episode raw keyframes
   animation_episode_scenes_NNN_refined.json  # Refined keyframes
-  animation_metadata.json           # Final merged scenes
+  animation_metadata.json           # Final merged scenes (single source of truth)
+  quality_report.json               # QA results per panel
   scene_NNN_grid_combined.png       # Full grid image per scene
   panels/
-    NNN_PP_static.png                    # Sliced panel images
+    NNN_PP_static.png               # Sliced panel images (static frame)
+    NNN_PP_start.png                # Start frame (for I2V animation)
+    NNN_PP_end.png                  # End frame (for I2V animation)
+  refined/
+    NNN_PP_static_refined.png       # Refined panels (before acceptance)
+  clips/
+    clip_NNN_PPP.mp4                # Generated animation clips
+  cut/
+    clip_NNN_PPP_trimmed.mp4        # Auto-trimmed clips (after autocut)
+  voiceover/
+    scene_NNN_PP_slug.wav           # Generated voiceover audio
   extra_panels/
-    NNN_INDEX_static.png                 # Extra micro-panels
+    NNN_INDEX_static.png            # Extra micro-panels
 chapter_summary.txt                 # AI context summary for next chapter
+suno_prompt.txt                     # Suno AI music prompt (after suno-prompt)
+voiceover.sh                        # Executable voiceover generation script
 ref_thriller/
   character-name.png   # Reference portrait
-  character-name.json  # Character visual metadata
+  character-name.json  # Character visual metadata (includes anchor_points after room-anchors)
   location-View-From-Entrance.png   # Per-view split (after remake-room-refs)
   location-View-From-Entrance.json
   location-View-To-Entrance.png
   location-View-To-Entrance.json
+  vehicle-Exterior.png              # Vehicle ref variants
+  vehicle-Interior-From-Entrance.png
+  vehicle-Interior-To-Entrance.png
 ```
 
 ### Rate Limiting
