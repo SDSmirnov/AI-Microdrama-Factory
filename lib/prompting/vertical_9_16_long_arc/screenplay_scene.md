@@ -90,6 +90,21 @@ A real human takes 0.2s to press a button, 0.5s to pick up a phone, 1s to stand 
 - NOT: "holds finger over the send button, hesitating, for the duration of the clip"
 Fill the time. If the core action takes 1s, add what happens before and after — the approach, the reaction, the consequence. A panel where nothing new happens between second 1 and second 5 is a failed panel. Each timestamped beat in motion_prompt must describe a DIFFERENT physical state than the previous beat.
 
+**TEMPORAL COMPRESSION LAW — when a physical action sequence takes ≤4 seconds in real life, it MUST be ONE panel:**
+Never map fast sequential events 1:1 to panels. If a character runs across a short space AND shouts AND collides — that is one continuous physical arc ≤4 seconds. Encode it as a single panel with a complex multi-beat motion_prompt. Three panels × 6s = 18 seconds of screen time for a 3-second real event — this is a broken clock.
+Diagnostic: before splitting a fast action into multiple panels, ask — how long does this physically take in real life? If the answer is ≤4s, collapse into one panel. The 6-second budget easily contains: sprint (2s) + shout mid-run (1s) + collision (0.5s) + impact held (2.5s).
+WRONG: panel 2 = "running", panel 3 = "shouts over shoulder while running", panel 4 = "door hits face" — three panels for four seconds of reality.
+RIGHT: one panel, motion_prompt: "At 0s character is mid-sprint, arms pumping. At 2.5s twists upper body back over right shoulder, mouth opening wide. At 4s door swings into frame from the left. At 4.5s door makes full contact with face. From 4.5s to 6s camera holds on the door filling the frame."
+Rule of thumb: any transition_to_next=hard_cut between two panels where BOTH motion_prompts describe parts of the SAME continuous physical action is a red flag — merge them.
+Camera movement is the compression tool: `lights_and_camera` describes the opening camera position; `motion_prompt` must describe how the camera moves through the action. A single panel can travel from MS tracking shot → crash-zoom into ECU at the impact moment. This is one clip, not three panels. Use it:
+- Tracking MS that crash-zooms to ECU face at the moment of collision
+- Dolly-in from wide to CU timed to the emotional peak
+- Camera whip-pan that reorients from one subject to another mid-action
+- Pull-back reveal that widens from ECU to MS as the full situation becomes clear
+WRONG: lights_and_camera = "MS tracking" → separate panel lights_and_camera = "CU static" → separate panel lights_and_camera = "ECU"
+RIGHT (one panel): lights_and_camera = "Starts MS tracking; motion_prompt drives crash-zoom to ECU on impact." motion_prompt: "At 0s camera tracks at MS, moving parallel. At 4s camera begins rapid push-in. At 4.5s full ECU on face fills frame — wide eyes, door edge entering from left. At 4.8s impact; camera holds ECU."
+SLOW-MOTION CONSTRAINT: do NOT write speed transitions within a single clip (normal speed → slow-mo or vice versa). Video models render the entire clip at one speed. If slow-motion is needed for a key impact moment, set the entire clip's motion to slow-motion in motion_prompt and lights_and_camera — never as a mid-clip transition.
+
 **motion_prompt HESITATION — use ONLY for a single life-altering decision moment (≤1 panel per episode, never P1–P3):**
 Reserve for the exact instant a character faces a choice that changes everything. Maximum 3 seconds of deliberation before the action resolves.
 WRONG: applying hesitation to confrontation, argument, revelation, or any panel where narrative momentum must continue.
