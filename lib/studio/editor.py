@@ -105,17 +105,30 @@ def _regenerate_t2i(
     visual_desc: str,
     char_refs: list,
     aspect_ratio: str,
+    prompts: dict = None,
 ) -> bytes:
     """Full T2I regeneration for panels too broken for I2I editing."""
     disposition = panel.get('visual_disposition', '')
+    lighting_context = " | ".join(filter(None, [
+        scene.get('camera_master', ''),
+        scene.get('lighting_master', ''),
+        panel.get('lights_and_camera', ''),
+    ]))
+    style_block = "\n\n".join(filter(None, [
+        (prompts or {}).get('style', ''),
+        (prompts or {}).get('imagery', ''),
+        (prompts or {}).get('setting', ''),
+    ]))
     prompt = (
-        f"Generate a SINGLE portrait {aspect_ratio} cinematic panel. "
+        (f"{style_block}\n\n" if style_block else "")
+        + f"Generate a SINGLE portrait {aspect_ratio} cinematic panel. "
         f"Location: {scene.get('location', '')}. "
         f"Scene: {scene.get('pre_action_description', '')}. "
         f"Visual: {visual_desc}. "
         + (f"Disposition: {disposition}. " if disposition else "")
-        + f"Camera/Lighting: {panel.get('lights_and_camera', '')}. "
-        "Photorealistic, cinematic quality. NO CAPTIONS. NO TEXT OVERLAYS."
+        + (f"Camera/Lighting: {lighting_context}. " if lighting_context else "")
+        + "CONSISTENCY RULE: Maintain IDENTICAL face, hair, clothing, and body proportions as shown in the reference images. "
+        + "NO CAPTIONS. NO TEXT OVERLAYS. NO WATERMARKS. NO TEARS. NO SPITTING."
     )
     return llm.make_image(prompt, refs=char_refs, aspect_ratio=aspect_ratio, image_size='1K')
 
@@ -129,6 +142,7 @@ def refine_panel(
     llm: BaseLLM,
     quality_prompts: Dict[str, dict] = None,
     project: Project = None,
+    prompts: Dict = None,
 ) -> bool:
     panels_dir = project.panels_dir if project else DEFAULT_OUTPUT_DIR / "panels"
     refined_dir = project.refined_dir if project else DEFAULT_OUTPUT_DIR / "refined"
@@ -152,7 +166,7 @@ def refine_panel(
         logger.error(f"❌ Panel file not found: {original_path}")
         return False
 
-    references = panel.get('references', [])
+    references = list(set(panel.get('references', []) + panel.get('location_references', [])))
     if not references:
         logger.warning(
             f"⚠️  Scene {scene_id} panel {panel_id}: no references specified, "
@@ -202,20 +216,26 @@ def refine_panel(
                 f"🔄 Fidelity={fidelity} < {_REGEN_FIDELITY_THRESHOLD} — full T2I regeneration "
                 f"(using {len(loaded_refs)} refs)..."
             )
-            img_bytes = _regenerate_t2i(llm, scene, panel, visual_desc, char_refs, aspect_ratio)
+            img_bytes = _regenerate_t2i(llm, scene, panel, visual_desc, char_refs, aspect_ratio, prompts=prompts)
         else:
             logger.info(f"🎨 I2I refinement (fidelity={fidelity}, using {len(loaded_refs)} refs)...")
             disposition = panel.get('visual_disposition', '')
+            lighting_context = " | ".join(filter(None, [
+                scene.get('camera_master', ''),
+                scene.get('lighting_master', ''),
+                panel.get('lights_and_camera', ''),
+            ]))
             correction = panel_specific.strip() or (
                 f"Refine character appearances to match the provided references. "
                 f"Fix face, hair, clothing, accessories, and location details. "
                 f"Panel description: {visual_desc}"
                 + (f" Spatial disposition: {disposition}" if disposition else "")
             )
+            imagery_rules = (prompts or {}).get('imagery', '')
             correction = (
-                "Apply cinematic beauty standard: dewy skin, sharp catchlights, volumetric rim light, "
-                "luxury teal-and-orange grade. "
+                (f"{imagery_rules}\n\n" if imagery_rules else "")
                 + correction
+                + (f" Required camera/lighting: {lighting_context}." if lighting_context else "")
                 + " Preserve composition, framing, camera angle, lighting mood, and character poses exactly."
             )
             try:
@@ -228,7 +248,7 @@ def refine_panel(
                 )
             except Exception as e:
                 logger.warning(f"  ⚠️  edit_image failed ({e}), falling back to T2I regeneration...")
-                img_bytes = _regenerate_t2i(llm, scene, panel, visual_desc, char_refs, aspect_ratio)
+                img_bytes = _regenerate_t2i(llm, scene, panel, visual_desc, char_refs, aspect_ratio, prompts=prompts)
     except Exception as e:
         logger.error(f"❌ Generation error: {e}", exc_info=True)
         return False

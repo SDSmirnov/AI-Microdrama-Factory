@@ -111,7 +111,7 @@ def cmd_apply_qa(args):
         panel_id = panel_info['panel_id']
         for frame_type in frames:
             total += 1
-            if refine_panel(scene_id, panel_id, frame_type, metadata, config, llm, quality_prompts, project=project):
+            if refine_panel(scene_id, panel_id, frame_type, metadata, config, llm, quality_prompts, project=project, prompts=prompts):
                 success += 1
     logger.info(f"\n✅ {success}/{total} frame(s) refined.")
 
@@ -128,7 +128,7 @@ def cmd_refinement(args):
     for frame_type in frames:
         if refine_panel(
             args.scene_id, args.panel_id, frame_type,
-            metadata, config, llm, quality_prompts, project=project
+            metadata, config, llm, quality_prompts, project=project, prompts=prompts
         ):
             success += 1
     logger.info(f"\n✅ {success}/{len(frames)} frames refined.")
@@ -479,7 +479,7 @@ def cmd_panel_by_panel_qa(args):
             if refined_path.exists():
                 refined_path.unlink()
 
-            if not refine_panel(scene_id, pid, 'static', metadata, config, vision_llm, quality_prompts, project=project):
+            if not refine_panel(scene_id, pid, 'static', metadata, config, vision_llm, quality_prompts, project=project, prompts=prompts):
                 logger.error(f"  ❌ Refinement failed for panel {pid}, stopping retries")
                 break
 

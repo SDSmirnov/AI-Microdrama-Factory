@@ -96,7 +96,9 @@ def analyze_panel(
     prev_scene_terminal: str = None,
     prompts: dict = None,
 ) -> Dict:
-    ref_names = panel_meta.get("references", [])
+    char_ref_names = panel_meta.get("references", [])
+    loc_ref_names = panel_meta.get("location_references", [])
+    ref_names = list(dict.fromkeys(char_ref_names + loc_ref_names))  # preserve order, dedupe
     ref_images_content: List[Any] = []
     ref_descriptions: List[str] = []
     loaded_refs: List[str] = []
@@ -109,20 +111,22 @@ def analyze_panel(
                 rimg = Image.open(ref["img_path"])
                 opened_ref_imgs.append(rimg)
                 desc = ref.get("video_visual_desc") or ref.get("visual_desc", "")
-                ref_images_content.append(f'Reference "{rname}" ({ref.get("type", "?")}):\n{desc}')
+                ref_type = ref.get("type", "?")
+                # Image before annotation — model sees visual before reading label
                 ref_images_content.append(rimg)
+                ref_images_content.append(f'↑ Reference "{rname}" ({ref_type}):\n{desc}')
                 ref_descriptions.append(f"- {rname}: {desc[:200]}")
                 loaded_refs.append(rname)
             except Exception as e:
                 logger.warning(f"  ⚠️  Could not load ref {rname}: {e}")
 
     visual_desc = panel_meta.get("visual_start", "") or panel_meta.get("visual_end", "")
-    panel_type = panel_meta.get("panel_type", "narrative")
     prev_panels = [
         {
             'panel_index': p['panel_index'],
             'visual_desc': p['visual_end'],
             'lights_and_camera': p.get('lights_and_camera', ''),
+            'references': p.get('references', []) + p.get('location_references', []),
             **({'visual_disposition': p['visual_disposition']} if p.get('visual_disposition') else {}),
         }
         for p in scene_meta.get('panels', [])
@@ -201,6 +205,7 @@ Lighting master: {scene_meta.get('lighting_master', 'N/A')}
 <PREV_PANELS>{json.dumps(prev_panels, ensure_ascii=False, indent=2)}</PREV_PANELS>
 
 ## ANALYZED PANEL {panel_id} DESCRIPTION
+Panel type: {panel_meta.get('panel_type', 'narrative')}{f"  |  Hook: {panel_meta['hook_type']}" if panel_meta.get('hook_type') and panel_meta['hook_type'] != 'none' else ''}{f"  |  Emotional beat: {panel_meta['emotional_beat']}" if panel_meta.get('emotional_beat') else ''}
 Visual: {visual_desc}
 {f"Disposition: {panel_meta['visual_disposition']}" + chr(10) if panel_meta.get('visual_disposition') else ""}Camera/Lighting: {panel_meta.get('lights_and_camera', '')}
 Motion intent: {panel_meta.get('motion_prompt', '')[:300]}

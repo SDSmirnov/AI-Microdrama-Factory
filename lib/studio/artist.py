@@ -1010,7 +1010,7 @@ Generate a SINGLE portrait image ({aspect_ratio}) for:
 Panel {panel['panel_index']} — {frame_type.upper()} frame{tag_str}
 
 Visual: {visual}{disposition_line}
-Camera / Lighting: {panel.get('lights_and_camera', '')}
+Camera / Lighting: {" | ".join(filter(None, [scene.get("camera_master", ""), scene.get("lighting_master", ""), panel.get("lights_and_camera", "")]))}
 
 {"**IMPORTANT: THIS IS VERTICAL PORTRAIT IMAGE, IT SHOULD BE VIEWED NORMALLY, WITHOUT ROTATION**" if is_portrait(aspect_ratio) else ""}
 """
