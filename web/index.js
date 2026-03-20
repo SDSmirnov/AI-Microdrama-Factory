@@ -376,7 +376,8 @@ function renderRefGrid(container, refs) {
       <div class="ref-info">
         <div class="ref-name">${esc(ref.name)}</div>
         <span class="ref-type-badge ${esc(typeCls)}">${esc(ref.type || 'unknown')}</span>
-        <div class="ref-logline">${esc(ref.logline_subject_info || ref.video_visual_desc || '')}</div>
+        ${ref.logline_subject_info ? `<div class="ref-logline ref-logline-labeled"><b>Logline:</b> ${esc(ref.logline_subject_info)}</div>` : ''}
+        ${ref.visual_desc ? `<details class="ref-desc-details"><summary>Visual desc</summary><div class="ref-logline">${esc(ref.visual_desc)}</div></details>` : ''}
       </div>
     `;
     makeLightboxHandler(card.querySelector('.ref-img-wrap'), imgSrc);
@@ -532,8 +533,10 @@ function renderPanelCard(scene, panel) {
     </div>
     <div class="panel-details">
       <div class="panel-field"><b>Beat:</b> ${esc(panel.emotional_beat || '')}</div>
+      ${panel.lights_and_camera ? `<div class="panel-field"><b>Camera:</b> ${esc(panel.lights_and_camera)}</div>` : ''}
       <div class="panel-field"><b>Start:</b> ${esc(panel.visual_start || '')}</div>
       <div class="panel-field"><b>End:</b> ${esc(panel.visual_end || '')}</div>
+      ${panel.visual_disposition ? `<div class="panel-field panel-field-disposition"><b>Disposition:</b> ${esc(panel.visual_disposition)}</div>` : ''}
       ${panel.motion_prompt ? `<div class="panel-field"><b>Motion:</b> ${esc(panel.motion_prompt)}</div>` : ''}
       ${panel.sound_design  ? `<div class="panel-field">🔊 ${esc(panel.sound_design)}</div>` : ''}
     </div>

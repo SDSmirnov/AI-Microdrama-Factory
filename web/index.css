@@ -331,6 +331,9 @@ select {
 .type-interface { background: #aaa2; color: #aaa; border: 1px solid #aaa; }
 
 .ref-logline { font-size: 12px; color: var(--text-muted); line-height: 1.55; }
+.ref-logline-labeled { margin-top: 4px; }
+.ref-desc-details { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+.ref-desc-details summary { cursor: pointer; color: var(--accent); user-select: none; }
 
 /* ── Scenes tab ── */
 .storyboard-img-wrap {
@@ -481,6 +484,7 @@ select {
 .panel-field b { color: var(--text); }
 .panel-field.dialogue { color: var(--accent2); font-style: italic; font-size: 15px; }
 .panel-field.voiceover { color: var(--text-muted); font-style: italic; }
+.panel-field-disposition { border-left: 2px solid var(--accent); padding-left: 6px; font-size: 11px; }
 
 .reversed-badge {
   display: inline-block;

@@ -195,9 +195,19 @@ For every scene, generate:
 - lighting_master: one sentence capturing key light direction/color/quality, fill ratio, and any visible practicals. All panels must stay within this lighting DNA — deviations must be noted in that panel's lights_and_camera.
 
 LOCATION REFERENCE NAMING — populate location_references per panel using EXACT split view names:
-- Room refs are split into two views. Pick the one matching the camera angle in this panel:
-  - `{Room-Name}-View-From-Entrance` — camera is at or near the entrance door, looking INTO the room
-  - `{Room-Name}-View-To-Entrance` — camera is at the far end of the room, looking BACK toward the entrance
+- Room refs are split into two views. Choose based on WHERE THE CAMERA IS POSITIONED, not based on
+  which character is on screen. Use all prose signals to determine camera side:
+  - `{Room-Name}-View-From-Entrance` — camera is at/near the entrance door, looking INTO the room.
+    Use when: shooting the character(s) at the far wall/desk; OR wide two-shot from entrance side;
+    OR "window behind [subject]" and window is the far wall (camera on entrance side).
+  - `{Room-Name}-View-To-Entrance` — camera is deep inside the room, looking TOWARD the entrance.
+    Use when: camera is past the visitor/near-entrance zone; OR "entrance/door behind [subject]"
+    (entrance wall is visible in background behind subject = camera is on the far/window side).
+  Key rule: the background element "behind [subject]" is on the wall OPPOSITE the camera.
+    "window behind her" → camera at entrance side → View-From-Entrance.
+    "entrance behind him" → camera at far/desk side → View-To-Entrance.
+  Key rule: two-shot with both characters in one frame → use whichever view best matches
+    the room background depth (typically View-From-Entrance for desk-facing wide shots).
 - Vehicle refs are split into three views:
   - `{Vehicle-Name}-Exterior` — camera outside the vehicle
   - `{Vehicle-Name}-Interior-From-Entrance` — camera inside, looking in from the driver/main door side

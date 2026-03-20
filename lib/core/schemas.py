@@ -273,16 +273,24 @@ SPATIAL_DISPOSITION_SCHEMA = {
                 "type": "boolean",
                 "description": (
                     "True if the current view_type is cinematically wrong for this panel. "
-                    "Set to true ONLY when the panel requires face visibility "
-                    "(dialogue present, close-up reaction, emotional beat, confrontation) "
-                    "AND the current view_type puts the main character(s) with backs to the camera "
-                    "given their orientation relative to the entrance wall in anchor_points. "
-                    "Never set for intentional rear/silhouette/wide-establishing shots. "
-                    "Omit or false when unsure."
+                    "Set to true ONLY when the panel requires face visibility of a single "
+                    "primary character (close-up, ECU, or spoken dialogue line) AND the "
+                    "inferred camera side contradicts the current view_type or would put "
+                    "the subject's back to camera. "
+                    "Never set for two-character wide/medium shots, profiles, silhouettes, "
+                    "rear shots, inserts, or overhead shots. False when unsure."
+                ),
+            },
+            "swap_view_reason": {
+                "type": "string",
+                "description": (
+                    "Required for every panel. One sentence: the primary prose signal used "
+                    "to infer camera side (e.g. 'entrance behind subject', 'window behind subject', "
+                    "'POV framing', 'two-shot') and the swap decision reached."
                 ),
             },
         },
-        "required": ["panel_index", "visual_disposition"],
+        "required": ["panel_index", "visual_disposition", "swap_view_reason"],
     },
 }
 

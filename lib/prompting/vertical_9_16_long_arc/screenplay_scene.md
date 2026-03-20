@@ -283,3 +283,23 @@ PANEL TYPE (panel_type):
 SCENE-LEVEL CAMERA AND LIGHTING MASTER:
 - camera_master: dominant lens (mm), angle, primary lighting condition — shared by all panels in this scene.
 - lighting_master: key light direction/color/quality, fill ratio, visible practicals.
+
+LOCATION REFERENCE NAMING — populate location_references per panel using EXACT split view names:
+- Room refs are split into two views. Choose based on WHERE THE CAMERA IS POSITIONED, not based on
+  which character is on screen. Use all prose signals to determine camera side:
+  - `{Room-Name}-View-From-Entrance` — camera is at/near the entrance door, looking INTO the room.
+    Use when: shooting the character(s) at the far wall/desk; OR wide two-shot from entrance side;
+    OR "window behind [subject]" and window is the far wall (camera on entrance side).
+  - `{Room-Name}-View-To-Entrance` — camera is deep inside the room, looking TOWARD the entrance.
+    Use when: camera is past the visitor/near-entrance zone; OR "entrance/door behind [subject]"
+    (entrance wall is visible in background behind subject = camera is on the far/window side).
+  Key rule: the background element "behind [subject]" is on the wall OPPOSITE the camera.
+    "window behind her" → camera at entrance side → View-From-Entrance.
+    "entrance behind him" → camera at far/desk side → View-To-Entrance.
+  Key rule: two-shot with both characters in one frame → use whichever view best matches
+    the room background depth (typically View-From-Entrance for desk-facing wide shots).
+- Vehicle refs are split into three views:
+  - `{Vehicle-Name}-Exterior` — camera outside the vehicle
+  - `{Vehicle-Name}-Interior-From-Entrance` — camera inside, looking in from the driver/main door side
+  - `{Vehicle-Name}-Interior-To-Entrance` — camera inside, looking toward the entrance from the rear
+- Names must match existing refs EXACTLY (letters, digits, hyphens) — a mismatch silently skips the reference image during rendering.

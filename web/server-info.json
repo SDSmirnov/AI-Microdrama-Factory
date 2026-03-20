@@ -15,5 +15,14 @@
     }
   ],
   "has_metadata": true,
-  "storyboards": []
+  "storyboards": [
+    {
+      "scene": 1,
+      "current": "cinematic_render/scene_001_grid_combined.png"
+    },
+    {
+      "scene": 2,
+      "current": "cinematic_render/scene_002_grid_combined.png"
+    }
+  ]
 }

@@ -692,6 +692,7 @@ def apply_spatial_disposition_pass(
             'view_type': _panel_view_type(p),
             'visual_start': p.get('visual_start', ''),
             'visual_end': p.get('visual_end', ''),
+            'lights_and_camera': p.get('lights_and_camera', ''),
             'motion_prompt': p.get('motion_prompt', ''),
             'references': p.get('references', []),
             'location_references': p.get('location_references', []),
@@ -735,22 +736,65 @@ physical relations (back to the brick wall / facing the gilded mirror / standing
 Each panel has a "view_type" field ("From-Entrance" or "To-Entrance") for your spatial reasoning only.
 Do NOT write "MIRROR VIEW:" or any screen-direction annotation in the output.
 
-VIEW VALIDATION (optional field: swap_view):
-Camera axis semantics (derived from anchor_points entrance wall):
-  - "From-Entrance": camera stands AT the entrance looking INTO the room.
-    → Character facing entrance = face toward camera (visible).
-    → Character with back to entrance = back to camera.
-  - "To-Entrance": camera stands inside the room looking TOWARD the entrance.
-    → Character with back to entrance = face toward camera (visible).
-    → Character facing entrance = back to camera.
-For each panel, check whether the current view_type is cinematically correct:
-Set swap_view=true ONLY when ALL of the following are true:
-  1. The panel requires face visibility: dialogue is present, OR visual_start describes
-     a close-up, reaction shot, emotional beat, or confrontation.
-  2. The current view_type puts the main character(s) with backs to the camera given
-     their orientation relative to the entrance wall in anchor_points.
-Do NOT set swap_view=true for intentional rear shots, silhouettes, or wide establishing panels.
-Omit or set false when in doubt.
+VIEW VALIDATION (fields: swap_view + swap_view_reason):
+Camera axis semantics:
+  - "From-Entrance": camera at/near entrance, looking INTO room.
+  - "To-Entrance": camera deep inside room, looking TOWARD entrance.
+
+━━ FIRST: classify the shot ━━
+
+Before anything else, classify this panel into exactly one category:
+  A. FACE SHOT — visual_start contains "CLOSE-UP", "ECU", "EXTREME CLOSE-UP", or a tight
+     portrait framing on a SINGLE character's face, OR the panel's dialogue line is spoken
+     BY that character. The primary intent is showing one character's face expression.
+  B. TWO-SHOT — visual_start begins with "MEDIUM SHOT" or "WIDE" AND two character names
+     from references[] are both described in the same frame ("Opposite", "across the desk",
+     "between them"). Wide establishing or two-character coverage.
+  C. ACTION / WIDE SINGLE — fall, crash, movement, or single-character medium/wide shot
+     where no close face is the primary subject.
+  D. INSERT — extreme close-up of an object only (hands, folder, object); no character face.
+
+━━ PRIMARY METHOD — use ONLY for category A (FACE SHOTS) ━━
+
+STEP A — Subject's facing direction:
+  Identify the single character whose face fills the frame. Determine which direction their
+  face points, using anchor_points zones and narrative context.
+  In a bilateral confrontation (interview, argument across a table): each character faces
+  the other. Character at the entrance zone faces AWAY from entrance (toward desk). Character
+  at the desk/far zone faces TOWARD the entrance.
+  Express as "toward entrance" or "away from entrance".
+
+STEP B — Camera direction for a face shot:
+  • A face shot shows the character looking AT the camera (front-on or near-front).
+    Camera is therefore on the side the character faces TOWARD.
+    Character faces TOWARD entrance → camera is at/near entrance side → From-Entrance.
+    Character faces AWAY from entrance (toward desk) → camera is on desk/far side → To-Entrance.
+  • OVER-THE-SHOULDER / POV: camera is BEHIND the named subject, looking at the target.
+    Apply the above rule to the TARGET character (whose face is actually visible), not the subject.
+
+STEP C — Decide swap:
+  Compare inferred view_type to current view_type. Set swap_view=true if they differ.
+
+━━ FALLBACK — use for categories B, C, D ━━
+
+  • TWO-SHOT (B): NEVER swap. Use whichever view best matches the established scene axis.
+  • "[furniture/desk] in foreground" between camera and subject → camera is on far/desk side
+    → To-Entrance (camera past the furniture looking toward entrance).
+  • "[element] behind [subject]" → that element is on the wall OPPOSITE the camera.
+    Map to anchor_points wall → camera is on the opposing wall.
+  • Action shots with no clear spatial signals → set swap_view=false (leave unchanged).
+  • INSERT (D): no swap.
+
+NEVER swap: profiles, silhouettes, rear shots, overhead shots.
+Set false when classification is ambiguous or signals are absent.
+
+For EACH panel output swap_view_reason: one sentence — shot category, primary signal used,
+and decision. Examples:
+  "Category A face shot, Svetlana faces toward entrance → camera at entrance → From-Entrance; current To-Entrance wrong → swap=true"
+  "Category A face shot, Pavel faces away from entrance → camera on desk side → To-Entrance; current From-Entrance wrong → swap=true"
+  "Category B two-shot → no swap"
+  "Category C action, desk in foreground → camera on far/desk side → To-Entrance; current From-Entrance wrong → swap=true"
+  "Category D insert, no swap"
 
 RULES:
 1. Identify which characters are present from visual_start, visual_end, references, dialogue.
@@ -769,8 +813,9 @@ RULES:
 SCENE PANELS:
 {json.dumps(panels_context, ensure_ascii=False, indent=2)}
 
-Return a JSON array: [{{"panel_index": N, "visual_disposition": "...", "swap_view": false}}, ...]
-Set swap_view=true only for panels where the view must be flipped (see VIEW VALIDATION above)."""
+Return a JSON array: [{{"panel_index": N, "visual_disposition": "...", "swap_view": false, "swap_view_reason": "..."}}, ...]
+Set swap_view=true only for panels where the view must be flipped (see VIEW VALIDATION above).
+swap_view_reason is required for every panel."""
 
     @retry_on_errors(max_retries=3, backoff_factor=2)
     def _call_api():
@@ -788,6 +833,7 @@ Set swap_view=true only for panels where the view must be flipped (see VIEW VALI
         if item.get('visual_disposition')
     }
     swap_set = {item['panel_index'] for item in items if item.get('swap_view')}
+    swap_reasons = {item['panel_index']: item.get('swap_view_reason', '') for item in items}
 
     updated = 0
     swapped = 0
@@ -812,7 +858,9 @@ Set swap_view=true only for panels where the view must be flipped (see VIEW VALI
                     continue
             p['location_references'] = new_refs
             swapped += 1
-            logger.info(f"      🔄 Panel {idx}: view swapped {old_refs} → {new_refs}")
+            reason = swap_reasons.get(idx, '')
+            logger.info(f"      🔄 Panel {idx}: view swapped {old_refs} → {new_refs}"
+                        + (f" [{reason}]" if reason else ""))
 
     logger.info(
         f"      ✅ Spatial disposition: {updated}/{len(panels)} panels for scene {scene_id}"
