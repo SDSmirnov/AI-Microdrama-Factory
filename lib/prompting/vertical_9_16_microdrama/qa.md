@@ -35,6 +35,7 @@ __DRAMATIC_INTENSITY_PANEL_TYPE__
   set suggest_mirror=true and describe the flip in mirror_reason.
   If other issues also exist, set needs_refinement=true and include the spatial issue in refinement_prompt.
   Note: text descriptions may not always specify sides explicitly — only flag when clearly contradicted.
+  - POV CAMERA LAW: if visual_start or visual_end is described as "from [Character X]'s perspective" or "[Character X]'s POV", Character X cannot appear anywhere in the rendered image. If Character X appears in the frame: flag in artifacts as "POV violation: [X] appears in their own POV shot"; set needs_refinement=true; refinement_prompt: "Remove the POV framing OR remove [X] from the frame — a character cannot appear in their own POV shot."
 
 ## IMPORTANT
 - Compare character faces CAREFULLY against reference images.
