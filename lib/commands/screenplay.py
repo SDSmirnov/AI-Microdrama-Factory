@@ -15,6 +15,7 @@ from lib.studio.director import run_continuity_pass
 from lib.studio.screenwriter import (
     analyze_scenes_master, apply_spatial_disposition_pass, merge_scenes,
     process_single_scene, run_scenes_pipeline, _write_episode_checkpoint,
+    _swap_view_ref,
 )
 
 logger = logging.getLogger(__name__)
@@ -382,12 +383,18 @@ def cmd_disposition(args):
     prev_terminal_disposition = ''
     prev_anchor_ref = None
     for scene in scenes:
-        scene_room_refs = {
-            ref
-            for panel in scene.get('panels', [])
-            for ref in panel.get('location_references', [])
-            if ref.endswith('-View-From-Entrance') and ref in anchors_by_ref
-        }
+        # Collect the canonical View-From-Entrance ref for this scene's room.
+        # Panels may already have been swapped to View-To-Entrance by a prior disposition run,
+        # so also resolve To-Entrance refs back to their From-Entrance counterpart for lookup.
+        scene_room_refs = set()
+        for panel in scene.get('panels', []):
+            for ref in panel.get('location_references', []):
+                if ref.endswith('-View-From-Entrance') and ref in anchors_by_ref:
+                    scene_room_refs.add(ref)
+                elif ref.endswith('-View-To-Entrance'):
+                    canonical = _swap_view_ref(ref)  # → View-From-Entrance
+                    if canonical in anchors_by_ref:
+                        scene_room_refs.add(canonical)
         anchor_ref = next(iter(scene_room_refs), None)
         anchor_points = anchors_by_ref[anchor_ref] if anchor_ref else None
         if not anchor_points:
