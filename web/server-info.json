@@ -1,6 +1,6 @@
 {
   "novels": [
-    "s01e01.txt"
+    "s01e07.txt"
   ],
   "scene_files": [
     {
@@ -10,6 +10,11 @@
     },
     {
       "episode": 2,
+      "has_refined": true,
+      "has_raw": true
+    },
+    {
+      "episode": 3,
       "has_refined": true,
       "has_raw": true
     }
@@ -23,6 +28,10 @@
     {
       "scene": 2,
       "current": "cinematic_render/scene_002_grid_combined.png"
+    },
+    {
+      "scene": 3,
+      "current": "cinematic_render/scene_003_grid_combined.png"
     }
   ]
 }

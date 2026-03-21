@@ -62,6 +62,12 @@ class LogDebugLLM(BaseLLM):
         self._write(caller, prompt, schema=schema)
         return {}
 
+    def make_text(self, prompt: str, system_prompt: str = None, max_tokens: int = 100000) -> str:
+        caller = _caller_name()
+        extra = f"system_prompt: {system_prompt[:300]}" if system_prompt else ""
+        self._write(caller, prompt, extra=extra)
+        return ""
+
     def make_image(self, prompt: str, refs: list = None,
                    aspect_ratio: str = "9:16", image_size: str = "2K",
                    temperature: float = None) -> bytes:

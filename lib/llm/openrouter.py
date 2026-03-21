@@ -179,6 +179,27 @@ class OpenRouterLLM(BaseLLM):
 
         return _call()
 
+    def make_text(self, prompt: str, system_prompt: str = None, max_tokens: int = 100000) -> str:
+        sys = self.system_prompt if system_prompt is None else system_prompt
+        messages = []
+        if sys:
+            messages.append({"role": "system", "content": sys})
+        messages.append({"role": "user", "content": prompt})
+        payload = {
+            "model": self._model_name(self.text_model),
+            "messages": messages,
+            "temperature": 0.7,
+            "max_tokens": max_tokens,
+        }
+
+        @retry_on_errors(max_retries=3, backoff_factor=2)
+        def _call():
+            self.text_limiter.acquire()
+            data = self._post_openrouter(payload, timeout=300)
+            return self._extract_text(data)
+
+        return _call()
+
     # ------------------------------------------------------------------
     # Image generation
     # ------------------------------------------------------------------

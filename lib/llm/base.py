@@ -177,6 +177,11 @@ class BaseLLM(ABC):
         ...
 
     @abstractmethod
+    def make_text(self, prompt: str, system_prompt: str = None, max_tokens: int = 100000) -> str:
+        """Generate plain text from a prompt. system_prompt overrides instance default if given."""
+        ...
+
+    @abstractmethod
     def make_image(self, prompt: str, refs: list = None,
                    aspect_ratio: str = '9:16', image_size: str = '2K',
                    temperature: float = None) -> bytes:

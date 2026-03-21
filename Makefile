@@ -33,7 +33,7 @@ NARRATIVE      ?=
 INDEX          ?=
 
 .PHONY: help init workdirs styles casting refs remake-room-refs room-anchors screenplay scenes reverse-refine disposition consistency storyboard qa apply-qa accept-qa rebuild-storyboard refinement animation \
-        autocut imgedit tts voiceover dub duck summary split-book panel-by-panel-with-qa extra-panel suno-prompt
+        autocut imgedit tts voiceover dub duck summary split-book panel-by-panel-with-qa extra-panel suno-prompt logic
 
 help:  ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-16s %s\n", $$1, $$2}'
@@ -58,6 +58,9 @@ remake-room-refs:  ## Split Room/Vehicle refs into separate per-view refs and re
 
 room-anchors:  ## Generate spatial anchor_points for View-From-Entrance room refs
 	python cli.py --llm $(LLM) --style $(STYLE) room-anchors
+
+logic:  ## Fix logic/physics/space bugs and generate scene prerequisites appendix (NOVEL=file.txt)
+	python cli.py --llm $(LLM) logic $(NOVEL) $(if $(OUTPUT),--output $(OUTPUT),) $(if $(WORKERS),--workers $(WORKERS),)
 
 screenplay:  ## Run full screenplay + scene keyframe pipeline
 	python cli.py --llm $(LLM) --style $(STYLE) screenplay $(NOVEL)

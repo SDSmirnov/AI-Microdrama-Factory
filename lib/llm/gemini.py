@@ -97,6 +97,28 @@ class GeminiLLM(BaseLLM):
 
         return _call()
 
+    def make_text(self, prompt: str, system_prompt: str = None, max_tokens: int = 100000) -> str:
+        sys = self.system_prompt if system_prompt is None else system_prompt
+        config: dict[str, Any] = {
+            "temperature": 0.7,
+            "max_output_tokens": max_tokens,
+            "safety_settings": SAFETY,
+        }
+        if sys:
+            config["system_instruction"] = sys
+
+        @retry_on_errors(max_retries=3, backoff_factor=2)
+        def _call():
+            self.limiter.acquire()
+            resp = self.client.models.generate_content(
+                model=self.text_model,
+                contents=prompt,
+                config=config,
+            )
+            return resp.text
+
+        return _call()
+
     # ------------------------------------------------------------------
     # Image generation
     # ------------------------------------------------------------------

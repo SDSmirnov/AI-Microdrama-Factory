@@ -29,6 +29,7 @@ Usage:
     python cli.py duck video.mp4 dubbed.mp3 output.mp3
     python cli.py dynamic-subtitles input.mp4 output.mp4 --srt input.srt
     python cli.py summary s01e01.txt [--output summary.txt]
+    python cli.py logic s01e01.txt [--output s01e01_fixed.txt] [--workers 5]
     python cli.py --llm openrouter --style vertical_9_16_microdrama split-book fullbook.txt [--output-dir book-split] [--season 1]
 """
 import argparse
@@ -38,7 +39,7 @@ import os
 import shlex
 import sys
 
-from lib.commands import animation, audio, screenplay, setup, storyboard
+from lib.commands import animation, audio, editorial, screenplay, setup, storyboard
 
 logging.basicConfig(
     level=os.getenv('AI_LOG_LEVEL', 'INFO'),
@@ -61,7 +62,7 @@ def main():
     )
     sub = parser.add_subparsers(dest='command', required=True)
 
-    for mod in [setup, screenplay, storyboard, animation, audio]:
+    for mod in [setup, screenplay, storyboard, animation, audio, editorial]:
         mod.register(sub)
 
     args = parser.parse_args()
