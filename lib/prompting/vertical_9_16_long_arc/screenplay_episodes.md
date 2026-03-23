@@ -220,7 +220,8 @@ In N≥3 arcs: echo the motif briefly in each arc_mid (without payoff — just r
 
 ## PRODUCTION INSTRUCTIONS
 
-1. Quote raw narrative text verbatim for context — do not shorten.
+1. Quote raw narrative text verbatim for context — do not shorten. Store in `raw_narrative`.
+1b. Write `rewritten_condensed_narrative`: rewrite the episode's source text as a tight, unbroken dramatic script — every spoken line verbatim, every physical beat in chronological sequence, no narrative ellipses, no author commentary. This is the dialogue and action coverage contract: every line and beat here MUST appear in the generated panels. The scene generator uses this field to verify dialogue coverage — a line missing from `rewritten_condensed_narrative` will be silently dropped from the episode.
 2. Screenplay instructions drive AI image generation and animation. Be very direct and verbose.
 3. Each arc unit covers ~54s (N=2), ~81s (N=3), ~108s (N=4), or ~135s (N=5) of real-time action in the finished edit.
 4. Mark hook_type for: cold_open, verbal_hook, emotional_capture, arc_bridge, arc_pickup, cliffhanger panels.

@@ -65,6 +65,21 @@ VISUAL DRAMATIC INTENSITY — WHAT GOES IN EVERY NARRATIVE FRAME:
 - A decision made visible, a boundary crossed, a contradiction revealed.
 - NEVER write visual_end as "the action is done." visual_end is a NEW UNSTABLE STATE.
 
+**motion_intent — declare BEFORE writing motion_prompt (required field):**
+One sentence: what does the character want to achieve in this physical moment?
+- RIGHT: "Pavel grabs her arm to stop her from leaving." / "Sofya leans back to re-establish dominance after the setback." / "Alisa crosses the room to reclaim the document before he reads it."
+- WRONG: "Pavel moves toward Sofya." (describes action, not goal)
+Without a declared intent, motion_prompt defaults to time-filling gestures ("holds the pose", "gaze remains fixed", "stands motionless"). motion_intent is the director's note that makes every timestamp purposeful. If you cannot state WHY the character moves, the panel has no dramatic content — rewrite the panel.
+
+**visual_start TIMING LAW:**
+visual_start = the SPLIT SECOND before motion_prompt [0s] begins. Not the previous panel's outcome state. Not mid-motion.
+The exact physical configuration at t=(-0.1s): hands at their resting position before the grab, body weight loaded before the lunge, fingers uncurled before the fist forms.
+WRONG: visual_start = "He is angrily brushing foam from his jacket" — already mid-action.
+WRONG: visual_start = "Her fingers are relaxed in defeat" — this is the residual state of the previous clip; the action of THIS clip (fist forming) hasn't started yet.
+RIGHT: visual_start = "He stands still, both hands hovering over his lapels, jaw set, the first brush not yet begun."
+RIGHT: visual_start = "Her hand lies open among the foam, tendons soft — the first curl of her fingers 0.1 seconds away."
+EXCEPTIONS: cold_open P1 (arc_open) — [0s] starts already in motion, visual_start describes the ongoing action. arc_pickup P1 — resumes from arc_bridge visual_end.
+
 **ARC BRIDGE EXCEPTION — any episode's final panel (arc_bridge):**
 visual_end must show physical suspension: the action is mid-motion and frozen.
 The hand is raised, the finger is 1cm from the target, the mouth open and the word unspoken.
@@ -111,6 +126,25 @@ WRONG: applying hesitation to confrontation, argument, revelation, or any panel 
 RIGHT: "At 0s hand hovers 5cm above the phone. At 2s finger descends and presses call. At 3s phone is at ear — decision made."
 If tempted to write hesitation for any other reason: don't. Move the character instead.
 HARD ENFORCEMENT: If a single gesture or held position spans more than 3 seconds without a physical state change in the motion_prompt — HARD FAILURE. A thumb hovering for 6 seconds is 3 seconds of usable footage wasted. Add what happens before (approach) and after (contact, response) to fill the clip.
+
+**TABLEAU FAILURE — add to HARD ENFORCEMENT list:**
+Any segment where the only visible motion is eye movement, micro-expression shift, or breathing for ≥2 consecutive seconds with no full-body or large-limb change = TABLEAU FAILURE.
+WRONG: "From 1s to 3.5s, her eyes slowly scan his posture." (2.5s of eye motion only)
+WRONG: "At 0s the scene is held in tense silence, no one moves." (even for arc_bridge — dead screen for 4s before suspension begins)
+RIGHT for arc_bridge: character approaches the threshold, reaches out, the hand travels toward the contact point — THEN freezes 1cm short at the last 1s of the clip. The suspension is the FINAL beat, not the whole clip.
+
+**COMBAT/CONTACT SEQUENCES — physical impact always collapses into one clip:**
+If a character winds up, strikes, and the target reacts — that is one continuous physical arc of ≤4 seconds. It MUST be one panel.
+WRONG: P5 = "character winds up for the punch", P6 = "fist connects with jaw", P7 = "opponent crumples to the floor" — three panels for four seconds of reality.
+RIGHT (one panel): "At 0s arm is already in mid-swing. At 0.3s fist contacts jaw. At 1s opponent's knees buckle. At 2.5s full collapse to ground. Camera holds on fallen figure 2.5s–6s."
+Same rule applies to: push → stumble, grab → spin, shove → door impact, throw → crash. Impact + immediate consequence = one clip.
+
+**POST-WRITE MOTION AUDIT (run this checklist on every panel before finalizing):**
+1. FREEZE CHECK: scan every consecutive timestamped segment. If any segment ≥2s has no change in physical body state → HARD FAILURE. Add motion: approach, reaction, consequence.
+2. VOICE CHECK: does the panel have `dialogue` OR `voiceover` populated? If both empty and it is not an arc_bridge → HARD FAILURE.
+3. INTENT CHECK: does every beat in motion_prompt serve the declared `motion_intent`? Beats that don't advance the intent ("holds the point", "remains still", "gaze is fixed") → delete them, replace with purposeful action.
+4. TIMING LAW CHECK: does `visual_start` describe the state JUST BEFORE motion_prompt [0s]? If it describes an already-in-progress action or the residual state of the previous panel → rewrite.
+5. COMBAT CHECK: if consecutive panels both describe parts of the same physical impact sequence → merge into one panel.
 
 ## 9-PANEL STRUCTURE BY EPISODE TYPE
 
@@ -235,10 +269,16 @@ MANDATORY: plan the arc_bridge → arc_pickup seam as a match_cut across the epi
 
 ## SOUND
 
-VOICE BUDGET (hard technical limit): 16 characters per second × panel duration = maximum characters for dialogue + voiceover COMBINED. For a 6s panel: 96 chars total. For a 4s panel: 64 chars total. Exceeding this budget causes TTS to either truncate or produce garbled audio in I2V rendering — the line will not fit the clip. Count characters before writing. If dialogue uses 50 chars, voiceover has ≤46 chars remaining. If a panel has no dialogue, voiceover may use the full budget. A panel with both a full dialogue line AND a full voiceover line will almost always exceed budget — choose one or split across panels.
+VOICE BUDGET (hard technical limit): 24 characters per second × panel duration = maximum characters for dialogue + voiceover COMBINED. For a 6s panel: 144 chars total. For a 4s panel: 96 chars total. Exceeding this budget causes TTS to either truncate or produce garbled audio in I2V rendering — the line will not fit the clip. Count characters before writing. If dialogue uses 80 chars, voiceover has ≤64 chars remaining. If a panel has no dialogue, voiceover may use the full budget.
+
+MANDATORY VOICE COVERAGE — HARD RULE:
+Every panel MUST have either `dialogue` OR `voiceover` populated (or both). HARD FAILURE if both are empty.
+Exceptions: arc_bridge (sound_design=silence) may have voiceover only — but voiceover is still strongly recommended. cold_open P1 may skip voiceover IF the visual alone passes the YouTube Entry Test AND dialogue is present.
+A panel with both fields empty is dead screen for 80% of muted viewers. The caption alone cannot carry emotional weight without audio counterpoint.
 
 DIALOGUE: ≤8 words per speaker line, CU on speaker's face. Populate both `dialogue` and `voiceover` for inner counterpoint.
-VOICEOVER: inner monologue revealing what the image cannot show. {target_language} language. HARD LIMIT: 4–5 words only. It is a reactive flash — a thought that crosses the face before the character acts. Longer inner monologue is a novel; this is a phone screen.
+VOICEOVER: inner monologue text only — no voice/gender prefix in the text field. {target_language} language. HARD LIMIT: 4–5 words only for pivot panels. It is a reactive flash — a thought that crosses the face before the character acts. Longer inner monologue is a novel; this is a phone screen.
+`voiceover_settings` — required alongside every non-empty voiceover. Set: gender ("male"/"female"), actor (character name), age (approximate, as string), tone (comma-separated delivery descriptors: "scared, confused", "cold, commanding", "bitter, exhausted", "breathless, urgent"). Use {} when voiceover is empty.
 
 DIALOGUE EXCHANGE CONTINUITY — HARD RULE (applies to ALL panels with dialogue, not just confrontation zone):
 Any line of dialogue that is a direct question, demand, or a statement addressed to a specific person in the scene MUST receive its verbal response within the same panel OR the immediately following panel. NEVER cut away after a line that demands a verbal reply without showing that reply first.

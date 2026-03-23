@@ -911,7 +911,9 @@ def process_single_scene(
         panel['panel_index'] = idx
         panel.setdefault('is_reversed', False)
         panel.setdefault('motion_prompt_reversed', '')
+        panel.setdefault('motion_intent', '')
         panel.setdefault('voiceover', '')
+        panel.setdefault('voiceover_settings', {})
         panel.setdefault('emotional_beat', '')
         panel.setdefault('hook_type', 'none')
         panel.setdefault('text_safe_composition', True)

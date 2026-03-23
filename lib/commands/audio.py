@@ -75,14 +75,19 @@ def cmd_voiceover(args):
             if not vo_text:
                 continue
 
-            slug = re.sub(r'^[A-Za-z ]+voiceover\s*:\s*', '', vo_text, flags=re.IGNORECASE)
-            slug = re.sub(r'^[A-Za-z]+\s*:\s*', '', slug)
-            slug = re.sub(r'\W+', '-', slug, flags=re.UNICODE).strip('-').lower()
+            vs = panel.get('voiceover_settings') or {}
+            gender = vs.get('gender', 'male').lower().strip()
+            tone = (vs.get('tone') or 'neutral').strip()
+            # Build the prefixed string that parse_speech_input expects:
+            # "<voice_key> [tone <descriptors>]: <text>"
+            tts_input = f"{gender} [tone {tone}]: {vo_text}"
+
+            slug = re.sub(r'\W+', '-', vo_text, flags=re.IGNORECASE | re.UNICODE).strip('-').lower()
             slug = slug[:40] or "vo"
 
             out_file = f"{out_dir}/scene_{scene_id:03d}_{panel_idx:02d}_{slug}.wav"
             lines.append(
-                f"python cli.py --llm \"${{LLM:-openrouter}}\" tts speech {shlex.quote(vo_text)} {shlex.quote(out_file)}"
+                f"python cli.py --llm \"${{LLM:-openrouter}}\" tts speech {shlex.quote(tts_input)} {shlex.quote(out_file)}"
             )
             count += 1
 
