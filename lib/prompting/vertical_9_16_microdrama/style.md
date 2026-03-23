@@ -1,7 +1,7 @@
 # Visual Style Template
 
 ## Format Specification
-FORMAT: Single 2K portrait grid (9 panel-pairs), 9:16 vertical orientation for short-form microdrama
+FORMAT: Single 2K portrait grid (9 panel-pairs), 9:16 vertical orientation for DramaBox/ReelShort paywall microdrama
 RESOLUTION: 2K
 ASPECT_RATIO: 9:16
 

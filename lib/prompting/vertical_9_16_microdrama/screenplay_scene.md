@@ -119,7 +119,7 @@ Same rule: push → stumble, grab → spin, shove → door impact, throw → cra
 4. TIMING LAW CHECK: does `visual_start` describe the state JUST BEFORE motion_prompt [0s]? If it describes mid-action or the residual state of the previous panel → rewrite.
 5. COMBAT CHECK: if two consecutive panels both describe parts of the same physical impact sequence → merge into one.
 
-9-PANEL MICRO-ACT STRUCTURE (mandatory rhythm for pov_a / pov_b / confrontation episodes):
+9-PANEL MICRO-ACT STRUCTURE (mandatory rhythm for all single-POV episodes):
 (TRANSITION episodes override this entirely — see episode_type block. All 9 panels are environmental with no dialogue, no character conflict structure.)
 - Panel 1: cold_open — EXPLANATION HOOK. The viewer drops into interaction already in progress. They see something happening and need to understand it: "what IS this?", "who IS this person?", "why ARE they doing that?" — forward pull toward understanding, not toward a withheld reveal. Duration: 3s hard cap (2–3s target). This is the maximum drop-off zone; every extra second costs viewers.
   TECHNICAL CONSTRAINT: after autocut, only 2–4s of the 6s clip will be visible. The action MUST be in progress at frame 0. motion_prompt[0s] MUST describe an ongoing physical event — NOT a character position, NOT a setup pose. If motion_prompt[0s] says "character stands / sits / holds", it is dead screen.
@@ -136,19 +136,20 @@ Same rule: push → stumble, grab → spin, shove → door impact, throw → cra
 - Panel 2: verbal_hook — a character delivers the episode's central conflict in ≤8 words: an ultimatum, threat, confession, or challenge. Delivery in CU on speaker's face. NOT exposition — the dialogue names the stakes mid-confrontation.
   Duration: 4s hard cap. Still in the maximum drop-off zone. motion_prompt[0s] must show the character already speaking or reacting — not walking into frame, not "preparing to speak." The words are already coming out.
   FORBIDDEN for P2: character entering frame, character turning toward camera, setup before the line. The speaker is already in CU, already mid-delivery. [≈4–7s]
-- Panel 3: escalation — first pressure or obstacle. [15s DEPTH TEST: this panel must be a second entry point — a viewer who missed P1-P2 must read the power dynamic, primary emotion, and stake object from this panel alone. Duration: 4–5s.]
-- Panel 4: emotional_capture — point of no return: an action, revelation, or commitment the viewer cannot abandon. Must escalate from panel 3 in emotional temperature, not just plot. This is the "21-second lock" — if the viewer is still here, they are captured. [≈21s mark. Duration: 6s.]
-- Panel 5: crystallization — stakes become visceral and irreversible; no exit. [30s COMPLETION TRIGGER: the episode's POINT OF NO RETURN. Also the strongest thumbnail candidate: compose for legibility as a static image, CU or ECU face with a recognizable ambiguous emotion, no key subject in text-overlay zone. Duration: 6–7s.]
+- Panel 3: escalation — first pressure or obstacle. Compose as a fully self-contained power-dynamic image: power, primary emotion, and stake object readable without context from P1–P2. Duration: 4–5s.
+- Panel 4: emotional_capture — point of no return: an action, revelation, or commitment that makes watching the episode to the end feel necessary. Must escalate from panel 3 in emotional temperature, not just plot. Duration: 6s.
+- Panel 5: crystallization — stakes become visceral and irreversible; no exit. STRONGEST THUMBNAIL CANDIDATE: compose for legibility as a static image, CU or ECU face with a recognizable ambiguous emotion, no key subject in text-overlay zone. Duration: 6–7s.
 - Panel 6: confrontation — peak conflict, ECU on face
-- Panel 7: peak — maximum emotional intensity, the scene's fulcrum
+- Panel 7: pivot — ECU reaction shot at maximum pressure, before the twist. Duration 3–4s. NO dialogue — voiceover MANDATORY: 4–5 words of inner monologue, nothing more. This is the protagonist's silent internal response to the confrontation. HARD FAILURE if voiceover is empty OR exceeds 5 words.
 - Panel 8: twist — one fact changes everything
-- Panel 9: cliffhanger — freeze on maximum unresolved tension; end mid-breath [≈60–90s mark, the Button]. DIAGNOSTIC: the cliffhanger must end on an OPEN QUESTION, never a closed reveal. YOUTUBE NEXT-EPISODE THUMBNAIL: the final FRAME of visual_end is displayed as a static "next video" card. Require: (1) a face in CU/ECU showing an ambiguous, legible emotion that invites the question "what happens next?"; (2) a stake object visible in frame; (3) no key subject in bottom 20% text zone. The final frame must be click-worthy as a standalone image — it is simultaneously the cliffhanger and the next episode's implicit call-to-action. Reveals satisfy — the viewer gets the answer and leaves. Questions compel — the viewer must return to find out. WRONG: "We see Alisa is lying — the truth is now known." RIGHT: "Ruslan's eyes narrow on something we cannot yet see — what did he find?" If your P9 answers anything, move the answer to the next episode's P2 and end P9 on the moment just before.
-  Choose one of four cliffhanger types based on context AND prior episode cliffhangers (rotate — never repeat the same type twice in a row):
-  * PHYSICAL THREAT: character in immediate danger. Use sparingly — only at true climactic episodes. RISK: overuse causes fatigue; the viewer stops fearing.
-  * SHOCKING REVELATION: new information reframes everything shown so far. Requires logical preparation in earlier panels — cannot arrive without a seed. Best at structural turning points.
-  * EMOTIONAL RUPTURE: unexpected reaction, betrayal, or sudden silence where there should be words. Best for drama and romance arcs.
-  * INTERRUPTED ACTION: cut mid-gesture, mid-word, mid-step. Best for routine episode transitions — lowest intensity, highest versatility.
-  Record the chosen type in hook_type as: cliffhanger/physical_threat, cliffhanger/revelation, cliffhanger/emotional_rupture, or cliffhanger/interrupted_action.
+- Panel 9 (intermediate episodes only): tension_peak — maximum escalation, no resolution. Protagonist at peak pressure — threat is closest, choice is seconds away. voiceover MANDATORY (4–5 words inner monologue): the held thought before the next episode's response. Viewer is propelled immediately into the next episode of the SAME published series.
+- Panel 9 (final episode of series only): cliffhanger — RESPONSE PRESSURE FREEZE. Protagonist has just received a devastating action, revelation, or demand. The cliffhanger freezes them at the moment BEFORE their response — response forming but not yet delivered. NEVER freeze on a revelation itself (satisfies the viewer) — freeze on the protagonist's face as they absorb it. The viewer must unlock the next series to see: "What do they say/do right now?" DRAMABOX SERIES THUMBNAIL: the final FRAME of visual_end is the series unlock card. Require: (1) protagonist face in CU/ECU — ambiguous emotion, readable as either fear OR determination; (2) a stake object visible in frame; (3) no key subject in bottom 20% text zone. WRONG: "We see Alisa is lying — the truth is now known." RIGHT: "Ruslan's face is perfectly still; something he has just heard demands a response — the next series reveals what it is." If your P9 resolves anything, move the resolution to the next series P2 and end P9 on the moment just before the response.
+  Choose one of four cliffhanger types (rotate — never repeat same type twice in a row across series):
+  * RESPONSE_FREEZE: protagonist receives a line/action and must respond — cut before the response. Most powerful DramaBox hook.
+  * REVELATION: new information reframes everything — protagonist's face at the moment of understanding, before reaction. Best at structural turning points.
+  * EMOTIONAL_RUPTURE: unexpected betrayal, confession, or sudden silence where there should be words. Best for drama/romance arcs.
+  * INTERRUPTED_ACTION: cut mid-gesture, mid-word, mid-step. Best for routine series transitions.
+  Record chosen type in hook_type as: cliffhanger/response_freeze, cliffhanger/revelation, cliffhanger/emotional_rupture, or cliffhanger/interrupted_action.
 
 MOTION PROMPTS for vertical format:
 - Prefer vertical camera movements: tilt up/down, vertical dolly, snap zoom into eyes
@@ -222,8 +223,41 @@ Every panel MUST have either `dialogue` OR `voiceover` populated (or both). HARD
 A panel with both fields empty is dead screen for 80% of muted viewers. The caption alone cannot carry emotional weight without audio counterpoint.
 
 DIALOGUE: ≤8 words, delivered in CU on speaker's face. Populate both `dialogue` and sync `voiceover` for inner counterpoint.
-VOICEOVER: inner monologue text only — no voice/gender prefix in the text field. {target_language} language.
+VOICEOVER: inner monologue text only — no voice/gender prefix in the text field. {target_language} language. HARD LIMIT: 4–5 words only for pivot panels (P7). It is a reactive flash — a thought that crosses the face before the character acts. Longer inner monologue is a novel; this is a phone screen.
 `voiceover_settings` — required alongside every non-empty voiceover. Set: gender ("male"/"female"), actor (character name), age (approximate, as string), tone (comma-separated delivery descriptors: "scared, confused", "cold, commanding", "bitter, exhausted", "breathless, urgent"). Use {} when voiceover is empty.
+
+DIALOGUE EXCHANGE CONTINUITY — HARD RULE (applies to ALL panels with dialogue, not just confrontation zone):
+Any line of dialogue that is a direct question, demand, or a statement addressed to a specific person in the scene MUST receive its verbal response within the same panel OR the immediately following panel. NEVER cut away after a line that demands a verbal reply without showing that reply first.
+
+Patterns that create "broken dialogue" — FORBIDDEN:
+- Panel A: Character X asks a question → Panel B: Character Y reacts in silence or only in voiceover, question visually unanswered
+- Panel A: Character X makes a demand → Panel B: Cut to a different emotional beat entirely, demand never answered
+- Panel A: Character Y reveals information → Panel B: Character X reacts, but their VERBAL response to the revelation is dropped (voiceover doesn't count — the viewer expects X to SAY something aloud)
+- Panel A: Character X addresses Character Y directly → Panel B: Character Y's voiceover carries the response that should be spoken dialogue — HARD FAILURE: move it to dialogue
+
+HOW TO HANDLE MULTI-TURN EXCHANGES:
+1. SHORT EXCHANGE (Q+A, ≤2 turns, total ≤80 chars): pack both sides into one panel's `dialogue` field.
+   Format: `"Speaker1 (voice): Line1\nSpeaker2 (voice): Line2"`
+   The camera holds on the LISTENER's face during the reaction turn — the emotional beat is in the face, not the speaker.
+2. LONGER EXCHANGE (3–4 turns): allocate two consecutive panels, one turn per panel. Panel N shows the challenge (CU on speaker), Panel N+1 shows the counter (CU on responder). Do NOT skip the counter to advance the emotional arc — the counter IS the emotional arc.
+3. REVELATION EXCHANGE ("Кто это?" / "Мой брат."): the trigger question has narrative value — include it. The revelation lands harder when the viewer sees the question that caused it. Both question and answer fit in one panel (total ≤40 chars).
+
+EXCHANGE COMPLETENESS CHECK (before finalizing any confrontation panel):
+- Does this panel's dialogue leave an open question that the next panel doesn't answer? → HARD FAILURE: include the answer in the next panel's dialogue.
+- Does the next panel's dialogue line presuppose an exchange the viewer never heard? → HARD FAILURE: include the trigger line in this panel.
+- Is the voiceover carrying a response that should be spoken dialogue? → HARD FAILURE: move it to dialogue. Inner monologue supplements speech; it never replaces it when the character would realistically speak.
+
+CAPTION CONTRACT (caption field — required for EVERY panel):
+`caption` is a persistent bottom-third text overlay, always visible regardless of audio state. It is a HOOK, not a summary.
+Rules:
+- ≤40 characters
+- NEVER narrates the action currently visible on screen (WRONG: "He called her number." — the viewer can see this)
+- Delivers the emotional punch, subtext, or an open question that makes the viewer need to see what happens next
+- RIGHT: "Thirty-one nights. One cracked screen." — adds subtext invisible on screen
+- RIGHT: "She laughed. With someone else." — delivers the emotional wound
+- SELF-TEST: if a stranger saw only the image + caption, would they pause their scroll? If not, rewrite.
+
+sound_design=silence CLARIFICATION: `sound_design=silence` means the ambient/music/SFX channels are zeroed. The voiceover TTS track plays independently and is NOT silenced. NEVER write "complete silence" or "no sound" when a voiceover is present — write "ambient silence, voiceover only." Complete silence = audio team will mute TTS = caption is the only thing muted viewers see.
 
 SOUND DESIGN (sound_design) — required for EVERY panel:
 - Capture the sonic atmosphere of this exact panel moment, separate from dialogue/voiceover.
