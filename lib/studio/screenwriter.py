@@ -113,6 +113,8 @@ def validate_episode_structure(episodes_list: list) -> None:
     all_types = {ep.get('episode_type', '') for ep in episodes_list}
     if all_types & _ARC_TYPES:
         return  # long-arc style — linear structure, no triplet constraint
+    if not (all_types & _POV_TYPES):
+        return  # single-POV style (microdrama DramaBox) — no triplet constraint
     chapters: dict = {}
     for ep in episodes_list:
         cid = ep.get('chapter_id', 0)
@@ -361,6 +363,8 @@ def _episode_type_block(episode_type: str, pov_character: str, prompts: dict, co
         char = pov_character or f'POV-{label} character'
         tmpl = prompts.get('episode_type_pov', '')
         return tmpl.replace('{{LABEL}}', label).replace('{{CHAR}}', char)
+    if episode_type == 'pov':
+        return prompts.get('episode_type_pov', '')
     if episode_type == 'confrontation':
         return prompts.get('episode_type_confrontation', '')
     if episode_type == 'transition':
