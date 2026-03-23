@@ -51,6 +51,20 @@ VISUAL DRAMATIC INTENSITY — WHAT GOES IN EVERY NARRATIVE FRAME:
 - A contradiction revealed: the suppressed smile when they should be devastated, the flash of real fear behind a performed confidence.
 - NEVER write visual_end as "the action is done." visual_end is a NEW UNSTABLE STATE — it demands resolution in the next panel.
 
+**motion_intent — declare BEFORE writing motion_prompt (required field):**
+One sentence: what does the character want to achieve in this physical moment?
+- RIGHT: "Pavel grabs her arm to stop her from leaving." / "Sofya leans back to re-establish dominance." / "Alisa crosses the room to reclaim the document before he reads it."
+- WRONG: "Pavel moves toward Sofya." (describes action, not goal)
+Without a declared intent, motion_prompt defaults to time-filling gestures ("holds the pose", "gaze remains fixed", "stands motionless"). If you cannot state WHY the character moves, the panel has no dramatic content — rewrite the panel.
+
+**visual_start TIMING LAW:**
+visual_start = the SPLIT SECOND before motion_prompt [0s] begins. Not the previous panel's outcome state. Not mid-motion.
+The exact physical configuration at t=(-0.1s): hands at their resting position before the grab, body weight loaded before the lunge, fingers uncurled before the fist forms.
+WRONG: visual_start = "He is angrily brushing foam from his jacket" — already mid-action.
+WRONG: visual_start = "Her fingers are relaxed in defeat" — residual state of the previous clip; this clip's action hasn't started yet.
+RIGHT: visual_start = "He stands still, both hands hovering over his lapels, the first brush not yet begun."
+EXCEPTIONS: cold_open P1 — [0s] starts already in motion, visual_start describes the ongoing action. No other exceptions.
+
 **motion_prompt DEFAULT — characters move. Every panel must have visible full-body physical action:**
 People walk across rooms, gesture emphatically, turn away, step closer, grab objects, push past someone, sit down hard, stand up fast. A 6-second clip is a movie clip — something must visibly happen in physical space. Micro-expressions alone are dead screen.
 WRONG: "character stands facing camera, jaw tightens, eyes shift left"
@@ -84,6 +98,26 @@ Reserve for the exact instant a character faces a choice that changes everything
 WRONG: applying hesitation to confrontation, argument, revelation, or any panel where narrative momentum must continue.
 RIGHT: "At 0s hand hovers 5cm above the phone. At 2s finger descends and presses call. At 3s phone is already at ear — decision made."
 If you are tempted to write hesitation for any other reason: don't. Move the character instead.
+HARD ENFORCEMENT: If a single gesture or held position spans more than 3 seconds without a physical state change — HARD FAILURE. Add what happens before (approach) and after (contact, response) to fill the clip.
+
+**TABLEAU FAILURE — add to HARD ENFORCEMENT list:**
+Any segment where the only visible motion is eye movement, micro-expression shift, or breathing for ≥2 consecutive seconds with no full-body or large-limb change = TABLEAU FAILURE.
+WRONG: "From 1s to 3.5s, her eyes slowly scan his posture." (2.5s of eye motion only)
+WRONG: "At 0s the scene is held in tense silence, no one moves." — dead screen regardless of emotional intent.
+RIGHT: fill the segment with approach, turn, reach, grab, step back, or any large-limb action.
+
+**COMBAT/CONTACT SEQUENCES — physical impact always collapses into one clip:**
+If a character winds up, strikes, and the target reacts — that is one continuous physical arc of ≤4 seconds. It MUST be one panel.
+WRONG: P5 = "character winds up", P6 = "fist connects", P7 = "opponent falls" — three panels for four seconds of reality.
+RIGHT (one panel): "At 0s arm is already in mid-swing. At 0.3s fist contacts jaw. At 1s knees buckle. At 2.5s full collapse. Camera holds on fallen figure 2.5s–6s."
+Same rule: push → stumble, grab → spin, shove → door impact, throw → crash. Impact + immediate consequence = one clip.
+
+**POST-WRITE MOTION AUDIT (run on every panel before finalizing):**
+1. FREEZE CHECK: scan each timestamped segment. If any segment ≥2s has no change in physical body state → HARD FAILURE. Add motion.
+2. VOICE CHECK: does the panel have `dialogue` OR `voiceover`? If both empty → HARD FAILURE.
+3. INTENT CHECK: does every beat in motion_prompt serve the declared `motion_intent`? Dead beats ("holds the point", "remains still", "gaze is fixed") → replace with purposeful action.
+4. TIMING LAW CHECK: does `visual_start` describe the state JUST BEFORE motion_prompt [0s]? If it describes mid-action or the residual state of the previous panel → rewrite.
+5. COMBAT CHECK: if two consecutive panels both describe parts of the same physical impact sequence → merge into one.
 
 9-PANEL MICRO-ACT STRUCTURE (mandatory rhythm for pov_a / pov_b / confrontation episodes):
 (TRANSITION episodes override this entirely — see episode_type block. All 9 panels are environmental with no dialogue, no character conflict structure.)
@@ -181,10 +215,15 @@ Concrete shape pairs to plan deliberately:
 In motion_prompt, name the match explicitly: "visual_end: [subject]'s arm sweeps upward in an arc — MATCH CUT via upward diagonal to next panel."
 MANDATORY: plan at least one match_cut transition per episode in the escalation zone (panels 3–5).
 
-VOICE BUDGET (hard technical limit): 16 characters per second × panel duration = maximum characters for dialogue + voiceover COMBINED. For a 6s panel: 96 chars total. For a 4s panel: 64 chars total. Exceeding this budget causes TTS to either truncate or produce garbled audio in I2V rendering — the line will not fit the clip. Count characters before writing. If dialogue uses 50 chars, voiceover has ≤46 chars remaining. If a panel has no dialogue, voiceover may use the full budget. A panel with both a full dialogue line AND a full voiceover line will almost always exceed budget — choose one or split across panels.
+VOICE BUDGET (hard technical limit): 24 characters per second × panel duration = maximum characters for dialogue + voiceover COMBINED. For a 6s panel: 144 chars total. For a 4s panel: 96 chars total. Exceeding this budget causes TTS to either truncate or produce garbled audio in I2V rendering — the line will not fit the clip. Count characters before writing. If dialogue uses 80 chars, voiceover has ≤64 chars remaining. If a panel has no dialogue, voiceover may use the full budget.
+
+MANDATORY VOICE COVERAGE — HARD RULE:
+Every panel MUST have either `dialogue` OR `voiceover` populated (or both). HARD FAILURE if both are empty.
+A panel with both fields empty is dead screen for 80% of muted viewers. The caption alone cannot carry emotional weight without audio counterpoint.
 
 DIALOGUE: ≤8 words, delivered in CU on speaker's face. Populate both `dialogue` and sync `voiceover` for inner counterpoint.
-VOICEOVER: inner monologue revealing what the image cannot show. {target_language} language.
+VOICEOVER: inner monologue text only — no voice/gender prefix in the text field. {target_language} language.
+`voiceover_settings` — required alongside every non-empty voiceover. Set: gender ("male"/"female"), actor (character name), age (approximate, as string), tone (comma-separated delivery descriptors: "scared, confused", "cold, commanding", "bitter, exhausted", "breathless, urgent"). Use {} when voiceover is empty.
 
 SOUND DESIGN (sound_design) — required for EVERY panel:
 - Capture the sonic atmosphere of this exact panel moment, separate from dialogue/voiceover.

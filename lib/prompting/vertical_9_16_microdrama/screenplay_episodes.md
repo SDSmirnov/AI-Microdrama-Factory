@@ -97,7 +97,8 @@ Example: a face in extreme close-up showing an emotion that contradicts what jus
 
 LAUNCH INSTRUCTION: deliver text that makes the cinematographer itch to grab a camera.
 
-1. Quote raw narrative text verbatim for the context, do not shorten.
+1. Quote raw narrative text verbatim for the context, do not shorten. Store in `raw_narrative`.
+1b. Write `rewritten_condensed_narrative`: rewrite the episode's source text as a tight, unbroken dramatic script — every spoken line verbatim, every physical beat in chronological sequence, no narrative ellipses, no author commentary. This is the dialogue and action coverage contract: every line and beat here MUST appear in the generated panels.
 2. Screenplay instructions will be used to generate cinematic prerolls for AI-driven animation. Be very direct and verbose.
 3. Each episode should cover from 30 to 50 seconds of real-time action.
 4. Add continuity rules for episodes, e.g. if in episode 3 hero puts on spacesuit, it should be noted in next episodes (4, 5, etc) until he takes it off.
