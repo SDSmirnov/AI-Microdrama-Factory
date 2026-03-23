@@ -96,7 +96,7 @@ CHARACTER_SCHEMA = {
             "name": {"type": "string", "description": "Name of the reference. Avoid punctuation, quotes and parenthesis, use only letters, digits and hyphens."},
             "logline_subject_info": {"type": "string", "description": "One-sentence semantic description of who/what this is in the story (role, relationship, function). Used to deduplicate refs across runs — must be unique enough to distinguish from similarly-named entities."},
             "visual_desc": {"type": "string", "description": "verbose detailed description for the reference image generation"},
-            "type": {"type": "string", "description": "Character, location, object, interface, room, vehicle"},
+            "type": {"type": "string", "description": "Character, location, object, interface, room, vehicle, outdoor"},
             "video_visual_desc": {"type": "string", "description": "Concise visual description for scene context injection. Must preserve: physical build, clothing, face, and — for characters — ALL carry items (bag type and placement, holster location, wallet pocket, keys, badge). Omitting carry items causes actors to pull weapons/phones from thin air in generated scenes."},
             "style_reference": {"type": "string", "description": "Name of the existing or new reference, for details consistency. E.g. for view to entrance, use view from entrance."},
         },

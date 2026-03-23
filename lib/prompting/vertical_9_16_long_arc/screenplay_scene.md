@@ -358,4 +358,12 @@ LOCATION REFERENCE NAMING — populate location_references per panel using EXACT
   - `{Vehicle-Name}-Exterior` — camera outside the vehicle
   - `{Vehicle-Name}-Interior-From-Entrance` — camera inside, looking in from the driver/main door side
   - `{Vehicle-Name}-Interior-To-Entrance` — camera inside, looking toward the entrance from the rear
+- Outdoor refs are split into two views. Choose based on camera direction relative to the PRIMARY DIRECTION defined in the location's compass layout:
+  - `{Outdoor-Name}-View-Primary` — camera faces the PRIMARY DIRECTION (toward the canonical background landmark).
+    Use when: shooting toward the far-end landmark; OR background element is the canonical far-end feature.
+  - `{Outdoor-Name}-View-Opposite` — camera faces the OPPOSITE direction (180-degree turn; left/right SWAPPED).
+    Use when: camera faces the entry/approach side; OR the canonical landmark is behind the camera.
+  Key rule: the background element "behind [subject]" is OPPOSITE the camera direction.
+    "archway behind her" + archway is the PRIMARY-end landmark → camera faces Opposite → View-Opposite.
+    "open street behind him" + street is the near/entry end → camera faces Primary → View-Primary.
 - Names must match existing refs EXACTLY (letters, digits, hyphens) — a mismatch silently skips the reference image during rendering.

@@ -249,4 +249,8 @@ LOCATION REFERENCE NAMING — populate location_references per panel using EXACT
   - `{Vehicle-Name}-Exterior`
   - `{Vehicle-Name}-Interior-From-Entrance`
   - `{Vehicle-Name}-Interior-To-Entrance`
+- Outdoor refs are split into two views. Choose based on camera direction relative to the PRIMARY DIRECTION defined in the location's compass layout:
+  - `{Outdoor-Name}-View-Primary` — camera faces the PRIMARY DIRECTION (toward the canonical background landmark).
+  - `{Outdoor-Name}-View-Opposite` — camera faces the OPPOSITE direction (180-degree turn; left/right SWAPPED).
+  Key rule: the background element "behind [subject]" is OPPOSITE the camera direction.
 - Names must match existing refs EXACTLY (letters, digits, hyphens).

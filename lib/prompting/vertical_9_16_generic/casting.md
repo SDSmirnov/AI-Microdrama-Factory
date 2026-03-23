@@ -26,7 +26,7 @@ For each NEW character:
     State WHERE items are carried and WHAT the carrier looks like (e.g. "tan leather bifold in left
     breast pocket", "black structured tote hanging from right shoulder").
 
-## Location/Object/Room/Vehicle/Interface Description Format
+## Location/Object/Room/Vehicle/Outdoor/Interface Description Format
 For each NEW reference:
 - Name: Full name
 - Visual Description: Photorealistic environment description
@@ -74,6 +74,30 @@ This format MUST be used for every Room ref so that per-view renders know exactl
      Set `style_reference` to `{Vehicle-Name}-Exterior`.
   3. `{Vehicle-Name}-Interior-To-Entrance` — interior looking TOWARD the entrance from the back seat.
      Set `style_reference` to `{Vehicle-Name}-Interior-From-Entrance`.
+
+## Important for outdoor locations:
+
+Open-air locations (streets, parks, courtyards, alleyways, rooftops, riverbanks, etc.) use type=Outdoor.
+
+### Outdoor visual_desc — use compass layout (MANDATORY format):
+Assign the primary camera direction first, then describe all four compass directions consistently.
+Example format:
+```
+LOCATION TYPE: narrow cobblestone alley, ~20 m long, 4 m wide.
+PRIMARY DIRECTION (camera faces): North — toward the archway at the far end.
+NORTH (background / far end): stone archway spanning full width, dim street lamp above.
+SOUTH (foreground / behind viewer): alley entrance, open street, daylight spill.
+EAST (right when facing North): brick wall, one iron drainpipe at mid-alley.
+WEST (left when facing North): row of three wooden doors, one slightly ajar.
+GROUND: uneven cobblestones, shallow puddle near EAST wall at mid-point.
+SKY/ATMOSPHERE: overcast, cool diffuse light.
+KEY LANDMARKS: iron drainpipe (EAST, mid-alley), three wooden doors (WEST), stone archway (far North).
+```
+
+- For every outdoor location generate TWO SEPARATE ref entries:
+  1. `{Outdoor-Name}-View-Primary` — wide establishing shot facing the PRIMARY DIRECTION. Empty location, no people.
+  2. `{Outdoor-Name}-View-Opposite` — wide shot facing the OPPOSITE direction (180-degree turn). CRITICAL: left and right are SWAPPED. Empty location, no people.
+     Set `style_reference` to `{Outdoor-Name}-View-Primary`.
 
 ## Visual Description
 - Must be verbose, precise, and contain specific features so that AI model can implement without hallucinations

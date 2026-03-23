@@ -370,29 +370,29 @@ def cmd_disposition(args):
     anchors_by_ref: dict = {
         name: info['anchor_points']
         for name, info in project.character_info.items()
-        if info.get('type') == 'Room'
-        and name.endswith('-View-From-Entrance')
+        if info.get('type') in ('Room', 'Outdoor')
+        and name.endswith(('-View-From-Entrance', '-View-Primary'))
         and info.get('anchor_points')
     }
 
     if not anchors_by_ref:
-        logger.error("❌ No room refs with anchor_points found. Run 'make room-anchors' first.")
+        logger.error("❌ No room/outdoor refs with anchor_points found. Run 'make room-anchors' first.")
         sys.exit(1)
 
     processed = 0
     prev_terminal_disposition = ''
     prev_anchor_ref = None
     for scene in scenes:
-        # Collect the canonical View-From-Entrance ref for this scene's room.
-        # Panels may already have been swapped to View-To-Entrance by a prior disposition run,
-        # so also resolve To-Entrance refs back to their From-Entrance counterpart for lookup.
+        # Collect the canonical primary-view ref for this scene's location.
+        # Panels may already have been swapped to the reversed view by a prior disposition run,
+        # so also resolve reversed-axis refs back to their primary counterpart for lookup.
         scene_room_refs = set()
         for panel in scene.get('panels', []):
             for ref in panel.get('location_references', []):
-                if ref.endswith('-View-From-Entrance') and ref in anchors_by_ref:
+                if ref.endswith(('-View-From-Entrance', '-View-Primary')) and ref in anchors_by_ref:
                     scene_room_refs.add(ref)
-                elif ref.endswith('-View-To-Entrance'):
-                    canonical = _swap_view_ref(ref)  # → View-From-Entrance
+                elif ref.endswith(('-View-To-Entrance', '-View-Opposite')):
+                    canonical = _swap_view_ref(ref)  # → View-From-Entrance or View-Primary
                     if canonical in anchors_by_ref:
                         scene_room_refs.add(canonical)
         anchor_ref = next(iter(scene_room_refs), None)

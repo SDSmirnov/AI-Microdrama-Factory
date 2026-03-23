@@ -224,6 +224,7 @@ class GeminiLLM(BaseLLM):
                 )
                 if resp.parts and resp.parts[0].inline_data:
                     return resp.parts[0].inline_data.data
+                logger.error(f"RESP: {resp}")
                 raise RuntimeError("Empty edit_image response from Gemini — no inline_data in response parts")
             except Exception as e:
                 logger.error(f"❌ Gemini edit_image error: {e}")

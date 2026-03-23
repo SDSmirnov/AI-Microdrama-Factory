@@ -194,13 +194,14 @@ For each NEW reference, provide:
   - logline_subject_info: one sentence — who/what this is in the story (role, relationship, function)
   - visual_desc: detailed visual description for image generation
   - video_visual_desc: short visual summary for video/animation
-  - type: Character | Location | Object | Room | Vehicle | Interface
+  - type: Character | Location | Object | Room | Vehicle | Interface | Outdoor
   - style_reference: name of an existing or new reference to use as style base
 
-CRITICAL — Rooms and Vehicles MUST be split into separate per-view entries (see casting instructions above).
-NEVER create a single monolithic entry with type=Room or type=Vehicle.
+CRITICAL — Rooms, Vehicles, and Outdoor locations MUST be split into separate per-view entries (see casting instructions above).
+NEVER create a single monolithic entry with type=Room, type=Vehicle, or type=Outdoor.
 A bare "Room-Name" entry with type=Room is WRONG — always use "{{Room-Name}}-View-From-Entrance" and "{{Room-Name}}-View-To-Entrance".
 A bare "Vehicle-Name" entry with type=Vehicle is WRONG — always use "{{Vehicle-Name}}-Exterior", "{{Vehicle-Name}}-Interior-From-Entrance", "{{Vehicle-Name}}-Interior-To-Entrance".
+A bare "Outdoor-Name" entry with type=Outdoor is WRONG — always use "{{Outdoor-Name}}-View-Primary" and "{{Outdoor-Name}}-View-Opposite".
 visual_desc for each view entry must describe ONE camera angle only — no TOP/BOTTOM panels, no multi-panel layouts.
 
 Text:
@@ -212,14 +213,14 @@ Text:
 
     # Reject any monolithic Room/Vehicle entries without a view suffix — the LLM
     # was explicitly told to split these; a bare entry means it ignored the rule.
-    _view_suffixes = {s for s, _ in _ROOM_VIEWS + _VEHICLE_VIEWS}
+    _view_suffixes = {s for s, _ in _ROOM_VIEWS + _VEHICLE_VIEWS + _OUTDOOR_VIEWS}
     bad = [c for c in (new_chars or [])
-           if c.get('type') in ('Room', 'Vehicle')
+           if c.get('type') in ('Room', 'Vehicle', 'Outdoor')
            and not any(c.get('name', '').endswith(f'-{s}') for s in _view_suffixes)]
     if bad:
         bad_names = [c['name'] for c in bad]
         logger.warning(
-            "  ⚠️  LLM returned monolithic Room/Vehicle entries (not split into views): %s. "
+            "  ⚠️  LLM returned monolithic Room/Vehicle/Outdoor entries (not split into views): %s. "
             "Run 'make remake-room-refs' to split them, or delete and re-cast.",
             bad_names,
         )
@@ -497,6 +498,24 @@ _VEHICLE_VIEWS = [
     ),
 ]
 
+_OUTDOOR_VIEWS = [
+    (
+        'View-Primary',
+        'Wide establishing shot facing the primary direction as defined in the visual_desc compass layout. '
+        'Show all foreground, midground, and background landmarks visible from this angle. '
+        'Empty location, no people, landscape/architectural photography.',
+    ),
+    (
+        'View-Opposite',
+        'Wide establishing shot facing the OPPOSITE direction (180-degree turn from View-Primary). '
+        'CRITICAL SPATIAL RULE — 180-degree turn: left and right sides are SWAPPED relative to View-Primary. '
+        'What was on the LEFT in View-Primary is now on the RIGHT, and vice versa. '
+        'Use the compass layout from visual_desc to determine the correct left/right placement of each landmark. '
+        'All materials, lighting, and atmosphere must match View-Primary style reference. '
+        'Empty location, no people, landscape/architectural photography.',
+    ),
+]
+
 
 def remake_room_refs(config: dict, llm: BaseLLM, project: Project):
     """Split existing Room/Vehicle refs into separate per-view refs and render them.
@@ -515,12 +534,12 @@ def remake_room_refs(config: dict, llm: BaseLLM, project: Project):
     """
     load_character_refs(project)
 
-    all_view_suffixes = {v[0] for v in _ROOM_VIEWS + _VEHICLE_VIEWS}
+    all_view_suffixes = {v[0] for v in _ROOM_VIEWS + _VEHICLE_VIEWS + _OUTDOOR_VIEWS}
 
     to_split = [
         (name, info)
         for name, info in project.character_info.items()
-        if info.get('type') in ('Room', 'Vehicle')
+        if info.get('type') in ('Room', 'Vehicle', 'Outdoor')
         and not any(name.endswith(f'-{s}') for s in all_view_suffixes)
     ]
 
@@ -532,7 +551,7 @@ def remake_room_refs(config: dict, llm: BaseLLM, project: Project):
 
     for name, info in to_split:
         rtype = info['type']
-        views = _ROOM_VIEWS if rtype == 'Room' else _VEHICLE_VIEWS
+        views = _ROOM_VIEWS if rtype == 'Room' else _VEHICLE_VIEWS if rtype == 'Vehicle' else _OUTDOOR_VIEWS
         prev_view_name: Optional[str] = None
 
         orig_desc = info['visual_desc']
@@ -581,16 +600,22 @@ def remake_room_refs(config: dict, llm: BaseLLM, project: Project):
                 orig_png = project.ref_dir / f"{safe_name(name)}.png"
                 if orig_png.exists():
                     try:
-                        with Image.open(orig_png) as img:
-                            w, h = img.size
-                            top_half = img.crop((0, 0, w, h // 2))
-                        buf = BytesIO()
-                        top_half.save(buf, format='PNG')
-                        view_png_path.write_bytes(buf.getvalue())
-                        project.character_images[view_name] = str(view_png_path)
-                        logger.info(f"    ✂️  Cropped top half → {view_png_path}")
+                        if rtype == 'Outdoor':
+                            # Original Location PNG is already a valid primary view — use it directly
+                            view_png_path.write_bytes(orig_png.read_bytes())
+                            project.character_images[view_name] = str(view_png_path)
+                            logger.info(f"    📋  Copied original → {view_png_path}")
+                        else:
+                            with Image.open(orig_png) as img:
+                                w, h = img.size
+                                top_half = img.crop((0, 0, w, h // 2))
+                            buf = BytesIO()
+                            top_half.save(buf, format='PNG')
+                            view_png_path.write_bytes(buf.getvalue())
+                            project.character_images[view_name] = str(view_png_path)
+                            logger.info(f"    ✂️  Cropped top half → {view_png_path}")
                     except Exception as e:
-                        logger.warning(f"  ⚠️  Crop failed for {name}: {e}; falling back to API render")
+                        logger.warning(f"  ⚠️  Copy/crop failed for {name}: {e}; falling back to API render")
 
             # Render via API if PNG still missing (no original, or crop failed)
             if not view_png_path.exists():
@@ -661,8 +686,58 @@ def _generate_room_anchors(ref: dict, llm: BaseLLM) -> dict:
         return {}
 
 
+def _generate_outdoor_anchors(ref: dict, llm: BaseLLM) -> dict:
+    """Call LLM to derive anchor_points from a View-Primary outdoor ref's visual_desc.
+
+    Returns anchor dict on success, empty dict on failure.
+    """
+    name = ref.get('name', '?')
+    desc = ref.get('visual_desc', '').strip()
+    if not desc:
+        logger.warning(f"  ⚠️  {name}: empty visual_desc — skipping anchor generation")
+        return {}
+
+    prompt = (
+        f"You are a spatial layout analyst. Convert the outdoor location description below into a precise "
+        f"coordinate anchor system for use by a cinematography AI.\n\n"
+        f"Location reference: {name}\n"
+        f"Camera view: View-Primary (camera faces the primary direction as defined in the compass layout).\n\n"
+        f"VISUAL DESCRIPTION:\n{desc}\n\n"
+        f"INSTRUCTIONS:\n"
+        f"1. Define a 2D coordinate origin at the center of the View-Primary frame at ground level. "
+        f"   X positive = right in View-Primary (East if primary direction is North). "
+        f"   Y positive = away from camera (into the scene). Z positive = up.\n"
+        f"2. Estimate room_m = [width_x, depth_y] in meters — the visible span of the location.\n"
+        f"3. Map every significant landmark (benches, lampposts, gates, trees, walls, paths, corners) "
+        f"   as a named object anchor. Use kebab-case ids (e.g. 'east-lamppost', 'iron-gate'). "
+        f"   Include 'notes' for landmarks with a clear left/right orientation.\n"
+        f"4. Define named zones (functional areas: entrance zone, path center, far background, etc.). "
+        f"   For each zone write a visual_disposition_hint — a self-contained natural-language phrase "
+        f"   that pins a character to that zone without using coordinates. "
+        f"   The phrase must reference visible landmarks so an image model can place the character correctly. "
+        f"   Example: 'standing at the LEFT edge of the iron gate, facing camera, stone wall behind'.\n"
+        f"5. Add an axes string that a downstream LLM can paste into a scene prompt.\n"
+        f"6. NOTE for downstream use: in View-Opposite perspective all X coordinates are negated "
+        f"   (180° turn — left and right swap). State this in the axes string.\n\n"
+        f"Return compact JSON only."
+    )
+    try:
+        result = llm.make_json(prompt, schema=ANCHOR_SCHEMA)
+        if result and result.get('zones'):
+            return result
+        logger.warning(f"  ⚠️  {name}: LLM returned empty anchor data")
+        return {}
+    except Exception as e:
+        logger.warning(f"  ⚠️  {name}: anchor generation failed: {e}")
+        return {}
+
+
 def run_room_anchors(project: Project, llm: BaseLLM):
-    """Generate anchor_points for all View-From-Entrance room refs that lack them.
+    """Generate anchor_points for all primary-view room and outdoor refs that lack them.
+
+    Covers:
+      - type=Room  with suffix -View-From-Entrance
+      - type=Outdoor with suffix -View-Primary
 
     Writes anchor_points field back into each ref's JSON file.
     Idempotent: skips refs that already have anchor_points.
@@ -672,20 +747,25 @@ def run_room_anchors(project: Project, llm: BaseLLM):
     targets = [
         (name, info)
         for name, info in project.character_info.items()
-        if info.get('type') == 'Room'
-        and name.endswith('-View-From-Entrance')
+        if (
+            (info.get('type') == 'Room' and name.endswith('-View-From-Entrance'))
+            or (info.get('type') == 'Outdoor' and name.endswith('-View-Primary'))
+        )
         and not info.get('anchor_points')
     ]
 
     if not targets:
-        logger.info("  ✅ All View-From-Entrance room refs already have anchor_points.")
+        logger.info("  ✅ All primary-view room/outdoor refs already have anchor_points.")
         return
 
-    logger.info(f"  📐 Generating anchor_points for {len(targets)} room ref(s).")
+    logger.info(f"  📐 Generating anchor_points for {len(targets)} ref(s).")
 
     for name, info in targets:
         logger.info(f"  🔍 {name} ...")
-        anchors = _generate_room_anchors(info, llm)
+        if info.get('type') == 'Outdoor':
+            anchors = _generate_outdoor_anchors(info, llm)
+        else:
+            anchors = _generate_room_anchors(info, llm)
         if not anchors:
             continue
 

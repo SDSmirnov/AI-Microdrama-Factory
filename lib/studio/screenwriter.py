@@ -644,12 +644,14 @@ PANELS TO PROCESS:
 # ---------------------------------------------------------------------------
 # Spatial disposition pass
 # ---------------------------------------------------------------------------
-_TO_ENTRANCE_SUFFIXES = ('-View-To-Entrance', '-Interior-To-Entrance')
+_TO_ENTRANCE_SUFFIXES = ('-View-To-Entrance', '-Interior-To-Entrance', '-View-Opposite')
 _VIEW_SWAP: dict[str, str] = {
     'View-From-Entrance': 'View-To-Entrance',
     'View-To-Entrance': 'View-From-Entrance',
     'Interior-From-Entrance': 'Interior-To-Entrance',
     'Interior-To-Entrance': 'Interior-From-Entrance',
+    'View-Primary': 'View-Opposite',
+    'View-Opposite': 'View-Primary',
 }
 
 
@@ -737,7 +739,9 @@ Use ONLY: compass walls (East wall / West wall / North wall / South wall),
 named anchor objects (West chair / East chair / bar counter / marble table / entrance door),
 physical relations (back to the brick wall / facing the gilded mirror / standing beside the bar counter).
 
-Each panel has a "view_type" field ("From-Entrance" or "To-Entrance") for your spatial reasoning only.
+Each panel has a "view_type" field for your spatial reasoning only.
+  Rooms/Vehicles: "From-Entrance" (canonical axis) or "To-Entrance" (reversed — left/right swapped).
+  Outdoor locations: "From-Entrance" maps to View-Primary (canonical axis); "To-Entrance" maps to View-Opposite (reversed — left/right swapped).
 Do NOT write "MIRROR VIEW:" or any screen-direction annotation in the output.
 
 VIEW VALIDATION (fields: swap_view + swap_view_reason):
