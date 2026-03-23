@@ -44,6 +44,17 @@ STYLE_PRESETS: Dict[str, Dict] = {
         "needs_captions": False,
         "camera_style": "cinematic_fpov"
     },
+    "vertical_9_16_generic": {
+        "name": "Vertical Generic - Faithful Cinematic Adaptation",
+        "format": "single_grid_animation",
+        "panels_per_scene": 9,
+        "aspect_ratio": "9:16",
+        "resolution": "2K",
+        "needs_start_end": True,
+        "needs_dialogue": True,
+        "needs_captions": False,
+        "camera_style": "cinematic_fpov"
+    },
 }
 
 _DEFAULT_STYLE = "vertical_9_16_microdrama"
