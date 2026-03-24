@@ -7,6 +7,7 @@ Steps:
 4. Check if `custom_prompts/scenery.md` exists — use it; otherwise use `lib/prompting/vertical_9_16_microdrama/scenery.md`. Read it.
 5. Check if `custom_prompts/setting.md` exists — use it; otherwise use `prompts/setting.md` (legacy fallback). Read it.
 6. Check if `custom_prompts/config.json` exists — use it; otherwise use `lib/prompting/vertical_9_16_microdrama/config.json`. Read it for `panels_per_scene` and `animation.enabled`.
+6b. Read `lib/prompting/vertical_9_16_microdrama/screenplay_scene.md` — this is the authoritative panel generation rulebook. All cinematography rules, motion protocols, panel structure, voice budget, and output field contracts come from this file.
 7. List all `.png` files in `ref_thriller/` — these are the available character/location references.
 8. Generate scene keyframes following all instructions below, applying the episode-type rules for the extracted `episode_type`. Set `episode_id` = $ARGUMENTS in every scene object.
 9. Write output to `cinematic_render/animation_episode_scenes_{episode_id:03d}.json` (zero-padded to 3 digits).
@@ -17,7 +18,7 @@ Steps:
 
 ---
 
-Apply the scenery template instructions from the loaded `scenery.md` and setting context from `setting.md`.
+Apply the scenery template instructions from the loaded `scenery.md`, setting context from `setting.md`, and ALL panel generation rules from the loaded `screenplay_scene.md` — including the independence protocol, motion protocols, cinematography techniques, voice budget, panel arc structure, post-write audit, and dialogue exchange continuity rules.
 
 ## ROLE: MASTER CINEMATOGRAPHER — KEYFRAME GENERATION
 
@@ -31,128 +32,47 @@ You prepare keyframe assets for AI-based Image-To-Video story visualization. You
 
 ## PANEL DESCRIPTION RULES
 
-### visual_start
-State JUST BEFORE the action — tense, static, anticipatory. **70+ words minimum.** Specify: character positions, clothing (textures, colors), props in each hand (left/right specified), lighting direction, camera framing, background details.
+Follow ALL field contracts and constraints from the loaded `screenplay_scene.md`. Key fields per panel:
 
-### visual_end
-State AFTER the micro-action — result is visible. **70+ words minimum.** Only the subjects change — lighting and camera remain IDENTICAL to visual_start.
+- `motion_intent` — one sentence: what does the character want to achieve in this physical moment? Required before writing `motion_prompt`.
+- `visual_start` — 70+ words, state JUST BEFORE [0s] begins (not mid-action, not residual from previous panel).
+- `visual_end` — 70+ words, state after the micro-action; new unstable state, not a completion.
+- `motion_prompt` — 100+ words, timestamped. Physical movements only. ITEM ORIGIN: every retrieved object must come from a physically real place stated in the character's ref. Follow all motion protocols from screenplay_scene.md (temporal compression, combat collapse, motion budget, hesitation constraints, tableau failure rule, post-write audit).
+- `motion_prompt_reversed` — always leave `""` — populated by `/reversal-pass`.
+- `is_reversed` — see screenplay_scene.md.
+- `lights_and_camera` — lens, angle, DOF, key light. Must be identical between start/end.
+- `dialogue` — ≤8 words per line, Russian. Follow dialogue exchange continuity rules from screenplay_scene.md.
+- `voiceover` — inner monologue in Russian, no voice/gender prefix in the field. Hard limit: 4–5 words for pivot panels (P7). Reveals subtext only — never narrates what is visible.
+- `voiceover_settings` — required alongside every non-empty voiceover: `{"gender": "male"/"female", "actor": "character name", "age": "approximate as string", "tone": "comma-separated delivery descriptors"}`. Use `{}` when voiceover is empty.
+- `emotional_beat` — one of: `tension`, `revelation`, `grief`, `desire`, `defiance`, `dread`, `relief`, `rage`, `longing`, `shock`, `shame`, `triumph`.
+- `hook_type` — uses `/` notation: `cold_open/status_reversal`, `cold_open/impossible_situation`, `cold_open/hidden_identity`, `cold_open/ticking_clock`, `cold_open/revelation`; `cliffhanger/response_freeze`, `cliffhanger/revelation`, `cliffhanger/emotional_rupture`, `cliffhanger/interrupted_action`; or: `verbal_hook`, `escalation`, `emotional_capture`, `crystallization`, `confrontation`, `pivot`, `twist`, `tension_peak`, `backlink`, `none`.
+- `text_safe_composition` — `true` when key subjects are in middle 65% of frame height.
+- `caption` — required for every panel. ≤40 characters. A hook, not a summary — emotional subtext or open question that makes a viewer pause their scroll. SELF-TEST: if a stranger saw only the image + caption, would they pause? Rewrite until yes.
+- `panel_type` — always `"narrative"`.
+- `transition_to_next` — `match_cut` / `jump_cut` / `smash_cut` / `j_cut` / `hard_cut`.
+- `sound_design` — required for every panel. See screenplay_scene.md for silence-panel rules.
+- `duration` — 6–8s default; 2–3s for jump_cut escalation panels; P1 hard cap 3s (autocut leaves only 2–4s visible).
+- `references` — character/object ref names from `ref_thriller/` (no extension).
+- `location_references` — see naming rules below.
 
-### motion_prompt
-Precise instruction for the AI video model for a 6–8 second clip. **100+ words minimum.** Add timestamps for complex actions:
-- "At 0s Ruslan sits still, glass in his right hand..."
-- "At 3s he slowly lifts the glass..."
-- "At 6s he sets it down, eyes still on Alisa."
-
-Camera movement: specify if camera is static, slow push-in, pan direction and degrees, rack focus.
-
-**PHYSICAL REALISM PROTOCOL — the model renders every word literally, with no narrative context.**
-
-1. **Physical movements only. No emotional language.** Emotions belong in `voiceover` and `emotional_beat`, not here. Describe joint angles, degrees, distances.
-   - BAD: `"he recoils in horror, utterly poleaxed, mouth agape in disbelief"`
-   - GOOD: `"at 1.5s his eyes open wide, jaw drops ~2 cm, upper body leans back 10°"`
-
-2. **No spectacle verbs for small actions.** Words like `erupts`, `sprays`, `fountains`, `explodes`, `bursts` instruct the model to generate special-effect-scale events.
-   - BAD: `"a fine spray of liquid erupts from his mouth catching the light"`
-   - GOOD: `"at 2s a small amount of liquid escapes his lips as he exhales sharply"`
-
-3. **No speed metaphors.** `"blurring speed"`, `"in an instant"`, `"lightning-fast"` cause motion blur artifacts and broken geometry. Use timestamps.
-   - BAD: `"her hand enters with blurring speed"`
-   - GOOD: `"at 0.5s her hand enters from the right; finger contacts the screen at 0.8s"`
-
-4. **Anatomically correct scale for tears and body fluids.** A tear is a 2–3 mm bead tracking down the cheek — not "streams" or "rivers". Crying: `"at 3s a small tear forms at the outer corner of his left eye and tracks slowly down his cheek."`
-
-5. **Self-check:** before writing any phrase, ask — could the AI render this as a grotesque artifact or broken anatomy? If yes, replace it with a minimal literal anatomical description.
-
-### lights_and_camera
-Camera angle, lens type (anamorphic, 50mm prime, wide), focal length, depth of field (shallow/deep), key light position, fill ratio. Must be IDENTICAL between start/end.
-
-### dialogue
-Russian text only. Format as `"Имя: 'реплика.'"`. ≤8 words per line — staccato, emotionally specific. Empty string if no dialogue in panel.
-
-### voiceover
-Off-screen narration / inner monologue in Russian, synced to panel action. Reveals subtext — what the viewer CANNOT see (fear, memory, desire). Never describes what is visually obvious. Add Male/Female voice indicator (e.g. `"Male Voiceover: Это конец."`). Must NOT overlap dialogue — use timestamps if needed (e.g. `"at 2.0s mark, after Alice finishes her line, Male Voiceover: Чёрт."`). Empty string if not applicable.
-
-### emotional_beat
-Single dominant emotion of this panel. Choose one: `tension`, `revelation`, `grief`, `desire`, `defiance`, `dread`, `relief`, `rage`, `longing`, `shock`, `shame`, `triumph`.
-
-### hook_type
-Role of this panel in episode dramaturgy:
-- `cold_open` — Panel 1 of the first pov_a episode: consequence before cause, visual question mark, no exposition.
-- `verbal_hook` — Panel 2 (≈7s mark): a character speaks the episode's central conflict in ≤8 words (ultimatum, threat, confession, challenge). NOT exposition — the dialogue names the stakes.
-- `escalation` — Panels 3–5: pressure compounds.
-- `emotional_capture` — Panel 4 (≈21s mark): irreversible emotional commitment — an action taken, a line crossed, a secret revealed.
-- `confrontation` — Panel 6: maximum interpersonal or physical conflict.
-- `twist` — Panel 8: one piece of information changes everything.
-- `cliffhanger` — Panel 9 (final panel of EVERY episode): never resolve.
-- `backlink` — Panel 2 or 3 of pov_a/pov_b episodes: visual callback (duration 2–3s, no dialogue) to the most emotionally charged moment from the PREVIOUS chapter. ECU on POV character's face → memory image → back to present. Voiceover carries the inner echo.
-- `none` — default for all other panels.
-
-### text_safe_composition
-`true` when key subjects (faces, hands, action) are composed in the middle 65% of frame height, leaving top 15% and bottom 20% clear for subtitle overlays. Default `true` for all dialogue/voiceover panels.
-
-### caption
-Narrative text overlay if captions are enabled in config. Empty string otherwise.
-
-### references
-List of character/object reference names (matching filenames from `ref_thriller/` without extension) that physically appear in this panel.
-
----
-
-## VERTICAL FORMAT CINEMATOGRAPHY TECHNIQUES
-
-### TILT REVEAL — vertical-format signature technique
-Use tilt in `motion_prompt` to reveal information progressively top-to-bottom or bottom-to-top. Start on feet/hands, tilt up to reveal face; or start on face, tilt down to reveal weapon/object. Mandatory for at least one confrontation or twist panel per scene. State tilt direction, speed (slow/fast), and what is concealed at the start.
-
-### MICRO-EXPRESSION CLUSTER — rapid emotional escalation
-Plan 2–3 consecutive ECU panels (panels 3–5 escalation zone) at duration 1–2s each with `transition_to_next=jump_cut` between them. Each shows the same face in a different emotion (calm → surprise → fear, or doubt → recognition → dread). In `motion_prompt`, describe only the face: micro-muscle shifts, eye movement, lip compression. Camera locked — no movement.
-
-### BOKEH / SELECTIVE FOCUS — attention direction
-In escalation and twist panels, compose with shallow DOF to isolate a single foreground object (a ring, a phone screen, a scar, a hand). Specify in `lights_and_camera`: "shallow DOF, [object] sharp in foreground, subject/background as bokeh at [distance]."
-
-### SHOT SCALE RHYTHM
-Prevent monotony by alternating scale: after 2–3 consecutive ECU/CU panels, insert one MS or WIDE to re-establish spatial context. Match motion intensity to emotional_beat (dread = slow creep, shock = snap zoom, rage = handheld shake). For shock/revelation panels: "camera snap-zooms into subject's eyes over 0.5s".
-
-### is_reversed
-Set `true` ONLY when the viewer must see an obscured/hidden state first, then a crisp reveal (fog clearing, door opening, hands withdrawing). Write `visual_start`/`visual_end` in NORMAL chronological order — the pipeline swaps them for rendering.
-
-### motion_prompt_reversed
-Always leave as empty string `""` — populated by the `/reversal-pass` skill.
-
-### duration
-Expected clip length in seconds: 6–8.
-
-### panel_type
-Always `"narrative"`. Every panel shows characters — faces, hands, power dynamics.
-
-### transition_to_next
-Edit cut technique to the next panel:
-- `match_cut`: plan visual_end of this panel to share a geometric shape or motion vector with visual_start of the next — name the match explicitly in motion_prompt
-- `jump_cut`: jarring deliberate cut for pace — use in escalation bursts and micro-expression clusters (allow duration 2–3s)
-- `smash_cut`: maximum contrast — silence → noise, stillness → chaos, or reverse — capture contrast in sound_design
-- `j_cut`: next panel's audio begins audibly 1–2s before the visual cut — describe it in sound_design
-- `hard_cut`: standard clean cut (default)
-
-### sound_design
-Sonic atmosphere cue for this panel, **required for every panel**, independent of dialogue/voiceover. Plan sonic contrast deliberately — sustained silence broken by a sharp sound is more powerful than continuous noise.
-- **MANDATORY**: at least one panel per scene must have `sound_design="silence"` as deliberate setup for the next panel's sonic event. Pair with `transition_to_next=smash_cut` on the following panel.
-- For j_cut transitions: describe the next scene's audio bleeding in ("J-cut: rain from next scene starts at 5s mark").
-- Examples: `"silence"`, `"low-frequency hum builds"`, `"amplified footstep at 2s, then silence"`, `"heartbeat rises to bass drop on cut"`, `"glass crack at 4s, then pin-drop silence"`.
-
-### location_references
-List of location/environment reference names (from `ref_thriller/`) visible in this panel (rooms, buildings, outdoor settings). Used for panel-by-panel rendering to maintain location consistency. Empty array if no location reference applies.
-
-### SCENE-LEVEL CAMERA AND LIGHTING MASTER
-
-For every scene, generate two master fields:
-- `camera_master`: one sentence — dominant lens (mm), angle, primary lighting condition shared by all panels.
-- `lighting_master`: one sentence — key light direction/color/quality, fill ratio, visible practicals. All panels inherit this DNA; deviations must be noted explicitly in that panel's `lights_and_camera`.
+### SCENE-LEVEL FIELDS
+- `camera_master` — one sentence: dominant lens (mm), angle, primary lighting condition shared by all panels.
+- `lighting_master` — one sentence: key light direction/color/quality, fill ratio, visible practicals.
 
 ### INDEPENDENCE PROTOCOL — NON-NEGOTIABLE
 
-Each panel is rendered by a separate image-generation model that receives ONLY that panel's text — no history, no context, no memory.
-- **FORBIDDEN**: "same as before", "same POV", "same framing", "same appearance", "as in panel N", "continues from", "identical to", "as established".
-- **REQUIRED**: Restate character appearance (hair, clothing, build, expression), location details, shot type, camera angle, and lighting in EVERY panel's `visual_start` and `visual_end` — even if they repeat word-for-word from the previous panel.
-- Treat each panel description as the ONLY instruction the image model will ever receive for that shot.
+Each panel is rendered by a separate image-generation model with ZERO context.
+- **FORBIDDEN**: "same as before", "same POV", "same framing", "as in panel N", "continues from", "identical to", "as established".
+- **REQUIRED in every panel**: location details, shot type, camera angle, lighting. Character reference images are injected separately — describe ONLY scene-specific deviations (costume changes, carried items, injuries, transient state). Signature visual tells must be mentioned at CU/ECU range.
+- **POV CAMERA LAW**: a shot from [Character X]'s POV means Character X CANNOT appear anywhere in frame.
+
+### LOCATION_REFERENCES NAMING
+
+Use exact split-view names:
+- **Room**: `{Room-Name}-View-From-Entrance` (camera at door, looking in) or `{Room-Name}-View-To-Entrance` (camera inside, looking toward door). Key rule: background element "behind [subject]" is on the wall OPPOSITE the camera.
+- **Vehicle**: `{Vehicle-Name}-Exterior` / `{Vehicle-Name}-Interior-From-Entrance` / `{Vehicle-Name}-Interior-To-Entrance`.
+- **Outdoor**: `{Outdoor-Name}-View-Primary` (camera faces the PRIMARY DIRECTION defined in the ref compass layout) or `{Outdoor-Name}-View-Opposite` (180-degree turn; left/right SWAPPED). Key rule: "archway behind her" + archway is the PRIMARY-end landmark → View-Opposite. "open street behind him" + street is the near/entry end → View-Primary.
+- Names must match existing refs EXACTLY — a mismatch silently skips the reference image during rendering.
 
 ## EPISODE-TYPE SPECIFIC RULES
 
@@ -196,24 +116,26 @@ Apply these rules based on the `episode_type` extracted in step 2:
       "panels": [
         {
           "panel_index": 1,
-          "visual_start": "70+ word description of initial static state...",
-          "visual_end": "70+ word description after micro-action...",
+          "motion_intent": "One sentence: what does the character want to achieve in this physical moment?",
+          "visual_start": "70+ word description of initial static state at t=(-0.1s)...",
+          "visual_end": "70+ word description of new unstable state after micro-action...",
           "motion_prompt": "100+ word timestamped motion instruction...",
           "is_reversed": false,
           "motion_prompt_reversed": "",
           "lights_and_camera": "Camera: 50mm anamorphic, shallow DOF. Key light: 45° right, warm tungsten. Fill: soft left.",
           "dialogue": "",
           "voiceover": "",
+          "voiceover_settings": {"gender": "female", "actor": "Character-Name", "age": "30", "tone": "scared, confused"},
           "emotional_beat": "tension",
-          "hook_type": "none",
+          "hook_type": "cold_open/status_reversal",
           "text_safe_composition": true,
           "panel_type": "narrative",
           "transition_to_next": "hard_cut",
-          "sound_design": "silence",
-          "caption": "",
-          "duration": 7,
+          "sound_design": "low-frequency hum builds",
+          "caption": "≤40 chars — hook, not summary",
+          "duration": 3,
           "references": ["Character-Name"],
-          "location_references": ["location-name"]
+          "location_references": ["Location-View-From-Entrance"]
         }
       ]
     }

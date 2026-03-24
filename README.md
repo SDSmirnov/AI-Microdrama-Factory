@@ -49,7 +49,7 @@ Core pipeline stages:
 1. `styles`: analyze novel + generate `custom_prompts/` overlay on top of `lib/prompting/<style>/`.
 2. `casting`: detect references and write `ref_thriller/*.json`.
 3. `refs`: render missing reference portraits `ref_thriller/*.png`.
-3b. `remake-room-refs`: split Room/Vehicle refs into per-view variants (View-From-Entrance, View-To-Entrance, Exterior, etc.) and render each as a separate PNG.
+3b. `remake-room-refs`: split monolithic Room/Vehicle/Outdoor refs into per-view variants (View-From-Entrance/View-To-Entrance, Exterior/Interior-*, View-Primary/View-Opposite) and render each as a separate PNG. New projects generate multi-view refs directly from `casting`; run this only to migrate old monolithic refs.
 3c. `room-anchors`: generate spatial `anchor_points` for View-From-Entrance room refs (doors, windows, furniture landmarks used by the disposition pass).
 4. `screenplay`: generate episodes/scenes/reversal pass and `animation_metadata.json`.
 5. `scenes`: generate keyframes for specific episode(s) with cross-episode continuity rules and upsert into metadata.
@@ -228,8 +228,9 @@ Commands (all accept `--style <preset>` where relevant; default: `vertical_9_16_
 
 Built-in styles in `lib/prompting/`:
 
-- `vertical_9_16_microdrama` (single_grid_animation, 9 panels, 9:16) — default. One episode per narrative chapter; multi-POV (pov_a / pov_b / confrontation) supported.
+- `vertical_9_16_microdrama` (single_grid_animation, 9 panels, 9:16) — default. Optimized for DramaBox/ReelShort serialized drama. Single POV throughout; episodes grouped into 3-episode series (open → mid × N → close). Each episode is one hook-to-cliffhanger unit.
 - `vertical_9_16_long_arc` (single_grid_animation, 9 panels, 9:16). Episodes grouped into arc units spanning 2 or 3 episodes (controlled by `episodes_count` in `config.json`). Each arc unit runs arc_open → [arc_mid] → arc_close as a single hook-to-cliffhanger.
+- `vertical_9_16_generic` (single_grid_animation, 9 panels, 9:16). Style-agnostic fallback. Single POV, configurable series size (1/2/3/5 episodes via `episodes_count`). Use as a neutral starting point for genres not served by the other presets.
 
 The `--style` flag is a global CLI option, not a subcommand argument. It selects the prompt directory and config. `custom_prompts/` files (if present) overlay on top.
 
@@ -256,8 +257,10 @@ Reference artifacts:
 
 - `ref_thriller/*.json`
 - `ref_thriller/*.png`
-- `ref_thriller/*-View-From-Entrance.{json,png}` (after `remake-room-refs`)
-- `ref_thriller/*-View-To-Entrance.{json,png}` (after `remake-room-refs`)
+- `ref_thriller/*-View-From-Entrance.{json,png}` — room refs (after `casting` or `remake-room-refs`)
+- `ref_thriller/*-View-To-Entrance.{json,png}` — room refs
+- `ref_thriller/*-Exterior.{json,png}`, `*-Interior-From-Entrance.{json,png}`, `*-Interior-To-Entrance.{json,png}` — vehicle refs
+- `ref_thriller/*-View-Primary.{json,png}`, `*-View-Opposite.{json,png}` — outdoor refs
 
 ## Project Layout
 
@@ -267,7 +270,7 @@ Makefile
 lib/
   core/        # project/env/prompts loader/schemas
   llm/         # OpenRouter, Gemini, Grok, Debug adapters
-  prompting/   # style preset directories (vertical_9_16_microdrama/)
+  prompting/   # style preset directories (vertical_9_16_microdrama/, vertical_9_16_long_arc/, vertical_9_16_generic/)
   studio/      # stylist/screenwriter/artist/critic/director/editor/cutter/retoucher/bookbinder
   commands/    # argparse command registration (setup/screenplay/storyboard/animation/audio)
   animation/   # Veo and Grok animators

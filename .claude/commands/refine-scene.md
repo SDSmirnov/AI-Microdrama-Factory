@@ -59,6 +59,9 @@ Set `is_reversed=true` for any panel where:
 - Background: distance, depth layers, out-of-focus elements
 - Ensure character appearance matches their `video_visual_desc` from loaded reference JSONs
 
+### motion_intent
+Every panel must have `motion_intent` — one sentence stating what the character wants to achieve physically in this clip. If missing or vague ("character moves toward her"), rewrite it as a goal-driven statement ("Alisa crosses the room to reclaim the document before he reads it"). If you cannot state why the character moves, the panel has no dramatic content — rewrite the panel content to give it one.
+
 ### motion_prompt (100+ words, timestamped)
 - Add precise timestamps: "At 0s...", "At 2s...", "At 5s...", "At 7s..."
 - Specify camera movement explicitly: "camera remains static", "slow push-in over 4 seconds", "pan 15° left"
@@ -90,8 +93,14 @@ Set `is_reversed=true` for any panel where:
 ### voiceover
 - Must reveal subtext — fear, memory, desire — that the IMAGE cannot show
 - Must NOT describe what is visually obvious ("she runs" is banned; "she knows she won't make it" is correct)
-- Must be in Russian, synced to the action timing of the panel
+- Must be in Russian, synced to the action timing of the panel. No voice/gender prefix in the text field.
+- Hard limit: 4–5 words for pivot panels (P7). Inner monologue is a flash — not a sentence.
 - If empty, consider whether inner monologue would deepen the panel — add it if so
+
+### voiceover_settings
+- Required alongside every non-empty `voiceover`. Add if missing.
+- Format: `{"gender": "male"/"female", "actor": "character name", "age": "approximate as string", "tone": "comma-separated delivery descriptors e.g. scared, confused"}`
+- Use `{}` when voiceover is empty.
 
 ### emotional_beat / hook_type / text_safe_composition
 - Verify `emotional_beat` accurately names the single dominant emotion of the panel
@@ -106,6 +115,11 @@ Set `is_reversed=true` for any panel where:
 
 ### location_references
 - Verify `location_references` lists any room, building, or outdoor location refs (from `ref_thriller/`) visible in this panel. Add any missing location refs. Leave empty if truly no location reference applies.
+- Use exact split-view names:
+  - **Room**: `{Room-Name}-View-From-Entrance` or `{Room-Name}-View-To-Entrance` — choose based on camera side. Background element "behind [subject]" is on the wall OPPOSITE the camera.
+  - **Vehicle**: `{Vehicle-Name}-Exterior` / `{Vehicle-Name}-Interior-From-Entrance` / `{Vehicle-Name}-Interior-To-Entrance`.
+  - **Outdoor**: `{Outdoor-Name}-View-Primary` (camera faces PRIMARY DIRECTION toward canonical background landmark) or `{Outdoor-Name}-View-Opposite` (180° turn; left/right SWAPPED). "archway behind her" + archway is PRIMARY-end → View-Opposite. "open street behind him" + street is near/entry end → View-Primary.
+  - Names must match existing refs EXACTLY — a mismatch silently skips the reference image during rendering.
 
 ### RULE 4 — CROSS-SCENE SPATIAL CONTINUITY
 

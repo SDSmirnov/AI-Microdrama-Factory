@@ -11,60 +11,15 @@ Steps:
 
 ---
 
-Apply the casting template instructions and visual style from the loaded `casting.md` and `setting.md`.
+Apply ALL rules from the loaded `casting.md` and `setting.md` exactly — including reference types, character EDC (Everyday Carry), compass-layout formats for rooms and outdoor locations, multi-entry formats for rooms/vehicles/outdoor, and image generation prompt templates.
 
 ## ROLE: MASTER CINEMATOGRAPHER — CASTING
 
 Think as a Master Cinematographer analyzing what will physically appear on screen when the entire story is filmed. Identify every KEY reference that needs a visual anchor image.
 
-## REFERENCE TYPES TO IDENTIFY
-
-- **Character**: Protagonist, antagonists, supporting cast with screen time
-- **Location**: Distinct physical spaces (exterior establishing shots)
-- **Room**: Interior spaces with distinct visual identity
-- **Vehicle**: Cars, ships, spacecraft — exterior + interior views
-- **Object**: Props with meaningful screen presence (weapons, devices, documents)
-- **Interface**: Screens, dashboards, UI elements
-
 ## DEDUPLICATION RULES
 
 Match by IDENTITY, not by name. If a character/place in the text is the same entity as an existing reference (same role, same location, same object) — SKIP IT, even if the name differs slightly. Only add a NEW entry if it is genuinely a different entity. If unsure, prefer reusing an existing reference over creating a new one.
-
-## DESCRIPTION RULES
-
-- `name`: Clean identifier — letters, digits, hyphens only. No quotes, punctuation, or parentheses.
-- `logline_subject_info`: One sentence — who/what this is in the story (role, relationship, function). Must be unique enough to distinguish from similarly-named entities. Used for deduplication across runs.
-- `visual_desc`: 100+ words. Precise enough for AI image generation with zero hallucination. Include: facial structure, eye shape/color, hair style/color, skin tone, build/height, clothing with textures and colors, distinctive features, age.
-- `video_visual_desc`: 30–50 words. Shorter version for use inside scene panel prompts.
-- `style_reference`: Name of an existing reference image to use as visual style base, or same `name` if entirely new.
-- `type`: Character / Location / Object / Room / Vehicle / Interface
-
-## BACKGROUND RULES FOR IMAGE GENERATION PROMPTS
-
-- Characters → **empty/solid neutral backdrop**
-- Locations → **empty space, no people**
-- Objects → **blank background**
-- Vehicles → **blank background, empty, no people**
-- Rooms → **empty room, no people**
-
-## SPECIAL MULTI-PANEL FORMATS
-
-**Rooms** — generate a 2-panel vertical image:
-- TOP: View from the door
-- BOTTOM: View toward the door
-
-**Vehicles** — generate a 3-panel vertical image:
-- TOP: Exterior view
-- MIDDLE: Interior from entrance, wide shot
-- BOTTOM: Interior toward entrance, wide shot
-
-## IMAGE GENERATION PROMPT TEMPLATE
-
-For each new reference, output a ready-to-copy image generation prompt:
-
-**Character**: `CINEMATIC REFERENCE FOR CHARACTER: {name}. {visual_desc}. Close-up portrait, neutral expression, uniform studio lighting, solid neutral backdrop, 8K resolution, sharp focus.`
-
-**Location/Room/Vehicle/Object/Interface**: `CINEMATIC REFERENCE FOR {TYPE}: {name}. {visual_desc}. Empty, no people. {appropriate shot type}. 8K resolution.`
 
 ## OUTPUT FORMAT
 
@@ -74,11 +29,16 @@ For each new reference, output a ready-to-copy image generation prompt:
     "name": "reference-name",
     "logline_subject_info": "One-sentence role/identity in the story",
     "visual_desc": "Verbose 100+ word description for image generation",
-    "type": "Character|Location|Object|Room|Vehicle|Interface",
+    "type": "Character|Location|Object|Room|Vehicle|Interface|Outdoor",
     "video_visual_desc": "Concise 30-50 word description for use in scene prompts",
     "style_reference": "reference-name-or-existing-ref"
   }
 ]
 ```
+
+**Multi-entry types** (generate multiple JSON objects per source entity — follow naming conventions from casting.md exactly):
+- **Room** → `{Room-Name}-View-From-Entrance` + `{Room-Name}-View-To-Entrance`
+- **Vehicle** → `{Vehicle-Name}-Exterior` + `{Vehicle-Name}-Interior-From-Entrance` + `{Vehicle-Name}-Interior-To-Entrance`
+- **Outdoor** → `{Outdoor-Name}-View-Primary` + `{Outdoor-Name}-View-Opposite`
 
 After the JSON, list each reference with its image generation prompt under a `## Image Generation Prompts` heading.

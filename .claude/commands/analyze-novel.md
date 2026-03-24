@@ -27,7 +27,8 @@ After outputting the JSON, recommend the best visual style preset for this novel
 
 | Preset | Best for |
 |--------|----------|
-| `vertical_9_16_microdrama` | Default portrait format for TikTok/Reels/Shorts (9:16). One episode per narrative chapter; multi-POV (pov_a / pov_b / confrontation) supported. Best for fast-paced stories. |
+| `vertical_9_16_microdrama` | Default portrait format for DramaBox/ReelShort (9:16). Episodes grouped into 3-episode series (open → mid × N → close). Single POV throughout, no POV switching. Best for fast-paced serialized drama. |
 | `vertical_9_16_long_arc` | Same portrait format, but episodes grouped into arc units of 2–3 episodes each (arc_open → arc_mid → arc_close). Better for slow-burn narratives, romance, and character-driven drama. |
+| `vertical_9_16_generic` | Style-agnostic fallback preset (9:16). Single POV, no multi-POV decomposition, configurable series size (1/2/3/5 episodes). Best for genres that don't fit microdrama or long_arc, or as a neutral starting point. |
 
 Explain your recommendation in 2–3 sentences referencing the novel's specific qualities.

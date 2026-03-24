@@ -12,6 +12,7 @@ Look up the preset for `style_preset` from the table below:
 |-----|------|--------|--------|--------|------------|----------------|----------------|----------------|--------------|
 | `vertical_9_16_microdrama` | Vertical MicroDrama - Realistic Cinematic | single_grid_animation | 9 | 9:16 | 2K | true | true | false | cinematic_fpov |
 | `vertical_9_16_long_arc` | Vertical Long Arc - Realistic Cinematic | single_grid_animation | 9 | 9:16 | 2K | true | true | false | cinematic_fpov |
+| `vertical_9_16_generic` | Vertical Generic - Realistic Cinematic | single_grid_animation | 9 | 9:16 | 2K | true | true | false | cinematic_fpov |
 
 If `style_preset` is not in the table, default to `vertical_9_16_microdrama`.
 

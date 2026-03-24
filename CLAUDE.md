@@ -47,7 +47,7 @@ make split-book BOOK=fullbook.txt STYLE=vertical_9_16_microdrama SEASON=1
 /analyze-novel s01e01.txt
 
 # Step 1b (optional): Generate custom_prompts/ overrides for a chosen style
-# Active styles: vertical_9_16_microdrama 
+# Available styles: vertical_9_16_microdrama | vertical_9_16_long_arc | vertical_9_16_generic
 /customize-style s01e01.txt vertical_9_16_microdrama
 # → writes override files to custom_prompts/ (style, casting, scenery, imagery, setting, config)
 # → these overlay on top of lib/prompting/<style>/ at runtime
@@ -102,6 +102,8 @@ lib/
   llm/         # BaseLLM ABC + backends: GeminiLLM, OpenRouterLLM, GrokLLM, LogDebugLLM
   prompting/   # Style preset directories (each: *.md prompts + config.json + book-shrinker.md)
     vertical_9_16_microdrama/
+    vertical_9_16_long_arc/
+    vertical_9_16_generic/
   studio/      # Production pipeline modules:
     stylist.py      — novel analysis + custom_prompts/ overlay generation
     screenwriter.py — episode/scene/reversal AI passes
@@ -125,7 +127,7 @@ All commands that load prompts accept the global `--style <preset>` flag (defaul
 1. **`styles`** (`stylist.analyze_novel` + `generate_custom_prompts`): Extracts genre/tone/characters; writes `custom_prompts/` overlay files on top of `lib/prompting/<style>/`
 2. **`casting`** (`artist.auto_cast_characters`): Identifies characters/locations/objects from text; saves reference JSONs to `ref_thriller/`
 3. **`refs`** (`artist.render_character_refs`): Generates missing reference portrait PNGs
-3b. **`remake-room-refs`** (`artist.remake_room_refs`): Splits monolithic Room/Vehicle refs into per-view variants — rooms get `View-From-Entrance` / `View-To-Entrance`; vehicles get `Exterior` / `Interior-From-Entrance` / `Interior-To-Entrance`. Renders each view as a separate PNG using architectural photography style (empty, no people). Run after `refs` when location consistency matters across opposing camera angles.
+3b. **`remake-room-refs`** (`artist.remake_room_refs`): Splits monolithic Room/Vehicle/Outdoor refs into per-view variants — rooms get `View-From-Entrance` / `View-To-Entrance`; vehicles get `Exterior` / `Interior-From-Entrance` / `Interior-To-Entrance`; outdoor locations get `View-Primary` / `View-Opposite`. Renders each view as a separate PNG (empty, no people). Run after `refs` when location consistency matters across opposing camera angles. New projects using the updated `casting` step generate multi-view refs directly — `remake-room-refs` is for migrating old monolithic single-image refs.
 3c. **`room-anchors`** (`artist.run_room_anchors`): Generates `anchor_points` for View-From-Entrance room refs — spatial landmarks (doors, windows, furniture positions) used by the disposition pass.
 4. **`screenplay`** (`screenwriter.analyze_scenes_master`): Episodes → scenes → refinement → reversal pass; writes `animation_metadata.json`
 5. **`scenes`** (`screenwriter.run_scenes_pipeline`): Per-episode keyframe generation with cross-episode continuity rules; upserts into `animation_metadata.json`
@@ -154,11 +156,13 @@ All commands that load prompts accept the global `--style <preset>` flag (defaul
 | `custom_prompts/` | User override files; deep-merged on top of `lib/prompting/<style>/` at runtime |
 | `prompts/` | Legacy fallback only (used if `lib/prompting/<style>/` dir is missing) |
 
-`lib/prompting/<style>/` contains: `style.md`, `casting.md`, `scenery.md`, `imagery.md`, `screenplay.md`, `screenplay_scene.md`, `screenplay_episodes.md`, `qa.md`, `episode_type_pov.md`, `episode_type_confrontation.md`, `episode_type_transition.md`, `episode_type_arc_open.md`, `episode_type_arc_mid.md`, `episode_type_arc_close.md`, `episode_type_duel.md` (long_arc only), `refinement_arc_rule.md`, `config.json`, `book-shrinker.md`
+`lib/prompting/<style>/` contains: `style.md`, `casting.md`, `scenery.md`, `imagery.md`, `setting.md`, `screenplay.md`, `screenplay_scene.md`, `screenplay_episodes.md`, `qa.md`, `refinement_arc_rule.md`, `config.json`, `book-shrinker.md`, plus episode-type-specific files that vary by style:
+- `microdrama` / `generic`: `episode_type_pov.md`, `episode_type_confrontation.md`, `episode_type_transition.md`
+- `long_arc`: `episode_type_arc_open.md`, `episode_type_arc_mid.md`, `episode_type_arc_close.md`, `episode_type_duel.md`, `episode_type_transition.md`
 
-Available built-in styles: `vertical_9_16_microdrama`, `vertical_9_16_long_arc`
+Available built-in styles: `vertical_9_16_microdrama`, `vertical_9_16_long_arc`, `vertical_9_16_generic`
 
-`config.json` controls format type (`single_grid_animation` or `single_grid`), panels per scene, aspect ratio, resolution, animation mode, slicing, dialogue, captions, and `episodes_count` (arc length for `vertical_9_16_long_arc`: 2 or 3 episodes per arc unit).
+`config.json` controls format type (`single_grid_animation` or `single_grid`), panels per scene, aspect ratio, resolution, animation mode, slicing, dialogue, captions, transitions, and `episodes_count` (series size: 1/2/3/5 for `generic`; arc length for `long_arc`: 2 or 3 episodes per unit).
 
 ### Output Structure
 
@@ -197,6 +201,10 @@ ref_thriller/
   vehicle-Exterior.png              # Vehicle ref variants
   vehicle-Interior-From-Entrance.png
   vehicle-Interior-To-Entrance.png
+  outdoor-location-View-Primary.png   # Outdoor ref variants (facing primary direction)
+  outdoor-location-View-Primary.json
+  outdoor-location-View-Opposite.png  # Outdoor ref variants (180° turn, left/right swapped)
+  outdoor-location-View-Opposite.json
 ```
 
 ### Rate Limiting
@@ -207,7 +215,7 @@ Built-in token-bucket rate limiters: 25 RPM for refinement calls, 20 RPM for ima
 
 Structured output schemas in `lib/core/schemas.py` enforce the AI response format:
 - `SCREENPLAY_SCHEMA` — episode-level breakdown with 3-POV fields (`episode_type`, `chapter_id`, `pov_character`, `visual_continuity_rules`)
-- `SCENE_SCHEMA` — scene-level keyframes including `camera_master` / `lighting_master` per scene and full panel fields (motion, reversal, sound, transitions)
+- `SCENE_SCHEMA` — scene-level keyframes including `camera_master` / `lighting_master` per scene and full panel fields (`motion_intent`, motion, reversal, sound, `voiceover_settings`, transitions)
 - `CHARACTER_SCHEMA` — reference character/location/object descriptions
 - `SCENE_REWRITE_SCHEMA` — used by the continuity enforcer to align `visual_start`, `visual_end`, and `lights_and_camera` to approved refs
 - `bookbinder._WINDOW_SCHEMA` — split-point anchors returned by `split-book` LLM call
