@@ -13,6 +13,13 @@
 ## Special Instructions
 Render with photorealistic quality. Apply professional, subtle color grading to establish a specific mood. Incorporate a shallow depth of field (bokeh) to isolate subjects and create a cinematic feel. Add a light layer of realistic film grain for texture.
 
+## Movement Direction Law
+All character movement must be stated camera-relative with exact phrasing:
+- "moving TOWARD the camera" — character approaches; grows larger in frame
+- "moving AWAY FROM the camera" — character retreats; grows smaller in frame
+- "moving LEFT across frame" / "moving RIGHT across frame" — lateral tracking
+NEVER rely on positional shorthand ("from end A to end B") — the model has no knowledge of which end is closer to camera. Always state the camera-relative vector explicitly in both visual_start and motion_prompt[0s].
+
 ## Extreme Close-Up (ECU) Protocol
 When the panel description calls for ECU, extreme close-up, or a tight shot on eyes/face/hands:
 - Maximum facial resolution: visible skin pores and natural skin texture — photorealistic, NOT plastic or AI-smoothed.

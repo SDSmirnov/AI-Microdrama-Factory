@@ -70,6 +70,10 @@ make remake-room-refs
 /generate-keyframes 1
 # → writes cinematic_render/animation_episode_scenes_001.json
 
+# Step 4b (required for multi-scene episodes with recurring characters):
+make consistency --no-dry-run
+# → re-aligns character refs, prevents visual drift between scenes
+
 # Step 5: Refine visual/motion descriptions for precision
 /refine-scene cinematic_render/animation_episode_scenes_001.json
 # → writes cinematic_render/animation_episode_scenes_001_refined.json

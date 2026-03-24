@@ -19,6 +19,14 @@ Each panel is rendered by a separate image-generation model that receives ONLY t
 - REQUIRED in EVERY panel's visual_start and visual_end: location details, shot type, camera angle, and lighting. Character reference images are injected separately — do NOT repeat canonical appearance (hair color, build, eye color, usual outfit). Instead, describe ONLY scene-specific deviations: costume changes ("silk robe instead of usual dress"), carried items for this scene ("holding a gun", "bag on left shoulder"), injuries or transient state ("soaked, mascara running"). Signature visual tells (scar, tattoo, prop) must be mentioned when visible at CU/ECU range.
 - Treat each panel description as the ONLY instruction the image model will ever receive for that shot.
 - POV CAMERA LAW: A shot described as "from [Character X]'s perspective" or "[Character X]'s POV" means the camera occupies Character X's eye position. Character X CANNOT appear anywhere in that frame. If Character X must be visible: drop the POV framing and use over-the-shoulder, reaction shot, or standard two-shot instead.
+- CHARACTER ISOLATION LAW: Every visual_start and visual_end must explicitly name every character present in the frame. End each description with one of:
+  - "NO OTHER CHARACTERS ARE VISIBLE IN THIS SHOT." — for single or paired shots
+  - "ONLY [Name1] AND [Name2] ARE IN THIS SHOT. NO ONE ELSE." — for two-shots
+  Never leave the character count implicit. The image model fills empty space with people from the scene context — block this with an explicit headcount every time.
+- REFERENCES ARRAY CONTRACT: The `references` array must contain ONLY characters and props that are physically visible in this panel's visual_start or visual_end.
+  FORBIDDEN: listing a character in references because they appear in a later panel of the same scene, or because they are mentioned in dialogue (off-screen voice = not visible).
+  Off-screen speakers: include in `dialogue` field only. Their ref image must NOT be injected.
+  Rule: if a character is not visible → not in references.
 
 ## VERTICAL CINEMATIC PHOTOGRAPHY — 9 PANELS PER SCENE
 
@@ -29,6 +37,12 @@ FRAMING HIERARCHY:
 - CU (Close-Up): face from chin to forehead — default for dialogue and reaction
 - MS (Medium Shot): chest up — confrontation, spatial relationship between characters
 - WIDE: only when the environment is the dramatic agent (threat, scale, isolation)
+
+CAMERA-FACING ORIENTATION LAW: Every visual_start must state explicitly how characters are oriented relative to the camera. Choose one and write it in the description:
+- "faces visible to camera" — frontal or near-frontal; default for MS/CU/ECU
+- "three-quarter profile to camera" — partial face visible (OTS with emotion)
+- "back to camera" — only when backs are the INTENTIONAL dramatic choice
+Never omit orientation. "Two figures on a bench" without camera orientation → model defaults to backs or profiles. If faces are needed: state it.
 
 ANGLE VARIETY RULE: No two consecutive panels may share the same shot scale AND the same camera angle. If P3 = CU / eye-level, then P4 must change at least one dimension: scale (ECU / MS / WIDE) OR angle (low / high / over-shoulder / oblique). Monotone shot sequences collapse rhythm.
 
@@ -41,7 +55,7 @@ VISUAL DRAMATIC INTENSITY — WHAT GOES IN EVERY NARRATIVE FRAME:
 **visual_start must answer four questions in one image:**
 1. WHO has power right now, and WHO doesn't? — Show it through spatial position (standing over / cornered), posture (open vs. closed), or a prop (who holds the phone, the contract, the weapon).
 2. WHAT specific emotion is visible on the primary face? — Not "he looks angry." Write the physics: "jaw set, lips compressed, eyes tracking her hands rather than her face." The AI renders what you describe.
-3. WHAT detail signals something is at stake? — A door left open, a phone face-down, hands too close together, a glass at the edge of a table. One object carries the threat without naming it.
+3. WHAT detail signals something is at stake? — A door left open, a phone face-down, hands too close together, a glass at the edge of a table. One object carries the threat without naming it. If the screenplay_instructions blueprint names a STAKE OBJECT for this panel, it is MANDATORY in visual_start with these exact words: "FEATURED PROP: [name] — [where in frame, focus state]." Example: "FEATURED PROP: business card — held extended between Viktor's fingers, sharp focus, center frame." Without this line, the image model will not render the prop.
 4. IS the character's signature visual tell present? — For any CU or ECU, the character's defining prop, mark, or gesture must be explicitly described as visible, OR motion_prompt must explain why it is off-frame.
 
 **visual_end must show a state transition with dramatic weight — not a completed action:**
@@ -158,6 +172,11 @@ MOTION_PROMPT PHYSICAL REALISM — the video model renders every word literally:
 4. Anatomically correct scale: a tear is a 2–3mm bead, not "rivers".
 5. ITEM ORIGIN — every retrieved object must come from a physically real place:
    "right hand moves to shoulder holster, draws pistol" — NEVER "pulls out a gun".
+6. MOVEMENT DIRECTION — all character movement must be stated camera-relative with exact phrasing:
+   - "moving TOWARD the camera" — character approaches; grows larger in frame
+   - "moving AWAY FROM the camera" — character retreats; grows smaller in frame
+   - "moving LEFT across frame" / "moving RIGHT across frame" — lateral tracking
+   NEVER rely on positional shorthand ("from end A to end B") — the model has no knowledge of which end is closer to camera. Always state the camera-relative vector explicitly in both visual_start and motion_prompt[0s].
 
 TILT REVEAL — vertical-format signature technique:
 Use tilt in motion_prompt to reveal information progressively top-to-bottom or bottom-to-top.
@@ -198,6 +217,14 @@ Every panel MUST have either `dialogue` OR `voiceover` populated. HARD FAILURE i
 
 DIALOGUE: ≤8 words, delivered in CU on speaker's face. Populate both `dialogue` and sync `voiceover` for inner counterpoint.
 VOICEOVER: inner monologue only — no voice/gender prefix. {target_language} language. HARD LIMIT: 4–5 words for emotional_beat panels.
+
+VOICEOVER + DIALOGUE TIMING: When a panel has both voiceover and dialogue non-empty, set voiceover_timing to one of:
+- "before_dialogue" — VO plays first, then the spoken line (default for inner reaction)
+- "after_dialogue" — spoken line first, then VO (default for consequence beats)
+- "under_dialogue" — VO runs simultaneously at low mix (use rarely — usually muddy)
+- "during_silence" — VO plays in a silent gap within motion_prompt (mark gap in motion_prompt)
+HARD DEFAULT: if voiceover is a reaction to dialogue, use "after_dialogue". Never leave timing ambiguous when both fields are populated.
+
 `voiceover_settings` — required alongside every non-empty voiceover. Set: gender, actor, age, tone.
 
 DIALOGUE EXCHANGE CONTINUITY — HARD RULE:
