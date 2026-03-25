@@ -360,10 +360,23 @@ ANCHOR_SCHEMA = {
                     "visual_disposition_hint": {
                         "type": "string",
                         "description": (
-                            "Natural-language anchor phrase for visual_disposition panel field. "
-                            "Must NOT use coordinates. Use landmark references instead. "
-                            "Example: 'seated on the left side of the marble table, back to the brick wall, "
-                            "gilded mirror centered behind'. Must be copy-pasteable into a panel prompt."
+                            "Natural-language anchor phrase for View-From-Entrance (camera at entrance looking in). "
+                            "Must state the full depth chain: what is nearest camera, what occludes the character, "
+                            "what is in background. Include explicit framing language. "
+                            "Example: 'host seated at far side of desk (East chair); desk surface in foreground "
+                            "lower-third between camera and host; host visible from mid-chest up above desk edge; "
+                            "South wall behind host in background. DEPTH: entrance → desk foreground → host mid-ground → South wall background'."
+                        ),
+                    },
+                    "visual_disposition_hint_to_entrance": {
+                        "type": "string",
+                        "description": (
+                            "Natural-language anchor phrase for View-To-Entrance (camera at far end looking toward entrance). "
+                            "Depth stack is REVERSED vs visual_disposition_hint. Must explicitly state what is now "
+                            "nearest camera (far-end objects/furniture), what they occlude, and entrance as background. "
+                            "Example: 'desk surface fills lower-third foreground (camera past desk looking toward entrance); "
+                            "visitor seated on entrance-side of desk visible from mid-chest up above desk edge; "
+                            "entrance door centered in background. DEPTH: desk foreground → visitor mid-ground → entrance background'."
                         ),
                     },
                 },

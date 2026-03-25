@@ -838,8 +838,19 @@ and decision. Examples:
   "Category D insert, no swap"
 
 RULES:
-1. Identify which characters are present from visual_start, visual_end, references, dialogue.
-2. Assign each character to the most appropriate zone using only physical landmark language.
+0. CAMERA-SIDE EXCLUSION — apply before all other rules:
+   Inspect lights_and_camera and visual_start for POV or OTS signals:
+     - "POV", "point-of-view", "[Name]'s POV", "POV from [Name]"
+     - "over-the-shoulder of [Name]", "OTS [Name]", "camera behind [Name]"
+     - "subjective camera", "first-person view"
+   Any character identified as the camera source is BEHIND the lens and NOT visible in frame.
+   In visual_disposition write: "[Name] — behind camera, not in frame" for that character.
+   Do NOT place them in foreground, background, or any spatial zone.
+   They may only appear as a partial anonymous element (e.g. "shoulder edge in extreme foreground corner")
+   if visual_start explicitly describes a partial OTS sliver — and only then.
+1. Identify which characters are VISIBLE in frame from visual_start, visual_end, references, dialogue.
+   Exclude any character identified as the camera source per Rule 0.
+2. Assign each visible character to the most appropriate zone using only physical landmark language.
    For moving panels (non-empty motion_prompt): state BOTH the origin anchor (visual_start) and
    destination anchor (visual_end), e.g. "Alisa moves FROM the marble table TOWARD the East wall bar counter".
 3. Enforce cross-panel consistency: a character in the West chair in panel 1 stays in the West chair
@@ -849,7 +860,21 @@ RULES:
    anchor_points.objects[].notes. Never use screen directions.
 5. For single-character or no-character panels: name the nearest anchor object and depth
    (close to camera / mid-room / far end of room).
-6. Keep each visual_disposition under 80 words.
+6. Keep each visual_disposition under 120 words.
+
+DEPTH STACK RULE — required whenever furniture or props exist in the scene:
+Use anchor_points Y-coordinates and view_type to compute depth order for each panel:
+  - View-From-Entrance: higher Y = deeper in room = farther from camera.
+  - View-To-Entrance: lower Y = closer to entrance = farther from camera (depth is reversed).
+For every object with Y between the camera and the character, express it as occlusion:
+  "[object] [surface/edge] occupies [lower/upper] [fraction] of frame;
+   [character] visible from [body part] upward above [object edge]"
+Append a DEPTH line to visual_disposition:
+  "DEPTH: [nearest to camera] → [mid-ground] → [background]"
+If anchor_points zones include visual_disposition_hint_to_entrance and the panel uses
+a To-Entrance view, use that hint as the starting point for visual_disposition and extend
+with character-specific anchor assignments. Never omit the depth chain when furniture is
+between the camera and the subject.
 
 SCENE PANELS:
 {json.dumps(panels_context, ensure_ascii=False, indent=2)}
