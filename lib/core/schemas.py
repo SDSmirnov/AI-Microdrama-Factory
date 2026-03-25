@@ -130,9 +130,17 @@ REVERSAL_SCHEMA = {
         "type": "object",
         "properties": {
             "panel_index": {"type": "integer"},
-            "motion_prompt_reversed": {"type": "string"}
+            "motion_prompt_reversed": {"type": "string"},
+            "visual_start_explicit": {
+                "type": "string",
+                "description": (
+                    "Fully explicit rewrite of the original visual_end (which becomes visual_start after swap). "
+                    "Must include shot type (ECU/CU/MS/MLS/LS), camera angle, character positions in frame, "
+                    "key props, lighting. No 'same framing', 'as before', or implicit references allowed."
+                )
+            }
         },
-        "required": ["panel_index", "motion_prompt_reversed"]
+        "required": ["panel_index", "motion_prompt_reversed", "visual_start_explicit"]
     }
 }
 

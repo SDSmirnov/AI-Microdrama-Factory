@@ -50,6 +50,9 @@ Set `is_reversed=true` for any panel where:
 - An object comes into view (door opens revealing someone, fog clears, etc.).
 - Someone approaches the camera from a distance.
 - `visual_end` shows a presence that is ABSENT in `visual_start`.
+- A character's FACE is hidden at `visual_start` (back to camera, hood up, silhouette, turned away)
+  and is REVEALED during the motion (turns around, removes hood, steps into light facing camera).
+  Shoot the character turning AWAY (face → back), reverse so viewer sees the face reveal.
 
 ### visual_start / visual_end (70+ words each)
 - Replace vague terms: not "a suit" but "charcoal wool double-breasted suit with white pocket square"

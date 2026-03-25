@@ -529,6 +529,9 @@ Set is_reversed=true for any panel where:
 - An object comes into view (door opens revealing someone, fog clears to show a figure, etc.).
 - Someone approaches the camera from a distance.
 - visual_end shows a presence that is ABSENT in visual_start.
+- A character's FACE is hidden at visual_start (back to camera, hood up, silhouette, turned away)
+  and is REVEALED during the motion (turns around, removes hood, steps into light facing camera).
+  Shoot the character turning AWAY (face → back), reverse so viewer sees the face reveal.
 {prev_terminal_block}
 ### RULE 5 — CROSS-PANEL SPATIAL CONTINUITY
 Characters do not teleport between panels. Each panel's visual_start at t=0 must be spatially
@@ -586,27 +589,56 @@ def apply_reversal_pass(scene: dict, prompts: dict, config: dict, llm: BaseLLM) 
     prompt = f"""
 You are a Master Cinematographer writing motion prompts for AI video generation.
 
-The following panels in this scene require REVERSE REVEAL animation:
-the action was originally written in chronological order, but the AI Image-To-Video must generate reversed clip.
-  - visual_start = what the camera sees at t=0  (the obscured / empty / hidden state)
-  - visual_end   = what the camera sees at the end (the fully revealed state)
+The following panels require REVERSE REVEAL animation. The clip is shot forward by the AI,
+then reversed in post — so you describe forward physics that read naturally when played backward.
 
-Your job: write motion_prompt_reversed describing how the scene transitions
-FROM visual_end TO visual_start. This will be initially rendered as a forward-playing clip,
-then REVERSED during post-processing so the viewer sees visual_start → visual_end.
-It must be viewed closer to natural when replayed backwards,
-e.g. if person walks in room from the open door, then "motion_prompt_reversed" should be like
-"Jack goes backwards to the open door and then closes the door, all time facing camera".
+  - visual_start = what the viewer sees at t=0 (obscured/empty/hidden state)
+  - visual_end   = what the viewer sees at the end (revealed/present state)
 
-Rules:
-- The motion must be physically plausible as a forward-playing clip.
-- Duration: {config['format'].get('panel_duration_s', 6)} seconds total.
-- Use timestamps (e.g. "At 2 seconds…") for clarity.
-- Be very detailed (100+ words). The AI video model needs precision.
-- Do NOT invent new elements — only describe the transition between the two provided states.
-- Preserve all lighting and camera details from lights_and_camera.
-- Output ONLY a JSON array with the same panel_index values. Each object must have
-  exactly two keys: "panel_index" (integer) and "motion_prompt_reversed" (string).
+You must generate TWO things per panel:
+
+1. motion_prompt_reversed — describes the FORWARD clip the AI will render:
+   starts at visual_end state, ends at visual_start state.
+   When this clip is reversed, the viewer sees visual_start → visual_end.
+
+2. visual_start_explicit — a fully explicit rewrite of visual_end (which becomes the new
+   visual_start after the swap). Required because the original visual_end may contain vague
+   references like "same framing" or lack camera/shot details.
+   Must include: shot type (ECU/CU/MS/MLS/LS), camera angle, character position in frame,
+   key props, lighting state. No implicit references.
+
+BODY MECHANICS RULES (critical for natural reversal):
+- Name the exact limb used: "reaches with RIGHT hand", "steps with LEFT foot"
+- State face direction at every beat: "facing camera", "in profile left", "turning 45° to door"
+- Sequence every movement beat: weight shift, reach, grip, step, pivot — one sentence each
+- For entries/exits: show full travel — partial frame edge → full frame presence, or reverse
+- Forward physics that reverse naturally:
+    character walking AWAY from camera  →  entry toward camera when reversed
+    door swinging SHUT, character outside  →  door opening, entry when reversed
+    character sitting DOWN  →  character rising when reversed
+
+Example:
+  Original visual_start: "Closed office door, empty hallway."
+  Original visual_end:   "Secretary inside room, door open, colleagues laughing in background."
+  → motion_prompt_reversed (forward: inside → outside):
+    "At 0s: MS shot from room corner — Secretary stands center-frame just inside doorway,
+    coat settling, colleagues visible over her right shoulder mid-laugh. Camera holds static.
+    At 1s she turns her head left toward the door, shifts weight to left foot.
+    At 2s she reaches forward with her RIGHT hand, grips the door handle.
+    At 3s she steps backward with her right foot through the threshold, body crossing doorframe.
+    At 4s she steps back again with left foot, now fully in hallway, facing INTO the room,
+    left hand still holding the door edge. At 5.5s she pulls the door closed with a firm pull,
+    door swinging toward camera. At 6.5s door clicks shut, hallway empty — closed door fills frame."
+  → visual_start_explicit:
+    "MS shot from room corner — Secretary stands center-frame just inside doorway, coat mid-settle,
+    right hand at side, colleagues blurred in background over her right shoulder, warm office
+    lighting, door fully open to the left of frame."
+
+RULES:
+- motion_prompt_reversed: 100+ words, timestamps, all verbs physically plausible forward
+- Do NOT invent new visual elements beyond the two provided states
+- Preserve all lighting and camera details from lights_and_camera
+- Duration: {config['format'].get('panel_duration_s', 6)} seconds total
 
 {setting_context}
 
@@ -623,14 +655,15 @@ PANELS TO PROCESS:
     if result:
         # result may be a list (schema is array) or dict with list
         items = result if isinstance(result, list) else result.get('items', [])
-        reversed_map = {item['panel_index']: item['motion_prompt_reversed'] for item in items}
+        reversed_map = {item['panel_index']: item for item in items}
         for p in scene.get('panels', []):
             if p.get('is_reversed', False) and p['panel_index'] in reversed_map:
+                item = reversed_map[p['panel_index']]
                 p['motion_prompt_original'] = p['motion_prompt']
-                p['motion_prompt'] = reversed_map[p['panel_index']]
+                p['motion_prompt'] = item['motion_prompt_reversed']
                 original_start = p['visual_start']
                 original_end   = p['visual_end']
-                p['visual_start'] = original_end
+                p['visual_start'] = item.get('visual_start_explicit') or original_end
                 p['visual_end']   = original_start
                 logger.info(f"      ✅ Panel {p['panel_index']}: motion_prompt_reversed generated")
             elif p.get('is_reversed', False):
