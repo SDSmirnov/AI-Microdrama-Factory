@@ -107,6 +107,7 @@ Plan a match_cut shape in visual_end that will connect to the next episode's arc
 visual_start continues from the previous episode's arc_bridge visual_end: same location, same character, same physical position, 1–2 seconds later.
 motion_prompt begins from where the bridge ended — the action now completes.
 Voiceover carries the character's inner decision at the moment of crossing — 4–5 words max.
+SCENE JUMP HARD RULE: if the arc_pickup is in a DIFFERENT location or a different moment in time than the arc_bridge — it is NOT an arc_pickup. Assign hook_type: cold_open and treat it as the opening of a new arc unit. An arc_pickup that jumps to a new scene (new location, time has passed) is a continuity break that confuses both the viewer and the image model — the match_cut geometry becomes impossible and the episode seam is broken. When in doubt: if the viewer would need a scene transition (fade, title card, time cut) between arc_bridge and arc_pickup, it is a new arc, not a pickup.
 
 **motion_prompt DEFAULT — characters move. Every panel must have visible full-body physical action:**
 People walk, gesture, turn, approach, retreat, grab objects, lean in, stand up, sit down. A 6-second clip must show something visibly happening in physical space. Micro-expressions alone are dead screen.
@@ -149,6 +150,13 @@ WRONG: "From 1s to 3.5s, her eyes slowly scan his posture." (2.5s of eye motion 
 WRONG: "At 0s the scene is held in tense silence, no one moves." (even for arc_bridge — dead screen for 4s before suspension begins)
 RIGHT for arc_bridge: character approaches the threshold, reaches out, the hand travels toward the contact point — THEN freezes 1cm short at the last 1s of the clip. The suspension is the FINAL beat, not the whole clip.
 
+**CU OBSERVATION PANEL — the most common TABLEAU FAILURE source:**
+A character watching, thinking, or reacting in CU still requires a physical action within the first 2 seconds. The model defaults to "eyes narrow → corner of mouth twitches → slowly inhales" — this is 5 seconds of face-only motion, which fails both TABLEAU and MOBILE MOTION LAW.
+The fix is always the same: find the object the character will interact with and make the hand move toward it early.
+WRONG: "At 0s gaze is fixed. At 1.5s eyes narrow. At 3s mouth twitches. At 4s inhales. At 5s leans forward."
+RIGHT: "At 0s gaze is fixed. At 1s right hand lifts from lap and reaches for the champagne glass. At 2s fingers close around the stem. At 3s he raises it slowly to lip height, eyes never leaving her. At 5s he sets it down with a deliberate click."
+If there is no object to interact with: the character stands up, shifts weight, turns their head a full 45 degrees, or takes a step — any full-body change. Eye movement alone is never enough.
+
 **COMBAT/CONTACT SEQUENCES — physical impact always collapses into one clip:**
 If a character winds up, strikes, and the target reacts — that is one continuous physical arc of ≤4 seconds. It MUST be one panel.
 WRONG: P5 = "character winds up for the punch", P6 = "fist connects with jaw", P7 = "opponent crumples to the floor" — three panels for four seconds of reality.
@@ -166,6 +174,7 @@ Same rule applies to: push → stumble, grab → spin, shove → door impact, th
    - visual_start shows a character sitting, thinking, or holding an expression → no physical action yet → HARD FAILURE
    - motion_prompt[0s]–[2s] contains only zoom or camera movement with static character → HARD FAILURE
    - motion_prompt[0s]–[2s] contains only face/eye/expression change → HARD FAILURE
+   - CU panel: "At 0s gaze fixed. At 1.5s eyes narrow. At 3s mouth twitches." → all expression, no limb → HARD FAILURE. Fix: move the hand, reach for an object, lean the full torso.
 
 ## 9-PANEL STRUCTURE BY EPISODE TYPE
 
