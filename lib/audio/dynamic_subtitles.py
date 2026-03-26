@@ -22,6 +22,7 @@ except ImportError:
     WhisperModel = None
 
 _SRT_TIME_RE = re.compile(r"(\d+):(\d+):(\d+)[,.](\d+)")
+_SENT_END_RE = re.compile(r"[.!?]$")
 
 
 # ---------------------------------------------------------------------------
@@ -354,6 +355,49 @@ def render_subtitle_overlay(
 # Transcribe video → SRT (for manual editing before dynamic-subtitles)
 # ---------------------------------------------------------------------------
 
+def _split_on_sentences(segments: list[dict]) -> list[dict]:
+    """Split segments at sentence-ending punctuation (., !, ?) using word timestamps.
+
+    Whisper often merges multiple sentences into one segment when pauses are
+    short. This uses cached word-level timestamps to split at sentence boundaries,
+    producing shorter, more readable subtitle entries.
+    Only splits mid-segment sentence ends — the final word is never a split point.
+    """
+    result = []
+    for seg in segments:
+        words = seg.get("words", [])
+        if not words:
+            result.append(seg)
+            continue
+
+        # Indices after which to split (sentence-ending word, not the last word)
+        split_after = [
+            i for i, w in enumerate(words[:-1])
+            if _SENT_END_RE.search(w["word"].strip())
+        ]
+
+        if not split_after:
+            result.append(seg)
+            continue
+
+        boundaries = [0] + [i + 1 for i in split_after] + [len(words)]
+        for j in range(len(boundaries) - 1):
+            chunk = words[boundaries[j]: boundaries[j + 1]]
+            if not chunk:
+                continue
+            # Whisper words carry leading spaces; join+strip gives clean text
+            text = "".join(w["word"] for w in chunk).strip()
+            if not text:
+                continue
+            result.append({
+                "start": chunk[0]["start"],
+                "end": chunk[-1]["end"],
+                "original_text": text,
+                "words": chunk,
+            })
+    return result
+
+
 def run_transcribe_srt(
     video_path: str,
     output_path: str,
@@ -366,6 +410,9 @@ def run_transcribe_srt(
     logger.info("Transcribing %s...", video_path)
     segments, duration = transcribe_video(video_path, transcription_cache)
     logger.info("  %d segments, %.1fs total", len(segments), duration)
+
+    segments = _split_on_sentences(segments)
+    logger.info("  %d phrases after sentence-split", len(segments))
 
     lines = []
     for i, seg in enumerate(segments, 1):
