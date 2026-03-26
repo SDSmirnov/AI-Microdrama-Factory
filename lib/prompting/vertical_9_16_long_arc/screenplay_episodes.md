@@ -171,12 +171,14 @@ The drama belongs to the next episode, not this one.
 - motion_prompt ends before the action completes
 - visual_end: the hand is 1cm from the target, the mouth open but the word unspoken
 - Must plan a match_cut shape in visual_end that connects to the next episode's arc_pickup visual_start
+- SCREENPLAY_INSTRUCTIONS FORMAT REQUIREMENT: the P9 blueprint MUST include a VOICEOVER SEED field (in addition to MATCH CUT SHAPE). Without it, the scene generator will not produce one. Format: `VOICEOVER SEED: "VO: [4–5 word inner monologue — the held thought at the threshold]"`
 
 **Arc Pickup (every non-open episode's first panel):**
 NOT a cold_open. Same location, same moment, 1–2 seconds later in narrative time.
 - Viewer who came from the previous episode feels zero gap
 - Viewer who starts here must read stakes through action and image, never exposition
 - Voiceover carries the character's inner decision at the moment of crossing
+- PHYSICAL CONTINUITY REQUIREMENT: arc_mid and arc_close are ONLY valid when the scene physically continues from the previous arc_bridge — same location, same character, action completing mid-motion, no time jump. If the next scene takes place in a different location OR if any time has passed (even minutes), DO NOT use arc_mid/arc_close. Instead, treat each scene as an independent arc_open with its own cliffhanger. Applying arc_mid/arc_close to physically disconnected scenes forces the scene generator to violate the SCENE JUMP HARD RULE — it will correctly override the arc_pickup with cold_open, creating hook_type conflicts throughout the episode.
 
 **YOUTUBE MID-SEASON ENTRY TEST (every arc_open and arc_pickup, not just the series opener):**
 YouTube algorithm delivers mid-season arcs to cold audiences — viewers who have never seen the series. Unlike ReelShort/DramaBox where viewers commit from episode 1, a YouTube viewer can land on arc 4 with zero prior context. If they cannot read the situation within panels 1–3 of the arc_open (or arc_pickup), they scroll.
@@ -260,6 +262,7 @@ P9 [arc_bridge | SCALE | LOCATION]:
   POWER: [spatial disposition frozen at threshold]
   EMOTION: [held tension — the face before the action]
   MATCH CUT SHAPE: [geometric element in visual_end that links to next episode's arc_pickup; e.g. "hand 1cm from target — MATCH CUT via extended arm line"]
+  VOICEOVER SEED: "VO: [4–5 word inner monologue — the character's held thought at the threshold; MANDATORY for arc_bridge]"
 ```
 
 POWER/EMOTION/STAKE/STATE are the direct inputs the scene generator uses for visual_start, visual_end, and motion_prompt. Collapsing them to beat-label codes forces the scene AI to invent all four from scratch — it will produce generic images that fail QA at dramatic_intensity ≥7. The arc_bridge MATCH CUT SHAPE field is required so the episode boundary seam is planned at generation time, not patched in refinement.

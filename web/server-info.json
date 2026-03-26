@@ -2,7 +2,23 @@
   "novels": [
     "s01e25.txt"
   ],
-  "scene_files": [],
-  "has_metadata": false,
+  "scene_files": [
+    {
+      "episode": 25,
+      "has_refined": true,
+      "has_raw": true
+    },
+    {
+      "episode": 26,
+      "has_refined": true,
+      "has_raw": true
+    },
+    {
+      "episode": 27,
+      "has_refined": true,
+      "has_raw": true
+    }
+  ],
+  "has_metadata": true,
   "storyboards": []
 }

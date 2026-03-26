@@ -8,10 +8,11 @@ For each panel, use its blueprint fields as **direct inputs**:
 - `STAKE OBJECT` → must appear as a visible element in `visual_start`; use for bokeh/rack focus where noted
 - `STATE` → defines the dramatic delta between `visual_start` and `visual_end`
 - `DIALOGUE SEED` → starting point for `dialogue`/`voiceover`; expand to full ≤8-word line
-- `hook_type` in the bracket → set panel's `hook_type` field to the value after the `/`
+- `hook_type` in the bracket → set panel's `hook_type` field to this value VERBATIM. This is a hard contract — do NOT substitute your own interpretation of the narrative beat. The hook_type label was chosen by the screenwriter to match the episode's structural position; overriding it with arc_close vocabulary (twist/reversal/consequence) on an arc_open or arc_mid episode breaks downstream QA and hook validation.
 - `SCALE` in the bracket → set the shot scale in `lights_and_camera`
 - `LOCATION` in the bracket → set the scene location; for INTERCUT episodes, alternate locations per the INTERCUT rule
 - `MATCH CUT SHAPE` (arc_bridge panel only) → plan visual_end geometry and `transition_to_next=match_cut`
+- `VOICEOVER SEED` (arc_bridge panel only) → use as the `voiceover` field verbatim or lightly expanded; NEVER leave voiceover empty on an arc_bridge panel
 
 For arc_bridge panels: `visual_end` must freeze the action at the threshold described in `MATCH CUT SHAPE` — hand 1cm away, word unspoken, door mid-swing.
 For arc_pickup panels: `visual_start` must resume from the previous arc_bridge `visual_end` — same location, same physical position, 1–2 seconds later.
