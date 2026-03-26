@@ -380,44 +380,73 @@ def cmd_disposition(args):
         sys.exit(1)
 
     processed = 0
+    available_refs = frozenset(project.character_info.keys())
     prev_terminal_disposition = ''
     prev_anchor_ref = None
     for scene in scenes:
-        # Collect the canonical primary-view ref for this scene's location.
-        # Panels may already have been swapped to the reversed view by a prior disposition run,
-        # so also resolve reversed-axis refs back to their primary counterpart for lookup.
-        scene_room_refs = set()
-        for panel in scene.get('panels', []):
-            for ref in panel.get('location_references', []):
-                if ref.endswith(('-View-From-Entrance', '-View-Primary')) and ref in anchors_by_ref:
-                    scene_room_refs.add(ref)
-                elif ref.endswith(('-View-To-Entrance', '-View-Opposite')):
-                    canonical = _swap_view_ref(ref)  # → View-From-Entrance or View-Primary
-                    if canonical in anchors_by_ref:
-                        scene_room_refs.add(canonical)
-        anchor_ref = next(iter(scene_room_refs), None)
-        anchor_points = anchors_by_ref[anchor_ref] if anchor_ref else None
-        if not anchor_points:
-            logger.warning(
-                f"  ⚠️  Scene {scene.get('scene_id', '?')}: no anchor_points in "
-                f"location_references — skipping. "
-                f"Refs present: {[r for p in scene.get('panels', []) for r in p.get('location_references', [])]}"
-            )
+        sid = scene.get('scene_id', '?')
+        panels = scene.get('panels', [])
+        if not panels:
             prev_terminal_disposition = ''
             prev_anchor_ref = None
             continue
 
-        # Pass prev terminal only when same room ref — different room has no spatial continuity
-        terminal_ctx = prev_terminal_disposition if anchor_ref == prev_anchor_ref else ''
+        # Resolve anchor per panel. Panels in a scene may reference different rooms.
+        # Group consecutive panels that share the same canonical primary-view anchor ref.
+        # Reversed-axis refs (View-To-Entrance, View-Opposite) map back to their primary.
+        def _resolve_ref(panel):
+            for ref in panel.get('location_references', []):
+                if ref.endswith(('-View-From-Entrance', '-View-Primary')) and ref in anchors_by_ref:
+                    return ref
+                if ref.endswith(('-View-To-Entrance', '-View-Opposite')):
+                    canonical = _swap_view_ref(ref)
+                    if canonical in anchors_by_ref:
+                        return canonical
+            return None
 
-        logger.info(f"  📐 Scene {scene.get('scene_id', '?')} [{scene.get('location', '')}] ...")
-        available_refs = frozenset(project.character_info.keys())
-        apply_spatial_disposition_pass(scene, anchor_points, llm, terminal_ctx, available_refs)
-        processed += 1
+        # Build ordered groups of (anchor_ref, [panel, ...]) preserving sequence
+        groups: list[tuple[str | None, list[dict]]] = []
+        for panel in panels:
+            ref = _resolve_ref(panel)
+            if groups and groups[-1][0] == ref:
+                groups[-1][1].append(panel)
+            else:
+                groups.append((ref, [panel]))
 
-        last_panel = max(scene.get('panels', []), key=lambda p: p.get('panel_index', 0), default=None)
-        prev_terminal_disposition = last_panel.get('visual_disposition', '') if last_panel else ''
-        prev_anchor_ref = anchor_ref
+        any_processed = False
+        for anchor_ref, group_panels in groups:
+            anchor_points = anchors_by_ref.get(anchor_ref) if anchor_ref else None
+            if not anchor_points:
+                logger.warning(
+                    f"  ⚠️  Scene {sid} panels "
+                    f"{[p.get('panel_index') for p in group_panels]}: "
+                    f"no anchor_points — skipping group. "
+                    f"Refs: {[r for p in group_panels for r in p.get('location_references', [])]}"
+                )
+                prev_terminal_disposition = ''
+                prev_anchor_ref = None
+                continue
+
+            terminal_ctx = prev_terminal_disposition if anchor_ref == prev_anchor_ref else ''
+            logger.info(
+                f"  📐 Scene {sid} [{scene.get('location', '')}] "
+                f"anchor={anchor_ref} panels={[p.get('panel_index') for p in group_panels]} ..."
+            )
+            sub_scene = {**scene, 'panels': group_panels}
+            apply_spatial_disposition_pass(sub_scene, anchor_points, llm, terminal_ctx, available_refs)
+            # Merge updated panels back into scene
+            updated = {p.get('panel_index'): p for p in sub_scene['panels']}
+            for i, p in enumerate(scene['panels']):
+                if p.get('panel_index') in updated:
+                    scene['panels'][i] = updated[p.get('panel_index')]
+
+            last_panel = max(group_panels, key=lambda p: p.get('panel_index', 0))
+            prev_terminal_disposition = last_panel.get('visual_disposition', '')
+            prev_anchor_ref = anchor_ref
+            any_processed = True
+
+        if any_processed:
+            processed += 1
 
     if not processed:
         logger.warning("  ⚠️  No scenes processed — check that room-anchors have been generated.")

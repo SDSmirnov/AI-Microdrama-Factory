@@ -13,6 +13,7 @@ from pathlib import Path
 from threading import Lock
 
 
+from lib.core import puppet as _puppet
 from lib.core.prompts import TARGET_LANGUAGE
 from lib.core.schemas import SCREENPLAY_SCHEMA, SCENE_SCHEMA, REVERSAL_SCHEMA, SPATIAL_DISPOSITION_SCHEMA
 from lib.core.state import ProjectState
@@ -932,6 +933,48 @@ swap_view_reason is required for every panel."""
         f"      ✅ Spatial disposition: {updated}/{len(panels)} panels for scene {scene_id}"
         + (f", {swapped} view(s) corrected" if swapped else "")
     )
+
+    # --- Puppet post-processing (Option A: deterministic rewrite) ---
+    # Guard: skip if anchor_points has no zones (legacy or incomplete anchor data).
+    if anchor_points and anchor_points.get('zones'):
+        try:
+            frames = _puppet.build_scene_frames(panels, anchor_points)
+
+            # Validate 180-degree rule — log warnings, never block
+            for v in _puppet.validate_180_rule(frames):
+                logger.warning(
+                    f"      ⚠️  180-rule: panel {v['panel_a']}→{v['panel_b']}: {v['reason']}"
+                )
+
+            # Validate movement transitions — log warnings, never block
+            for v in _puppet.SceneState(frames).validate_transitions():
+                logger.warning(
+                    f"      ⚠️  Transition jump: panel {v['panel_a']}→{v['panel_b']} "
+                    f"'{v['character']}' moved {v['distance_m']}m "
+                    f"(budget {v['budget_m']}m)"
+                )
+
+            # Replace LLM-generated visual_disposition with deterministic output
+            panel_by_idx = {p.get('panel_index'): p for p in panels}
+            det_rewrites = 0
+            for frame in frames:
+                if frame.panel_index not in disp_map:
+                    continue  # LLM produced no disposition for this panel — skip
+                if not frame.characters:
+                    continue  # no zone assignments parsed — keep LLM text
+                det = _puppet.compile_visual_disposition(frame, anchor_points)
+                if det:
+                    panel_by_idx[frame.panel_index]['visual_disposition'] = det
+                    det_rewrites += 1
+            if det_rewrites:
+                logger.info(
+                    f"      🎭 Puppet: {det_rewrites}/{len(panels)} panels rewritten deterministically"
+                )
+        except Exception:
+            logger.exception(
+                f"      ⚠️  Puppet post-processing failed for scene {scene_id} — LLM disposition kept"
+            )
+
     return scene
 
 

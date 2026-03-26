@@ -33,7 +33,7 @@ NARRATIVE      ?=
 INDEX          ?=
 
 .PHONY: help init workdirs styles casting refs remake-room-refs room-anchors screenplay scenes reverse-refine disposition consistency storyboard qa apply-qa accept-qa rebuild-storyboard refinement animation \
-        autocut imgedit tts voiceover dub duck summary split-book panel-by-panel-with-qa extra-panel suno-prompt logic
+        autocut imgedit tts voiceover dub duck summary split-book panel-by-panel-with-qa extra-panel suno-prompt logic 3d-preview
 
 help:  ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-16s %s\n", $$1, $$2}'
@@ -73,6 +73,9 @@ reverse-refine:  ## Refinement + reversal pass on existing raw episode JSON (SCE
 
 disposition:  ## Spatial disposition pass: write visual_disposition per panel (SCENE=N required)
 	python cli.py --llm $(LLM) --style $(STYLE) disposition $(SCENE)
+
+3d-preview:  ## Render axonometric puppet layout preview PNG (SCENE=N or omit for all)
+	python cli.py 3d-preview $(SCENE)
 
 consistency:  ## Run continuity enforcer to sync references (dry-run by default; use RENDER=--no-dry-run to regenerate PNGs)
 	python cli.py --llm $(LLM) --style $(STYLE) consistency $(RENDER)

@@ -31,6 +31,9 @@ Usage:
     python cli.py summary s01e01.txt [--output summary.txt]
     python cli.py logic s01e01.txt [--output s01e01_fixed.txt] [--workers 5]
     python cli.py --llm openrouter --style vertical_9_16_microdrama split-book fullbook.txt [--output-dir book-split] [--season 1]
+
+    # Puppet / spatial debug
+    python cli.py 3d-preview [SCENE|all]
 """
 import argparse
 import datetime

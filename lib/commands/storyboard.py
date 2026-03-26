@@ -1,7 +1,8 @@
-"""Storyboard commands: storyboard, qa, apply-qa, accept-qa, rebuild-storyboard, refinement, imgedit, extra-panel."""
+"""Storyboard commands: storyboard, qa, apply-qa, accept-qa, rebuild-storyboard, refinement, imgedit, extra-panel, 3d-preview."""
 import datetime
 import json
 import logging
+import math
 import os
 import re
 import shutil
@@ -497,6 +498,293 @@ def cmd_panel_by_panel_qa(args):
         sys.exit(1)
 
 
+# ---------------------------------------------------------------------------
+# 3D preview — axonometric puppet layout renderer
+# ---------------------------------------------------------------------------
+
+# Cabinet oblique projection constants:
+#   Receding Y axis at 45°, foreshortened to 0.5 true scale.
+#   0.3536 = cos(45°) * 0.5
+_AXO_F = 0.3536
+
+# Color palette for panel-index coloring (up to 12 panels, wraps)
+_PREVIEW_PALETTE = [
+    (220,  50,  47), ( 38, 139, 210), ( 42, 161, 152), (181, 137,   0),
+    (108, 113, 196), (211,  54, 130), (  0, 168, 107), (203,  75,  22),
+    (100, 200, 100), (  0, 148, 255), (220, 150,  50), (150, 111, 214),
+]
+
+# View-To-* suffix → canonical primary ref suffix (for anchor_points lookup)
+_TO_PRIMARY: dict[str, str] = {
+    'View-To-Entrance':   'View-From-Entrance',
+    'Interior-To-Entrance': 'Interior-From-Entrance',
+    'View-Opposite':      'View-Primary',
+}
+
+
+def _to_primary_ref(ref: str) -> str:
+    """Map a reversed-axis ref name to its canonical primary ref name."""
+    for old, new in _TO_PRIMARY.items():
+        if ref.endswith(f'-{old}'):
+            return ref[: -len(old)] + new
+    return ref
+
+
+def _axo(x_m: float, y_m: float, z_m: float, scale: float, ox: float, oy: float) -> tuple[int, int]:
+    """Cabinet oblique projection: room 3D (X=East, Y=depth, Z=up) → PIL pixels.
+
+    ox/oy: pixel coordinate of the room origin (entrance floor corner).
+    Receding axis: Y at 45°, foreshortened 0.5 (0.3536 = cos45 * 0.5).
+    """
+    rx = (x_m + y_m * _AXO_F) * scale
+    ry = (y_m * _AXO_F + z_m) * scale   # raw Y-up; flipped via oy below
+    return int(ox + rx), int(oy - ry)
+
+
+def _resolve_panel_anchor(panel: dict, anchors_by_ref: dict) -> tuple[str | None, dict | None]:
+    """Return (canonical_ref, anchor_points) for a single panel's location_references, or (None, None)."""
+    for ref in panel.get('location_references', []):
+        if ref.endswith(('-View-From-Entrance', '-View-Primary')) and ref in anchors_by_ref:
+            return ref, anchors_by_ref[ref]
+        canon = _to_primary_ref(ref)
+        if canon in anchors_by_ref:
+            return canon, anchors_by_ref[canon]
+    return None, None
+
+
+def _render_3d_scene_preview(
+    frames_with_anchors: list,   # [(PuppetFrame, anchor_points, ref_name), ...]
+    scene: dict,
+    output_path: Path,
+) -> None:
+    """Render an axonometric puppet preview; each panel uses its own room's anchor_points.
+
+    Produces a 3-column grid. Sub-images with different room sizes are padded to uniform
+    dimensions. Drawing per panel:
+      floor parallelogram + wall wireframe, furniture (tan), zones (green +),
+      camera triangle with FOV lines, character body+circle (or × if behind camera).
+    """
+    from PIL import Image, ImageDraw, ImageFont
+
+    try:
+        font_sm = ImageFont.load_default(size=9)
+        font_md = ImageFont.load_default(size=11)
+    except TypeError:          # Pillow < 9.2
+        font_sm = font_md = ImageFont.load_default()
+
+    SCALE  = 50
+    WALL_H = 2.5
+    MARGIN = 35
+    HEADER = 28
+
+    sub_images: list[Image.Image] = []
+
+    for frame, anchor_points, ref_name in frames_with_anchors:
+        room_m = anchor_points.get('room_m', [6.0, 8.0])
+        W = float(room_m[0])
+        D = float(room_m[1]) if len(room_m) > 1 else 8.0
+
+        CW = int((W + D * _AXO_F) * SCALE) + 2 + 2 * MARGIN
+        CH = int((D * _AXO_F + WALL_H) * SCALE) + 2 + 2 * MARGIN
+        ox_b = float(MARGIN)
+        oy_b = float(CH - MARGIN)
+
+        # These closures capture per-iteration W/D/ox_b/oy_b via default args.
+        def pt(x_m, y_m, z_m=0.0, _ox=ox_b, _oy=oy_b):
+            return _axo(x_m, y_m, z_m, SCALE, _ox, _oy)
+
+        def _txt(draw, pos, text, font, color=(50, 50, 50)):
+            draw.text(pos, text, fill=color, font=font)
+
+        color = _PREVIEW_PALETTE[frame.panel_index % len(_PREVIEW_PALETTE)]
+        objects_data = anchor_points.get('objects', [])
+        zones_data   = anchor_points.get('zones',   [])
+
+        room_img = Image.new('RGB', (CW, CH), (250, 250, 248))
+        draw = ImageDraw.Draw(room_img)
+
+        # Floor + walls
+        draw.polygon([pt(0,0), pt(W,0), pt(W,D), pt(0,D)],
+                     fill=(230, 230, 228), outline=(100, 100, 100))
+        wc = (130, 130, 140)
+        for gx, gy in [(0,0),(W,0),(W,D),(0,D)]:
+            draw.line([pt(gx,gy,0), pt(gx,gy,WALL_H)], fill=wc, width=1)
+        corners = [(0,0),(W,0),(W,D),(0,D)]
+        for i in range(4):
+            a, b = corners[i], corners[(i+1)%4]
+            draw.line([pt(*a,0),      pt(*b,0)],      fill=wc,            width=1)
+            draw.line([pt(*a,WALL_H), pt(*b,WALL_H)], fill=(170,170,180), width=1)
+        mid = W / 2
+        draw.line([pt(mid-0.5,0,0), pt(mid+0.5,0,0)], fill=(200,100,50), width=2)
+        _txt(draw, (pt(mid,0,0)[0]-10, pt(mid,0,0)[1]+3), 'ENT', font_sm, (190,90,40))
+
+        # Furniture objects
+        for obj in objects_data:
+            px, py = pt(float(obj.get('x',0)), float(obj.get('y',0)))
+            label = (obj.get('label') or obj.get('id',''))[:12]
+            draw.rectangle([px-4,py-3,px+4,py+3], fill=(200,160,95), outline=(110,85,40))
+            _txt(draw, (px+6,py-5), label, font_sm, (100,75,35))
+
+        # Anchor zones
+        for zone in zones_data:
+            cx, cy = pt(float(zone.get('x',0)), float(zone.get('y',0)))
+            draw.line([cx-5,cy,cx+5,cy], fill=(50,150,50), width=1)
+            draw.line([cx,cy-5,cx,cy+5], fill=(50,150,50), width=1)
+            _txt(draw, (cx+6,cy-5), zone.get('id',''), font_sm, (35,115,35))
+
+        # Camera glyph
+        cam = frame.camera
+        lx = cam.look_at_x - cam.x
+        ly = cam.look_at_y - cam.y
+        n = math.hypot(lx, ly)
+        if n > 1e-9:
+            lx /= n; ly /= n
+        else:
+            lx, ly = 0.0, 1.0
+        tx, ty = cam.x - lx*0.35, cam.y - ly*0.35
+        wx, wy = -ly*0.18, lx*0.18
+        apex = pt(cam.x, cam.y, cam.z)
+        draw.polygon([apex, pt(tx-wx,ty-wy,cam.z), pt(tx+wx,ty+wy,cam.z)],
+                     fill=color, outline=(30,30,30))
+        cos20, sin20 = math.cos(math.radians(20)), math.sin(math.radians(20))
+        fov_c = tuple(min(c+70,255) for c in color)
+        for s in (-1,1):
+            fx = lx*cos20 - ly*(s*sin20)
+            fy = lx*(s*sin20) + ly*cos20
+            draw.line([apex, pt(cam.x+fx*2.0, cam.y+fy*2.0, cam.z)], fill=fov_c, width=1)
+
+        # Characters
+        for char in frame.characters.values():
+            if not char.visible:
+                cx, cy = pt(char.x, char.y, char.z)
+                draw.line([cx-5,cy-5,cx+5,cy+5], fill=(160,50,50), width=2)
+                draw.line([cx-5,cy+5,cx+5,cy-5], fill=(160,50,50), width=2)
+                _txt(draw, (cx+7,cy-5), f'({char.name[:8]})', font_sm, (160,50,50))
+            else:
+                draw.line([pt(char.x,char.y,0), pt(char.x,char.y,1.7)], fill=color, width=1)
+                px, py = pt(char.x, char.y, 1.7)
+                draw.ellipse([px-7,py-7,px+7,py+7], fill=color, outline=(20,20,20))
+                initials = ''.join(w[0].upper() for w in char.name.split()[:2])[:2]
+                _txt(draw, (px-4,py-5), initials, font_sm, (255,255,255))
+                _txt(draw, (px+9,py-5), char.name[:10], font_sm, (30,30,30))
+
+        # Header strip — show exact ref name so mixed-room scenes are unambiguous
+        full_img = Image.new('RGB', (CW, CH + HEADER), (255,255,255))
+        hd = ImageDraw.Draw(full_img)
+        hd.rectangle([0, 0, CW, HEADER-1], fill=color)
+        hd.text((6, 7), f"P{frame.panel_index}  {frame.view_type}  {(ref_name or '')[:34]}",
+                fill=(255,255,255), font=font_md)
+        full_img.paste(room_img, (0, HEADER))
+        sub_images.append(full_img)
+
+    if not sub_images:
+        logger.warning(f"  ⚠️  Scene {scene.get('scene_id','?')}: no frames to preview")
+        return
+
+    # Pad all sub-images to uniform size (rooms may differ in dimensions)
+    max_w = max(img.size[0] for img in sub_images)
+    max_h = max(img.size[1] for img in sub_images)
+    COLS = 3
+    grid = Image.new('RGB', (max_w*COLS, max_h*math.ceil(len(sub_images)/COLS)), (200,200,200))
+    for i, img in enumerate(sub_images):
+        r, c = divmod(i, COLS)
+        cell = Image.new('RGB', (max_w, max_h), (255,255,255))
+        cell.paste(img, (0,0))
+        grid.paste(cell, (c*max_w, r*max_h))
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    grid.save(output_path)
+    logger.info(f"  ✅ Scene {scene.get('scene_id','?')}: → {output_path.name}")
+
+
+def cmd_3d_preview(args):
+    """Render axonometric puppet layout preview for one or all scenes."""
+    from lib.core import puppet as _puppet
+
+    project, _, _ = load_project(style=args.style)
+    load_character_refs(project)
+
+    meta_path = project.output_dir / 'animation_metadata.json'
+    if not meta_path.exists():
+        logger.error("❌ animation_metadata.json not found. Run 'make scenes' first.")
+        sys.exit(1)
+
+    metadata = json.loads(meta_path.read_text(encoding='utf-8'))
+    all_scenes = metadata.get('scenes', [])
+
+    scene_filter = None
+    if args.scene and args.scene != 'all':
+        try:
+            scene_filter = int(args.scene)
+        except ValueError:
+            logger.error("❌ SCENE must be an integer or 'all'.")
+            sys.exit(1)
+
+    scenes = (
+        all_scenes if scene_filter is None
+        else [s for s in all_scenes if s.get('scene_id') == scene_filter]
+    )
+    if not scenes:
+        logger.error("❌ No matching scenes found in animation_metadata.json.")
+        sys.exit(1)
+
+    # Index anchor_points by canonical primary-view ref name (same strategy as cmd_disposition).
+    # scene['location'] is free-style text — never match on it; use location_references instead.
+    anchors_by_ref: dict = {
+        name: info['anchor_points']
+        for name, info in project.character_info.items()
+        if info.get('type', '').lower() in ('room', 'outdoor')
+        and name.endswith(('-View-From-Entrance', '-View-Primary'))
+        and info.get('anchor_points')
+    }
+    if not anchors_by_ref:
+        logger.error(
+            "❌ No room/outdoor refs with anchor_points found. "
+            "Run 'make room-anchors' then 'make disposition' first."
+        )
+        sys.exit(1)
+
+    rendered = 0
+    skipped = 0
+    for scene in scenes:
+        sid = scene.get('scene_id', 0)
+        panels = scene.get('panels', [])
+        if not panels:
+            logger.warning(f"  ⚠️  Scene {sid}: no panels — skipping")
+            skipped += 1
+            continue
+
+        # Resolve anchor per panel — panels may reference different rooms
+        frames_with_anchors: list = []
+        has_any_anchor = False
+        for panel in panels:
+            ref, ap = _resolve_panel_anchor(panel, anchors_by_ref)
+            if ref and ap:
+                has_any_anchor = True
+            # build a single-panel pseudo-scene so build_scene_frames works
+            panel_frames = _puppet.build_scene_frames([panel], ap or {})
+            for frame in panel_frames:
+                frames_with_anchors.append((frame, ap, ref or ''))
+
+        if not has_any_anchor:
+            logger.warning(
+                f"  ⚠️  Scene {sid}: no anchor_points for any panel — skipping. "
+                f"Refs: {list({r for p in panels for r in p.get('location_references', [])})}"
+            )
+            skipped += 1
+            continue
+
+        out = project.output_dir / f'preview_3d_scene_{int(sid):03d}.png'
+        try:
+            _render_3d_scene_preview(frames_with_anchors, scene, out)
+            rendered += 1
+        except Exception:
+            logger.exception(f"  ❌ Scene {sid}: render failed")
+            skipped += 1
+
+    logger.info(f"\n✅ 3D preview: {rendered} rendered, {skipped} skipped.")
+
+
 def register(sub):
     p = sub.add_parser('storyboard', help='Render scene grids or panels')
     p.add_argument('scene', nargs='?', default='all', help='Scene number or "all"')
@@ -553,3 +841,10 @@ def register(sub):
     p.add_argument('--max-attempts', type=int, default=3, dest='max_attempts',
                    help='Max refinement attempts per panel (default: 3)')
     p.set_defaults(func=cmd_panel_by_panel_qa)
+
+    p = sub.add_parser(
+        '3d-preview',
+        help='Render axonometric puppet layout preview (camera + characters per panel)',
+    )
+    p.add_argument('scene', nargs='?', default='all', help='Scene number or "all" (default: all)')
+    p.set_defaults(func=cmd_3d_preview)
