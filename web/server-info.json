@@ -1,37 +1,24 @@
 {
   "novels": [
-    "s01e07.txt"
+    "s01e25.txt"
   ],
   "scene_files": [
     {
-      "episode": 1,
+      "episode": 25,
       "has_refined": true,
       "has_raw": true
     },
     {
-      "episode": 2,
+      "episode": 26,
       "has_refined": true,
       "has_raw": true
     },
     {
-      "episode": 3,
+      "episode": 27,
       "has_refined": true,
       "has_raw": true
     }
   ],
   "has_metadata": true,
-  "storyboards": [
-    {
-      "scene": 1,
-      "current": "cinematic_render/scene_001_grid_combined.png"
-    },
-    {
-      "scene": 2,
-      "current": "cinematic_render/scene_002_grid_combined.png"
-    },
-    {
-      "scene": 3,
-      "current": "cinematic_render/scene_003_grid_combined.png"
-    }
-  ]
+  "storyboards": []
 }

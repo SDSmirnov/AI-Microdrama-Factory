@@ -161,6 +161,11 @@ Same rule applies to: push → stumble, grab → spin, shove → door impact, th
 3. INTENT CHECK: does every beat in motion_prompt serve the declared `motion_intent`? Beats that don't advance the intent ("holds the point", "remains still", "gaze is fixed") → delete them, replace with purposeful action.
 4. TIMING LAW CHECK: does `visual_start` describe the state JUST BEFORE motion_prompt [0s]? If it describes an already-in-progress action or the residual state of the previous panel → rewrite.
 5. COMBAT CHECK: if consecutive panels both describe parts of the same physical impact sequence → merge into one panel.
+6. FORBIDDEN VISUALS CHECK: scan ALL visual_start, visual_end, and motion_prompt fields for: tears (any form — running, filling, glinting), sweat (any form — glistening, dripping, damp skin), spitting. If found → HARD FAILURE. Replace with: jaw clenching, bitten lip, chin tremor, bright/wide eyes, body curl (for emotion); rapid breathing described as chest movement, tense posture, urgency in movement pace (for exertion). Never describe visible liquid on skin or face. These are viewer-behavior triggers — confirmed by retention analytics to cause immediate swipe regardless of narrative context.
+7. FIRST-2-SECONDS CHECK: in motion_prompt, identify the first DIEGETIC physical state change — a character or object in the scene changing its physical state (full-body/large-limb movement, object picked up/dropped/thrown, physical contact initiated). Camera movement (zoom, push-in, tilt) does NOT count — the viewer's brain ignores it and scans for in-world action. If the first diegetic change occurs after second 2 → HARD FAILURE. Add motion before it: approach, reach, turn, stand up, step forward. Specific HARD FAILURE patterns:
+   - visual_start shows a character sitting, thinking, or holding an expression → no physical action yet → HARD FAILURE
+   - motion_prompt[0s]–[2s] contains only zoom or camera movement with static character → HARD FAILURE
+   - motion_prompt[0s]–[2s] contains only face/eye/expression change → HARD FAILURE
 
 ## 9-PANEL STRUCTURE BY EPISODE TYPE
 
@@ -244,7 +249,7 @@ MOTION_PROMPT PHYSICAL REALISM — the video model renders every word literally:
    WRONG: "he recoils in horror"  RIGHT: "at 1.5s his eyes open wide, jaw drops ~2 cm, upper body leans back 10°"
 2. No spectacle verbs: erupts/sprays/fountains/explodes → describe the minimal physical event.
 3. No speed metaphors: "blurring speed" → use explicit timestamps and distances.
-4. Anatomically correct scale: a tear is a 2–3 mm bead, not "rivers".
+4. No tears, sweat, or spitting — these are retention-killing viewer triggers. Encode emotion through jaw mechanics, eye width, posture, body curl, breath rate — never through visible liquid on skin or face. (See FORBIDDEN VISUALS in screenplay.md.)
 5. Ask before writing: could the AI render this as a grotesque artifact? If yes, rewrite.
 6. ITEM ORIGIN — every retrieved object must come from a physically real place: "right hand moves to shoulder holster, draws pistol" / "opens bag hanging from left shoulder, removes phone" / "reaches into left breast pocket, produces badge wallet". NEVER write "pulls out a gun" or "takes out phone" — the model has no idea where the item was. The character's reference description defines where everything is carried.
 7. MOVEMENT DIRECTION — all character movement must be stated camera-relative with exact phrasing:
