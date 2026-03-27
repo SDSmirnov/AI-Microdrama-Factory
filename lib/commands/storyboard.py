@@ -923,7 +923,7 @@ def register(sub):
     p.add_argument('scene', type=int, help='Scene number')
     p.add_argument('panel', nargs='?', default='all', help='Panel number or "all" (default: all)')
     p.add_argument('--threshold', type=int, default=5, help='QA fidelity threshold (default: 5)')
-    p.add_argument('--max-attempts', type=int, default=3, dest='max_attempts',
+    p.add_argument('--max-attempts', type=int, default=0, dest='max_attempts',
                    help='Max refinement attempts per panel (default: 3)')
     p.set_defaults(func=cmd_panel_by_panel_qa)
 

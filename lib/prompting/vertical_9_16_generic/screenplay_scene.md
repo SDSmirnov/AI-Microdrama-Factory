@@ -19,10 +19,12 @@ Each panel is rendered by a separate image-generation model that receives ONLY t
 - REQUIRED in EVERY panel's visual_start and visual_end: location details, shot type, camera angle, and lighting. Character reference images are injected separately — do NOT repeat canonical appearance (hair color, build, eye color, usual outfit). Instead, describe ONLY scene-specific deviations: costume changes ("silk robe instead of usual dress"), carried items for this scene ("holding a gun", "bag on left shoulder"), injuries or transient state ("soaked, mascara running"). Signature visual tells (scar, tattoo, prop) must be mentioned when visible at CU/ECU range.
 - Treat each panel description as the ONLY instruction the image model will ever receive for that shot.
 - POV CAMERA LAW: A shot described as "from [Character X]'s perspective" or "[Character X]'s POV" means the camera occupies Character X's eye position. Character X CANNOT appear anywhere in that frame. If Character X must be visible: drop the POV framing and use over-the-shoulder, reaction shot, or standard two-shot instead.
-- CHARACTER ISOLATION LAW: Every visual_start and visual_end must explicitly name every character present in the frame. End each description with one of:
-  - "NO OTHER CHARACTERS ARE VISIBLE IN THIS SHOT." — for single or paired shots
-  - "ONLY [Name1] AND [Name2] ARE IN THIS SHOT. NO ONE ELSE." — for two-shots
-  Never leave the character count implicit. The image model fills empty space with people from the scene context — block this with an explicit headcount every time.
+- CHARACTER ISOLATION LAW: Every visual_start and visual_end must end with an explicit named-character headcount — one of:
+  - "NO OTHER CHARACTERS ARE VISIBLE IN THIS SHOT." — private/closed spaces (home, office, car)
+  - "ONLY [Name1] AND [Name2] ARE IN THIS SHOT. NO ONE ELSE." — intimate shots with exactly two characters
+  - "ONLY [Name1] [AND Name2] ARE NAMED IN THIS FRAME. ANONYMOUS BACKGROUND: [sparse/moderate/dense] [descriptor — e.g. café patrons, street pedestrians, subway riders] — anonymous, unidentifiable, NOT listed in references." — inherently public locations (restaurant, street, station, mall, park) where background population is contextually required. DO NOT use for homes, offices, vehicles, or private controlled spaces.
+  Never leave the named character count implicit. The image model fills empty space with context-inferred people — blocking hallucinated named characters requires an explicit headcount every time.
+  Background extras are NEVER added to the `references` array regardless of how many are visible.
 - REFERENCES ARRAY CONTRACT: The `references` array must contain ONLY characters and props that are physically visible in this panel's visual_start or visual_end.
   FORBIDDEN: listing a character in references because they appear in a later panel of the same scene, or because they are mentioned in dialogue (off-screen voice = not visible).
   Off-screen speakers: include in `dialogue` field only. Their ref image must NOT be injected.
