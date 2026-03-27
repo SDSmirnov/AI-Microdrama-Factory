@@ -475,6 +475,7 @@ def cmd_panel_by_panel_qa(args):
                     'composition_match': panel_result.get('composition_match', 10),
                 }
             }
+            logger.info(f"  🔧 Results: {scene_id} {pid} {panel_result}")
 
             refined_path = project.refined_dir / f"{scene_id:03d}_{pid:02d}_static_refined.png"
             if refined_path.exists():
