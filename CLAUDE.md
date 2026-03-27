@@ -102,7 +102,7 @@ Uses `--llm {openrouter|gemini|grok|debug}` to select the backend. The `debug` b
 
 ```
 lib/
-  core/        # Project config, path constants, prompts loader, JSON schemas, grid utils
+  core/        # Project config, path constants, prompts loader, JSON schemas, grid utils, puppet engine (camera rig + 3D layout)
   llm/         # BaseLLM ABC + backends: GeminiLLM, OpenRouterLLM, GrokLLM, LogDebugLLM
   prompting/   # Style preset directories (each: *.md prompts + config.json + book-shrinker.md)
     vertical_9_16_microdrama/
@@ -110,7 +110,7 @@ lib/
     vertical_9_16_generic/
   studio/      # Production pipeline modules:
     stylist.py      — novel analysis + custom_prompts/ overlay generation
-    screenwriter.py — episode/scene/reversal AI passes
+    screenwriter.py — episode/scene/reversal AI passes; reversal now produces `visual_start_explicit` alongside `motion_prompt_reversed`; disposition groups consecutive panels by shared anchor ref; puppet engine integrated for 180-rule validation
     artist.py       — casting, reference rendering, room-view splitting, grid/panel image generation, slicing
     critic.py       — QA gate: fidelity/consistency scoring per panel
     director.py     — continuity enforcer: enriches refs, aligns scene prompts
@@ -136,7 +136,8 @@ All commands that load prompts accept the global `--style <preset>` flag (defaul
 4. **`screenplay`** (`screenwriter.analyze_scenes_master`): Episodes → scenes → refinement → reversal pass; writes `animation_metadata.json`
 5. **`scenes`** (`screenwriter.run_scenes_pipeline`): Per-episode keyframe generation with cross-episode continuity rules; upserts into `animation_metadata.json`
 5b. **`reverse-refine`** (`screenwriter.run_scenes_pipeline` refinement+reversal only): Re-runs refinement and reversal pass on an already-generated raw episode JSON (`animation_episode_scenes_NNN.json`) without re-querying keyframes. Requires `SCENE=N`.
-5c. **`disposition`** (`screenwriter.apply_spatial_disposition_pass`): Spatial disposition pass — uses room `anchor_points` to write `visual_disposition` per panel (character positions relative to spatial landmarks). Run after `room-anchors`. Requires `SCENE=N` or `all`.
+5c. **`disposition`** (`screenwriter.apply_spatial_disposition_pass`): Spatial disposition pass — uses room `anchor_points` to write `visual_disposition` per panel. Groups consecutive panels by shared anchor ref so mixed-ref scenes (e.g., hallway → kitchen) are processed independently per anchor group. Run after `room-anchors`. Requires `SCENE=N` or `all`.
+5d. **`3d-preview`** (`artist.render_3d_preview`): Renders an axonometric (cabinet oblique) puppet layout preview PNG per scene — camera rig position, 180° axis, and character placement overlaid on the floor-plan footprint of room `anchor_points`. Writes `cinematic_render/preview_3d_scene_NNN.png`. Requires room refs with `anchor_points`. Use to visually validate spatial disposition and 180-rule compliance before committing to full renders.
 6. **`consistency`** (`director.run_continuity_pass`): Enriches ref JSONs from scene/location usage; re-aligns `visual_start`/`visual_end`/`lights_and_camera` to approved references. Default `--dry-run` enriches JSONs only — run `make refs` after to regenerate PNGs. Pass `--no-dry-run` to regenerate PNGs in one step.
 7. **`storyboard`** (`artist.render_scene_grids` / `render_panels`): Generates grid images or individual panel PNGs
 7b. **`panel-by-panel-with-qa`** (`artist.render_panel` + `critic` inline): Renders each panel one at a time, runs QA, and refines in-place up to `--max-attempts` times. Requires `SCENE=N`; optional `PANEL=N` to target one panel.
@@ -149,7 +150,7 @@ All commands that load prompts accept the global `--style <preset>` flag (defaul
 14. **`extra-panel`** (`artist.render_extra_panel`): Generates a micro-panel not in the original screenplay (e.g., for reaction shots between existing panels); writes to `cinematic_render/extra_panels/`
 15. **`summary`**: AI-generated context summary of current episode data for use in the next chapter prompt; writes to `chapter_summary.txt`
 16. **`suno-prompt`**: Generates a Suno-compatible instrumental music prompt from `animation_episodes.json` metadata; writes `suno_prompt.txt`.
-17. **`srt`**: Transcribes a video with Whisper → SRT subtitle file. Accepts `--transcription-cache` to skip re-transcription.
+17. **`srt`**: Transcribes a video with Whisper → SRT subtitle file. Accepts `--transcription-cache` to skip re-transcription. Whisper segments are automatically split at sentence boundaries (`.`, `!`, `?`) using word-level timestamps via `_split_on_sentences()`, preventing overly long multi-sentence entries.
 18. **`dynamic-subtitles`**: Burns karaoke-style dynamic subtitles onto video (phrase-level or word-level). Supports `--no-whisper` (even word split), `--overlay-only` (transparent .mov/.webm instead of burned video), `--word-srt-output`, `--ass-output`, and `--overlay-fps`.
 
 ### Prompt System
@@ -173,6 +174,7 @@ Available built-in styles: `vertical_9_16_microdrama`, `vertical_9_16_long_arc`,
 ```
 cinematic_render/
   animation_episodes.json           # Master screenplay breakdown
+  preview_3d_scene_NNN.png          # Axonometric puppet layout preview (after 3d-preview)
   animation_episode_scenes_NNN.json # Per-episode raw keyframes
   animation_episode_scenes_NNN_refined.json  # Refined keyframes
   animation_metadata.json           # Final merged scenes (single source of truth)
@@ -221,6 +223,7 @@ Structured output schemas in `lib/core/schemas.py` enforce the AI response forma
 - `SCREENPLAY_SCHEMA` — episode-level breakdown with 3-POV fields (`episode_type`, `chapter_id`, `pov_character`, `visual_continuity_rules`)
 - `SCENE_SCHEMA` — scene-level keyframes including `camera_master` / `lighting_master` per scene and full panel fields (`motion_intent`, motion, reversal, sound, `voiceover_settings`, transitions)
 - `CHARACTER_SCHEMA` — reference character/location/object descriptions
+- `REVERSAL_SCHEMA` — produced by the reversal pass: `panel_index`, `motion_prompt_reversed`, and `visual_start_explicit` (explicit frame description for the reversed start pose)
 - `SCENE_REWRITE_SCHEMA` — used by the continuity enforcer to align `visual_start`, `visual_end`, and `lights_and_camera` to approved refs
 - `bookbinder._WINDOW_SCHEMA` — split-point anchors returned by `split-book` LLM call
 

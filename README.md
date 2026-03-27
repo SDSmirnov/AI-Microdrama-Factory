@@ -54,7 +54,8 @@ Core pipeline stages:
 4. `screenplay`: generate episodes/scenes/reversal pass and `animation_metadata.json`.
 5. `scenes`: generate keyframes for specific episode(s) with cross-episode continuity rules and upsert into metadata.
 5b. `reverse-refine`: re-run refinement + reversal pass on an existing raw episode JSON without re-querying keyframes. Requires `SCENE=N`.
-5c. `disposition`: spatial disposition pass — writes `visual_disposition` per panel using room `anchor_points`. Requires `SCENE=N` or `all`.
+5c. `disposition`: spatial disposition pass — writes `visual_disposition` per panel using room `anchor_points`. Handles panels with mixed room refs within a single scene by grouping consecutive panels that share the same anchor. Requires `SCENE=N` or `all`.
+5d. `3d-preview`: render axonometric (cabinet oblique) puppet layout preview PNG per scene — camera rig + character positions overlaid on anchor-point floor plan. Requires room refs with `anchor_points`. Writes `cinematic_render/preview_3d_scene_NNN.png`. Useful for validating 180-rule and spatial disposition before rendering.
 6. `consistency`: continuity enforcer — enrich ref JSONs from scene/location usage, re-align panel visuals to approved refs. Default: `--dry-run` (JSON only); use `--no-dry-run` or follow with `make refs` to regenerate PNGs.
 7. `storyboard`: render scene grids or individual panel images.
 7b. `panel-by-panel-with-qa`: render each panel one at a time with inline QA + refinement loop (up to `--max-attempts` retries). Requires `SCENE=N`.
@@ -65,7 +66,7 @@ Core pipeline stages:
 12. `refinement`: manually regenerate a specific panel frame.
 13. `animation`: generate clips with `veo` or `grok`.
 14. `autocut`, `voiceover`, `tts`, `dub`, `duck`: post-production helpers.
-15. `srt`: transcribe video → SRT subtitle file (Whisper).
+15. `srt`: transcribe video → SRT subtitle file (Whisper). Segments are auto-split at sentence boundaries (`.`, `!`, `?`) using word-level timestamps, producing shorter and more readable entries.
 16. `dynamic-subtitles`: burn karaoke-style subtitles; word-level or phrase-level timing; optional transparent overlay output.
 17. `suno-prompt`: generate Suno instrumental music prompt from episode metadata → `suno_prompt.txt`.
 18. `extra-panel`: generate a micro-panel not in the original screenplay → `cinematic_render/extra_panels/`.
@@ -160,7 +161,7 @@ Use `make help` to list all targets. Current targets:
 
 - `init`, `workdirs`
 - `split-book`, `styles`, `casting`, `refs`, `remake-room-refs`, `room-anchors`
-- `screenplay`, `scenes`, `reverse-refine`, `disposition`, `consistency`
+- `screenplay`, `scenes`, `reverse-refine`, `disposition`, `3d-preview`, `consistency`
 - `storyboard`, `panel-by-panel-with-qa`, `qa`, `apply-qa`, `accept-qa`, `rebuild-storyboard`, `refinement`, `animation`
 - `autocut`, `voiceover`, `imgedit`, `tts`, `dub`, `duck`, `srt`, `dynamic-subtitles`
 - `suno-prompt`, `summary`, `webserver`
@@ -202,6 +203,7 @@ Commands (all accept `--style <preset>` where relevant; default: `vertical_9_16_
 - `scenes [scene|all]`
 - `reverse-refine <scene>`
 - `disposition [scene|all]`
+- `3d-preview [scene|all]`
 - `consistency [--dry-run|--no-dry-run]`
 - `storyboard [scene|all] [panel|all]`
 - `qa [--scene N ...] [--panel N ...] [--threshold N]`
@@ -244,6 +246,7 @@ Primary generated files:
 - `cinematic_render/animation_metadata.json`
 - `cinematic_render/scene_NNN_grid_combined.png`
 - `cinematic_render/panels/NNN_PP_{static|start|end}.png`
+- `cinematic_render/preview_3d_scene_NNN.png` (after `3d-preview`)
 - `cinematic_render/quality_report.json`
 - `cinematic_render/refined/*_refined.png`
 - `cinematic_render/clips/clip_*.mp4`
@@ -268,7 +271,7 @@ Reference artifacts:
 cli.py
 Makefile
 lib/
-  core/        # project/env/prompts loader/schemas
+  core/        # project/env/prompts loader/schemas/puppet engine
   llm/         # OpenRouter, Gemini, Grok, Debug adapters
   prompting/   # style preset directories (vertical_9_16_microdrama/, vertical_9_16_long_arc/, vertical_9_16_generic/)
   studio/      # stylist/screenwriter/artist/critic/director/editor/cutter/retoucher/bookbinder
