@@ -223,7 +223,7 @@ In N≥3 arcs: echo the motif briefly in each arc_mid (without payoff — just r
 ## PRODUCTION INSTRUCTIONS
 
 1. Quote raw narrative text verbatim for context — do not shorten. Store in `raw_narrative`.
-1b. Write `rewritten_condensed_narrative`: rewrite the episode's source text as a tight, unbroken dramatic script — every spoken line verbatim, every physical beat in chronological sequence, no narrative ellipses, no author commentary. This is the dialogue and action coverage contract: every line and beat here MUST appear in the generated panels. The scene generator uses this field to verify dialogue coverage — a line missing from `rewritten_condensed_narrative` will be silently dropped from the episode.
+1b. Write `rewritten_condensed_narrative`: rewrite the episode's source text as a tight, unbroken dramatic script — every spoken line verbatim, every physical beat in chronological sequence, no narrative ellipses, no author commentary. This is the dialogue and action coverage contract: every line and beat here MUST appear in the generated panels. The scene generator uses this field to verify dialogue coverage — a line missing from `rewritten_condensed_narrative` will be silently dropped from the episode. Write in the SAME language as the source text — do NOT translate.
 2. Screenplay instructions drive AI image generation and animation. Be very direct and verbose.
 3. Each arc unit covers ~54s (N=2), ~81s (N=3), ~108s (N=4), or ~135s (N=5) of real-time action in the finished edit.
 4. Mark hook_type for: cold_open, verbal_hook, emotional_capture, arc_bridge, arc_pickup, cliffhanger panels.
@@ -254,6 +254,7 @@ P1 [hook_type | SCALE | LOCATION]:
   STAKE OBJECT: [one prop or environmental detail that carries the scene's subtext]
   STATE: [what changes from visual_start to visual_end — dramatic meaning, not the action]
   DIALOGUE SEED: [the ≤8-word line, or "— silence —", or "VO: [inner monologue fragment]"]
+  THREAD→P[N+1]: [required when STATE describes an action started but not completed within this panel — one sentence: what the next panel's visual_start must open on to resolve this thread. Omit when action resolves within this panel's motion_prompt.]
 
 P2 [hook_type | SCALE | LOCATION]:
   ... (same structure; for pivot panels POWER+EMOTION only — no STAKE OBJECT / STATE needed)

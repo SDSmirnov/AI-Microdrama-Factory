@@ -1,4 +1,4 @@
-### RULE 6 — SOURCE COVERAGE AND NARRATIVE FIDELITY
+### RULE 7 — SOURCE COVERAGE AND NARRATIVE FIDELITY
 Verify that the generated panels faithfully cover the source text for this episode:
   - Every spoken line present in `rewritten_condensed_narrative` must appear in at least one panel's `dialogue`.
   - Every named physical action in `rewritten_condensed_narrative` must appear in at least one panel's `motion_prompt`.

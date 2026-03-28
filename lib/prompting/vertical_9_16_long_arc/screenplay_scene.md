@@ -172,6 +172,7 @@ Same rule applies to: push → stumble, grab → spin, shove → door impact, th
 3. INTENT CHECK: does every beat in motion_prompt serve the declared `motion_intent`? Beats that don't advance the intent ("holds the point", "remains still", "gaze is fixed") → delete them, replace with purposeful action.
 4. TIMING LAW CHECK: does `visual_start` describe the state JUST BEFORE motion_prompt [0s]? If it describes an already-in-progress action or the residual state of the previous panel → rewrite.
 5. COMBAT CHECK: if consecutive panels both describe parts of the same physical impact sequence → merge into one panel.
+6. THREAD CHECK: does panel N's `motion_intent` or `visual_end` leave a physical action unresolved? Does panel N+1's `visual_start` open on the outcome or interruption? If not → rewrite panel N+1's `visual_start`.
 6. FORBIDDEN VISUALS CHECK: scan ALL visual_start, visual_end, and motion_prompt fields for: tears (any form — running, filling, glinting), sweat (any form — glistening, dripping, damp skin), spitting. If found → HARD FAILURE. Replace with: jaw clenching, bitten lip, chin tremor, bright/wide eyes, body curl (for emotion); rapid breathing described as chest movement, tense posture, urgency in movement pace (for exertion). Never describe visible liquid on skin or face. These are viewer-behavior triggers — confirmed by retention analytics to cause immediate swipe regardless of narrative context.
 7. FIRST-2-SECONDS CHECK: in motion_prompt, identify the first DIEGETIC physical state change — a character or object in the scene changing its physical state (full-body/large-limb movement, object picked up/dropped/thrown, physical contact initiated). Camera movement (zoom, push-in, tilt) does NOT count — the viewer's brain ignores it and scans for in-world action. If the first diegetic change occurs after second 2 → HARD FAILURE. Add motion before it: approach, reach, turn, stand up, step forward. Specific HARD FAILURE patterns:
    - visual_start shows a character sitting, thinking, or holding an expression → no physical action yet → HARD FAILURE
@@ -348,6 +349,31 @@ EXCHANGE COMPLETENESS CHECK (before finalizing any confrontation panel):
 - Does this panel's dialogue leave an open question that the next panel doesn't answer? → HARD FAILURE: include the answer in the next panel's dialogue.
 - Does the next panel's dialogue line presuppose an exchange the viewer never heard? → HARD FAILURE: include the trigger line in this panel.
 - Is the voiceover carrying a response that should be spoken dialogue? → HARD FAILURE: move it to dialogue. Inner monologue supplements speech; it never replaces it when the character would realistically speak.
+
+ACTION THREAD LAW — MANDATORY CROSS-PANEL NARRATIVE CONTINUITY:
+Any physical action introduced in a panel creates an OPEN THREAD. The next panel MUST resolve it — not ignore it. A viewer's subconscious tracks motion continuity; an unresolved action reads as a production error even when the viewer cannot name why.
+
+OPEN THREAD — any panel where:
+- A character moves toward someone/something but hasn't yet arrived (approaching, stepping closer, crossing the room)
+- Physical contact is attempted but not yet completed (reaching for an object, arm raised to strike, hand extended toward another character)
+- An object is handed, pointed, or picked up — but the recipient/target hasn't reacted yet
+- A character begins a gesture with a clear physical endpoint not completed within this panel's motion_prompt
+
+RESOLUTION RULE — the NEXT panel's `visual_start` MUST show one of:
+1. COMPLETION: the action reached its endpoint ("his hand now closes around her wrist", "she holds the contract she was reaching for")
+2. INTERRUPTION: another event stopped the action — stated explicitly in `visual_start` ("her reach for the envelope stops as his hand closes around her wrist first")
+3. TIME-SKIP: only valid with `transition_to_next=hard_cut` + a location or time change — `visual_start` must acknowledge the outcome state ("she stands at the door, contract in hand — she retrieved it in the gap")
+
+FORBIDDEN:
+- Panel N: "she reached for the phone" — Panel N+1: unrelated dramatic beat, phone outcome unknown
+- Panel N ends with character mid-approach — Panel N+1 opens as if the approach never started
+- Panel N: arm raised toward another character — Panel N+1: both characters in pre-gesture positions with no explanation
+
+THREAD CHECK — run before finalizing any consecutive panel pair:
+Does panel N's `motion_intent` or `visual_end` leave a physical action unresolved?
+→ YES: does panel N+1's `visual_start` open on the outcome or interruption? If not: rewrite panel N+1's `visual_start`.
+→ NO open thread: proceed.
+If the action fits within panel N's 6s clip budget: complete it in `motion_prompt` instead of leaving it open (see TEMPORAL COMPRESSION LAW above).
 
 CAPTION CONTRACT (caption field — required for EVERY panel):
 `caption` is a persistent bottom-third text overlay, always visible regardless of audio state. It is a HOOK, not a summary.

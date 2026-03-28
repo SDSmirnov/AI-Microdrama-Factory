@@ -91,6 +91,7 @@ P[N] [hook_type | SCALE | LOCATION]:
   EMOTION: [...]
   STAKE: [...]
   DIALOGUE SEED: [...]
+  THREAD→P[N+1]: [required when ACTION describes a movement or gesture started but not completed within this panel — one sentence: what the next panel's visual_start must open on to resolve this thread. Omit when action resolves within this panel's motion_prompt.]
 ```
 
 SCALE options: ECU / CU / MS / WIDE
@@ -102,7 +103,7 @@ Include entries for all 9 panels. If a panel carries no dialogue or internal tho
 ## RESPONSE STRUCTURE
 
 1. `raw_narrative`: Quote the source text verbatim for this episode's scene. Do not shorten.
-2. `rewritten_condensed_narrative`: Rewrite the source as a tight, unbroken shooting script — every spoken line verbatim, every physical beat in chronological sequence, no narrative ellipsis, no author commentary. This is the coverage contract: every line and beat here MUST appear in generated panels.
+2. `rewritten_condensed_narrative`: Rewrite the source as a tight, unbroken shooting script — every spoken line verbatim, every physical beat in chronological sequence, no narrative ellipsis, no author commentary. This is the coverage contract: every line and beat here MUST appear in generated panels. Write in the SAME language as the source text — do NOT translate.
 3. `screenplay_instructions`: The panel-by-panel production blueprint (format above).
 4. `visual_continuity_rules`: All state changes to propagate into the next episode.
 

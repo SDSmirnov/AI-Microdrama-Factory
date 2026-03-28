@@ -154,7 +154,7 @@ In close episode P9: call back the motif — same framing, transformed meaning. 
 ## RESPONSE STRUCTURE
 
 1. Quote raw narrative text verbatim for context — do not shorten. Store in `raw_narrative`.
-1b. Write `rewritten_condensed_narrative`: rewrite the episode's source text as a tight, unbroken dramatic script — every spoken line verbatim, every physical beat in chronological sequence, no narrative ellipses, no author commentary. This is the dialogue and action coverage contract: every line and beat here MUST appear in the generated panels.
+1b. Write `rewritten_condensed_narrative`: rewrite the episode's source text as a tight, unbroken dramatic script — every spoken line verbatim, every physical beat in chronological sequence, no narrative ellipses, no author commentary. This is the dialogue and action coverage contract: every line and beat here MUST appear in the generated panels. Write in the SAME language as the source text — do NOT translate.
 2. Screenplay instructions drive AI image generation and animation. Be very direct and verbose.
 3. Mark hook_type for: cold_open, verbal_hook, emotional_capture, tension_peak (intermediate), cliffhanger (final) panels.
 4. Ep1.P7, Ep2.P5, close.P5 are pivot panels: ECU reaction shot, no dialogue, voiceover MANDATORY 4–5 words, duration 3–4s.
@@ -178,6 +178,7 @@ P1 [hook_type | SCALE | LOCATION]:
   STAKE OBJECT: [one prop or environmental detail that carries the scene's subtext]
   STATE: [what changes from visual_start to visual_end — dramatic meaning, not the action]
   DIALOGUE SEED: [the ≤8-word line, or "— silence —", or "VO: [inner monologue 4–5 words]"]
+  THREAD→P[N+1]: [required when STATE describes an action started but not completed within this panel — one sentence: what the next panel's visual_start must open on to resolve this thread. Omit when action resolves within this panel's motion_prompt.]
 
 P7 [pivot | ECU | LOCATION]:
   POWER: [spatial disposition at peak pressure]

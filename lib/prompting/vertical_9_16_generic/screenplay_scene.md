@@ -113,6 +113,7 @@ Wind-up + strike + reaction = one panel. Push + stumble, grab + spin, throw + cr
 3. INTENT CHECK: does every beat in motion_prompt serve the declared `motion_intent`?
 4. TIMING LAW CHECK: does `visual_start` describe the state JUST BEFORE motion_prompt [0s]?
 5. COMBAT CHECK: two consecutive panels both describing the same physical impact → merge them.
+6. THREAD CHECK: does panel N's `motion_intent` or `visual_end` leave a physical action unresolved? Does panel N+1's `visual_start` open on the outcome or interruption? If not → rewrite panel N+1's `visual_start`.
 
 ## 9-PANEL NARRATIVE FLOW
 
@@ -237,6 +238,31 @@ HOW TO HANDLE MULTI-TURN EXCHANGES:
    Format: `"Speaker1 (voice): Line1\nSpeaker2 (voice): Line2"`
 2. LONGER EXCHANGE (3–4 turns): allocate consecutive panels, one turn per panel.
 3. REVELATION EXCHANGE: include both the trigger question and the answer in one panel.
+
+ACTION THREAD LAW — MANDATORY CROSS-PANEL NARRATIVE CONTINUITY:
+Any physical action introduced in a panel creates an OPEN THREAD. The next panel MUST resolve it — not ignore it. A viewer's subconscious tracks motion continuity; an unresolved action reads as a production error even when the viewer cannot name why.
+
+OPEN THREAD — any panel where:
+- A character moves toward someone/something but hasn't yet arrived (approaching, stepping closer, crossing the room)
+- Physical contact is attempted but not yet completed (reaching for an object, arm raised to strike, hand extended toward another character)
+- An object is handed, pointed, or picked up — but the recipient/target hasn't reacted yet
+- A character begins a gesture with a clear physical endpoint not completed within this panel's motion_prompt
+
+RESOLUTION RULE — the NEXT panel's `visual_start` MUST show one of:
+1. COMPLETION: the action reached its endpoint ("his hand now closes around her wrist", "she holds the contract she was reaching for")
+2. INTERRUPTION: another event stopped the action — stated explicitly in `visual_start` ("her reach for the envelope stops as his hand closes around her wrist first")
+3. TIME-SKIP: only valid with `transition_to_next=hard_cut` + a location or time change — `visual_start` must acknowledge the outcome state ("she stands at the door, contract in hand — she retrieved it in the gap")
+
+FORBIDDEN:
+- Panel N: "she reached for the phone" — Panel N+1: unrelated dramatic beat, phone outcome unknown
+- Panel N ends with character mid-approach — Panel N+1 opens as if the approach never started
+- Panel N: arm raised toward another character — Panel N+1: both characters in pre-gesture positions with no explanation
+
+THREAD CHECK — run before finalizing any consecutive panel pair:
+Does panel N's `motion_intent` or `visual_end` leave a physical action unresolved?
+→ YES: does panel N+1's `visual_start` open on the outcome or interruption? If not: rewrite panel N+1's `visual_start`.
+→ NO open thread: proceed.
+If the action fits within panel N's 6s clip budget: complete it in `motion_prompt` instead of leaving it open (see TEMPORAL COMPRESSION LAW above).
 
 CAPTION CONTRACT (caption field — required for EVERY panel):
 `caption` is a persistent bottom-third text overlay. It is a HOOK, not a summary.

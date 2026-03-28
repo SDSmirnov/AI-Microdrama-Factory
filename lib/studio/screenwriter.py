@@ -465,6 +465,12 @@ def refine_scenes_for_episode(scene: dict, prompts: dict, config: dict, llm: Bas
         for p in panels_sorted
     )
 
+    # Build action thread chain: motion_intent + visual_end summary per panel
+    panels_action_chain = "\n".join(
+        f"  Panel {p.get('panel_index', '?')} motion_intent: {p.get('motion_intent', '')} | visual_end: {p.get('visual_end', '')[:120]}"
+        for p in panels_sorted
+    )
+
     # Cross-scene entry block
     prev_terminal_block = ""
     if prev_scene_terminal:
@@ -545,9 +551,29 @@ Current panel endpoint chain (use as spatial anchor when refining):
 {panels_spatial_chain}
 </PANEL_SPATIAL_CHAIN>
 
+### RULE 6 — ACTION THREAD CONTINUITY
+Every panel whose motion_intent introduces a physical action (approach, reach, grab, strike, hand over, step toward)
+creates an OPEN THREAD. The immediately following panel's visual_start MUST open on the resolved or interrupted
+state — not on an unrelated starting position.
+
+RESOLUTION forms:
+- COMPLETION: panel N+1's visual_start describes the outcome state (contact made, object received, distance closed)
+- INTERRUPTION: panel N's motion_prompt explicitly shows what interrupted the action; panel N+1's visual_start
+  opens on the character in that interrupted state (arm pulled back, body reoriented, reach abandoned)
+- TIME-SKIP: only valid with hard_cut + location or time change; panel N+1's visual_start acknowledges the outcome
+
+Scan the action chain below. For each consecutive pair where panel N's motion_intent creates a physical expectation:
+- Does panel N+1's visual_start open at the moment after panel N's action resolved?
+- If NOT: rewrite panel N+1's visual_start to begin at the resolved or interrupted state.
+- If the action fits within panel N's 6s clip: extend panel N's motion_prompt to complete the arc instead.
+
+<PANEL_ACTION_CHAIN>
+{panels_action_chain}
+</PANEL_ACTION_CHAIN>
+
 {prompts.get('refinement_arc_rule', '')}
 
-### RULE 7 — CAMERA AND LIGHTING MASTER COMPLIANCE
+### RULE 8 — CAMERA AND LIGHTING MASTER COMPLIANCE
 Every panel's lights_and_camera must stay within the scene's camera_master and lighting_master DNA.
 Deviations for dramatic effect are allowed but must be flagged explicitly (e.g. "deviation from master:
 snap to 24mm wide for panic effect, then return to established 85mm CU").
