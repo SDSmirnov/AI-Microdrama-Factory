@@ -132,7 +132,18 @@ Panel 1's `visual_start` MUST be spatially compatible with the cross-scene termi
 
 Characters do not teleport between panels. Each panel's `visual_start` at t=0 must be spatially compatible with the previous panel's `visual_end`, unless a `hard_cut` or location change is established. If a character was LEFT of frame at the end of panel N, they cannot be RIGHT of frame at the start of panel N+1 without a stated camera repositioning or character movement. Build a spatial anchor chain from the existing panel endpoints and check each panel against it.
 
-### RULE 6 — EMOTIONAL ARC INTEGRITY
+### RULE 6 — ACTION THREAD CONTINUITY
+
+Every panel whose `motion_intent` introduces a physical action (approach, reach, grab, strike, hand over, step toward) creates an OPEN THREAD. The immediately following panel's `visual_start` MUST open on the resolved or interrupted state — not on an unrelated starting position.
+
+RESOLUTION forms:
+- **COMPLETION**: panel N+1's `visual_start` describes the outcome state (contact made, object received, distance closed)
+- **INTERRUPTION**: panel N's `motion_prompt` explicitly shows what interrupted the action; panel N+1's `visual_start` opens on the character in that interrupted state
+- **TIME-SKIP**: only valid with `hard_cut` + location or time change; panel N+1's `visual_start` acknowledges the outcome
+
+Build the action chain from panel `motion_intent` fields and scan each consecutive pair. If panel N+1's `visual_start` doesn't acknowledge the outcome: rewrite it to begin at the resolved or interrupted state. If the action fits within panel N's 6s clip: extend `motion_prompt` to complete the arc instead.
+
+### RULE 7 — EMOTIONAL ARC INTEGRITY
 
 Verify and enforce the 9-panel arc structure. Do NOT allow resolution before panel 9:
 - Panel 1: `cold_open` | Panel 2: `context` | Panels 3–5: `escalation`
@@ -140,7 +151,7 @@ Verify and enforce the 9-panel arc structure. Do NOT allow resolution before pan
 
 Each panel's `emotional_beat` and `hook_type` must align with its arc position. Correct mismatches.
 
-### RULE 7 — CAMERA AND LIGHTING MASTER COMPLIANCE
+### RULE 8 — CAMERA AND LIGHTING MASTER COMPLIANCE
 
 Every panel's `lights_and_camera` must stay within the scene's `camera_master` and `lighting_master` DNA. Deviations for dramatic effect are allowed but must be flagged explicitly in that field (e.g. "deviation from master: snap to 24mm wide for panic effect, then return to established 85mm CU").
 
