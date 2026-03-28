@@ -78,7 +78,7 @@ disposition:  ## Spatial disposition pass: write visual_disposition per panel (S
 	python cli.py 3d-preview $(SCENE)
 
 consistency:  ## Run continuity enforcer to sync references (dry-run by default; use RENDER=--no-dry-run to regenerate PNGs)
-	python cli.py --llm $(LLM) --style $(STYLE) consistency $(RENDER)
+	python cli.py --llm $(LLM) --style $(STYLE) consistency --no-dry-run
 
 storyboard:  ## Render scene grid images or individual panels
 	python cli.py --llm $(LLM) --style $(STYLE) storyboard $(SCENE) $(PANEL)
