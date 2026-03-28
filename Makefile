@@ -33,7 +33,7 @@ NARRATIVE      ?=
 INDEX          ?=
 
 .PHONY: help init workdirs styles casting refs remake-room-refs room-anchors screenplay scenes reverse-refine disposition consistency storyboard qa apply-qa accept-qa rebuild-storyboard refinement animation \
-        autocut imgedit tts voiceover dub duck summary split-book panel-by-panel-with-qa extra-panel suno-prompt logic 3d-preview
+        autocut imgedit tts voiceover dub duck summary split-book panel-by-panel-with-qa extra-panel suno-prompt logic 3d-preview draft
 
 help:  ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-16s %s\n", $$1, $$2}'
@@ -147,6 +147,15 @@ extra-panel:  ## Generate extra micro-panel not in screenplay (SCENE=N INDEX=4_5
 	@[ "$(SCENE)" != "all" ] || (echo "❌ SCENE must be set to an integer, e.g. make extra-panel SCENE=1"; exit 1)
 	@[ -n "$(INDEX)" ] || (echo "❌ INDEX must be set in N_M format, e.g. make extra-panel INDEX=4_5"; exit 1)
 	python cli.py --llm $(LLM) --style $(STYLE) extra-panel $(NARRATIVE) --scene $(SCENE) --index $(INDEX)
+
+draft:  ## Full draft pipeline: casting → refs → room-anchors → screenplay → consistency → disposition → storyboard
+	$(MAKE) casting
+	$(MAKE) refs
+	$(MAKE) room-anchors
+	$(MAKE) screenplay
+	$(MAKE) consistency
+	$(MAKE) disposition
+	$(MAKE) storyboard
 
 panel-by-panel-with-qa:  ## Render panels one-by-one with inline QA+refine (SCENE=N [PANEL=N] [THRESHOLD=5] [MAX_ATTEMPTS=3])
 	@[ "$(SCENE)" != "all" ] || (echo "❌ SCENE must be set to an integer, e.g. make panel-by-panel-with-qa SCENE=1"; exit 1)
