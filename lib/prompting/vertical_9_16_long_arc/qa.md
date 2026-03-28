@@ -37,6 +37,14 @@ __DRAMATIC_INTENSITY_PANEL_TYPE__
   Note: text descriptions may not always specify sides explicitly — only flag when clearly contradicted.
   - POV CAMERA LAW: if visual_start or visual_end is described as "from [Character X]'s perspective" or "[Character X]'s POV", Character X cannot appear anywhere in the rendered image. If Character X appears in the frame: flag in artifacts as "POV violation: [X] appears in their own POV shot"; set needs_refinement=true; refinement_prompt: "Remove the POV framing OR remove [X] from the frame — a character cannot appear in their own POV shot."
 
+- **shot_impossible**: True if the panel description contains a physically impossible shot combination
+  that no amount of image refinement can fix. Check visual_start and visual_end for scale conflicts:
+  - ECU of a face + a distant body part (foot, knee) visible in the same frame — impossible: a face ECU fills the entire 9:16 frame.
+  - ECU of a hand/object + character's facial expression in the same frame — impossible: at macro range the face is out of frame.
+  - CU of one character + full-body view of a second character in the same frame — incompatible scales.
+  When shot_impossible=true: set needs_refinement=false, leave refinement_prompt empty, fill shot_impossible_reason.
+  Do NOT write a refinement_prompt for impossible shots — image regeneration cannot resolve a structural description conflict.
+
 ## IMPORTANT
 - Compare character faces CAREFULLY against reference images.
 - Even small differences (hair color, eye color, facial structure) matter.

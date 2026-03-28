@@ -237,6 +237,10 @@ Expected characters/objects: {', '.join(ref_names) if ref_names else 'None speci
             "needs_refinement": True,
             "refinement_prompt": "API call failed, manual review required.",
             "reasoning": f"Error: {e}",
+            "suggest_mirror": False,
+            "mirror_reason": "",
+            "shot_impossible": False,
+            "shot_impossible_reason": "",
         }
     finally:
         for img in opened_ref_imgs:
@@ -331,9 +335,12 @@ def process_scene(
         fid = result["fidelity"]
         cc = result["character_consistency"]
         di = result.get("dramatic_intensity", "?")
+        impossible_tag = "  🚫 IMPOSSIBLE" if result.get("shot_impossible") else ""
         need = "🔴 NEEDS FIX" if result["needs_refinement"] else "🟢 OK"
         mirror_tag = "  🪞 MIRROR" if result.get("suggest_mirror") else ""
-        logger.info(f"    → fidelity={fid}/10  char_consistency={cc}/10  drama={di}/10  {need}{mirror_tag}")
+        logger.info(f"    → fidelity={fid}/10  char_consistency={cc}/10  drama={di}/10  {need}{mirror_tag}{impossible_tag}")
+        if result.get("shot_impossible"):
+            logger.info(f"       🚫 IMPOSSIBLE SHOT: {result.get('shot_impossible_reason', '')}")
         if result.get("suggest_mirror"):
             logger.info(f"       🪞 {result.get('mirror_reason', '')}")
         if result["artifacts"]:
@@ -439,6 +446,7 @@ def run_quality_gate(
         "total_panels": len(all_results),
         "needs_refinement": sum(1 for r in all_results if r["needs_refinement"]),
         "suggest_mirror": sum(1 for r in all_results if r.get("suggest_mirror")),
+        "shot_impossible": sum(1 for r in all_results if r.get("shot_impossible")),
         "avg_fidelity": round(sum(r["fidelity"] for r in all_results) / max(len(all_results), 1), 2),
         "avg_dramatic_intensity": round(sum(r.get("dramatic_intensity", 0) for r in all_results) / max(len(all_results), 1), 2),
         "panels": all_results,
@@ -456,6 +464,7 @@ def print_summary(report: Dict, threshold: int):
 
     total = len(results)
     needs_fix = sum(1 for r in results if r["needs_refinement"])
+    impossible_count = report.get("shot_impossible", 0)
     avg_fid = report.get("avg_fidelity", 0)
 
     print(f"\n{'=' * 72}")
@@ -471,4 +480,6 @@ def print_summary(report: Dict, threshold: int):
     print(f"  🔴 Needs refinement:  {needs_fix}")
     if mirror_count:
         print(f"  🪞 Mirror fix only:   {mirror_count}")
+    if impossible_count:
+        print(f"  🚫 Impossible shots:  {impossible_count}  ← require SCREENPLAY REWRITE")
     print(f"{'=' * 72}\n")

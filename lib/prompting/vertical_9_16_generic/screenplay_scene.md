@@ -25,6 +25,7 @@ Each panel is rendered by a separate image-generation model that receives ONLY t
   - "ONLY [Name1] [AND Name2] ARE NAMED IN THIS FRAME. ANONYMOUS BACKGROUND: [sparse/moderate/dense] [descriptor — e.g. café patrons, street pedestrians, subway riders] — anonymous, unidentifiable, NOT listed in references." — inherently public locations (restaurant, street, station, mall, park) where background population is contextually required. DO NOT use for homes, offices, vehicles, or private controlled spaces.
   Never leave the named character count implicit. The image model fills empty space with context-inferred people — blocking hallucinated named characters requires an explicit headcount every time.
   Background extras are NEVER added to the `references` array regardless of how many are visible.
+  BODY-PART / ACCESSORY RULE: A character's body part (foot, hand, wrist, ankle) or a personal accessory worn or held by them (shoe, watch, ring, bag) IS that character being physically present in the frame. An ECU of a character's shoe means their lower body is in frame — they count as visible. Use the appropriate headcount form. NEVER write "NO CHARACTERS ARE VISIBLE" when the shot is an ECU of a named character's body part or belonging that is attached to or directly adjacent to their body in the scene.
 - REFERENCES ARRAY CONTRACT: The `references` array must contain ONLY characters and props that are physically visible in this panel's visual_start or visual_end.
   FORBIDDEN: listing a character in references because they appear in a later panel of the same scene, or because they are mentioned in dialogue (off-screen voice = not visible).
   Off-screen speakers: include in `dialogue` field only. Their ref image must NOT be injected.
@@ -39,6 +40,12 @@ FRAMING HIERARCHY:
 - CU (Close-Up): face from chin to forehead — default for dialogue and reaction
 - MS (Medium Shot): chest up — confrontation, spatial relationship between characters
 - WIDE: only when the environment is the dramatic agent (threat, scale, isolation)
+
+ONE SHOT — ONE SCALE LAW: Each panel has exactly one shot scale. A single frame cannot simultaneously show an ECU subject AND a distant body part or second detail that requires a different scale. These are physically impossible in 9:16:
+- IMPOSSIBLE: ECU face + foot visible — a face ECU fills the entire frame; feet are meters below and out of frame.
+- IMPOSSIBLE: ECU hand + character's expression — at ECU range on a hand, the face is outside the frame.
+- IMPOSSIBLE: CU face + full body of a second character.
+If you want both the face reaction AND the foot detail, use TWO SEPARATE PANELS with a cut between them. Do not attempt to combine them into one visual description. Violations produce unrenderable prompts that QA cannot fix.
 
 CAMERA-FACING ORIENTATION LAW: Every visual_start must state explicitly how characters are oriented relative to the camera. Choose one and write it in the description:
 - "faces visible to camera" — frontal or near-frontal; default for MS/CU/ECU

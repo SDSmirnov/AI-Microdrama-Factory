@@ -222,6 +222,25 @@ PANEL_QA_SCHEMA = {
                 "flipped and relative to which panel. Empty string otherwise."
             ),
         },
+        "shot_impossible": {
+            "type": "boolean",
+            "description": (
+                "True if the panel description contains a physically impossible shot combination "
+                "that no amount of image refinement can fix — e.g. ECU face + distant body part "
+                "visible in the same frame, two incompatible shot scales in one visual_start/visual_end. "
+                "When true: set needs_refinement=false, leave refinement_prompt empty, "
+                "describe the conflict in shot_impossible_reason. "
+                "This panel requires a SCREENPLAY REWRITE, not image regeneration."
+            ),
+        },
+        "shot_impossible_reason": {
+            "type": "string",
+            "description": (
+                "If shot_impossible is true: describe the specific scale conflict — "
+                "which two elements are mutually exclusive in one frame and why. "
+                "Empty string otherwise."
+            ),
+        },
         "reasoning": {
             "type": "string",
             "description": "Brief explanation of the scores.",
@@ -236,6 +255,8 @@ PANEL_QA_SCHEMA = {
         "refinement_prompt",
         "suggest_mirror",
         "mirror_reason",
+        "shot_impossible",
+        "shot_impossible_reason",
         "dramatic_intensity",
         "reasoning",
     ],
