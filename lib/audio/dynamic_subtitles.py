@@ -10,6 +10,7 @@ Steps:
 
 import json
 import logging
+import math
 import re
 import subprocess
 from pathlib import Path
@@ -23,6 +24,8 @@ except ImportError:
 
 _SRT_TIME_RE = re.compile(r"(\d+):(\d+):(\d+)[,.](\d+)")
 _SENT_END_RE = re.compile(r"[.!?]$")
+_SENT_BOUNDARY_RE = re.compile(r'(?<=[.!?…])\s+')
+_MAX_PHRASE_SEC = 4.5  # split any phrase longer than this (for language models w/o word punctuation)
 
 
 # ---------------------------------------------------------------------------
@@ -359,9 +362,10 @@ def _split_on_sentences(segments: list[dict]) -> list[dict]:
     """Split segments at sentence-ending punctuation (., !, ?) using word timestamps.
 
     Whisper often merges multiple sentences into one segment when pauses are
-    short. This uses cached word-level timestamps to split at sentence boundaries,
-    producing shorter, more readable subtitle entries.
-    Only splits mid-segment sentence ends — the final word is never a split point.
+    short. Primary strategy: word-level punctuation tokens (works for English and
+    some Whisper models). Fallback: original_text sentence boundaries mapped back
+    to word tokens by word count. Last resort: duration cap — any phrase longer
+    than _MAX_PHRASE_SEC is split at word boundaries into equal-duration chunks.
     """
     result = []
     for seg in segments:
@@ -370,31 +374,64 @@ def _split_on_sentences(segments: list[dict]) -> list[dict]:
             result.append(seg)
             continue
 
-        # Indices after which to split (sentence-ending word, not the last word)
+        def _emit_chunks(boundaries: list[int], texts: list[str] | None = None) -> None:
+            for j in range(len(boundaries) - 1):
+                chunk = words[boundaries[j]: boundaries[j + 1]]
+                if not chunk:
+                    continue
+                text = texts[j] if texts else "".join(w["word"] for w in chunk).strip()
+                if not text:
+                    continue
+                result.append({
+                    "start": chunk[0]["start"],
+                    "end": chunk[-1]["end"],
+                    "original_text": text,
+                    "words": chunk,
+                })
+
+        # ── Primary: word-level punctuation (English / punctuated Whisper models) ──
         split_after = [
             i for i, w in enumerate(words[:-1])
             if _SENT_END_RE.search(w["word"].strip())
         ]
+        if split_after:
+            boundaries = [0] + [i + 1 for i in split_after] + [len(words)]
+            _emit_chunks(boundaries)
+            continue
 
-        if not split_after:
+        # ── Fallback 1: sentence boundaries in original_text (Russian Whisper) ──
+        # Whisper puts punctuation on segment text but not on individual word tokens;
+        # _split_on_gaps rebuilds original_text from unpunctuated word tokens, so
+        # this path only fires when original_text was NOT rebuilt (no gap split) and
+        # still carries the original Whisper segment text with punctuation.
+        original_text = seg.get("original_text", "").strip()
+        sentences = [s.strip() for s in _SENT_BOUNDARY_RE.split(original_text) if s.strip()]
+        if len(sentences) > 1:
+            word_counts = [len(s.split()) for s in sentences]
+            if sum(word_counts) == len(words):
+                pos = 0
+                boundaries = []
+                for count in word_counts:
+                    boundaries.append(pos)
+                    pos += count
+                boundaries.append(len(words))
+                _emit_chunks(boundaries, sentences)
+                continue
+
+        # ── Fallback 2: duration cap — split at word boundaries ──
+        duration = seg["end"] - seg["start"]
+        if duration <= _MAX_PHRASE_SEC:
             result.append(seg)
             continue
 
-        boundaries = [0] + [i + 1 for i in split_after] + [len(words)]
-        for j in range(len(boundaries) - 1):
-            chunk = words[boundaries[j]: boundaries[j + 1]]
-            if not chunk:
-                continue
-            # Whisper words carry leading spaces; join+strip gives clean text
-            text = "".join(w["word"] for w in chunk).strip()
-            if not text:
-                continue
-            result.append({
-                "start": chunk[0]["start"],
-                "end": chunk[-1]["end"],
-                "original_text": text,
-                "words": chunk,
-            })
+        n_chunks = max(2, math.ceil(duration / _MAX_PHRASE_SEC))
+        chunk_size = max(1, len(words) // n_chunks)
+        boundaries = list(range(0, len(words), chunk_size)) + [len(words)]
+        # merge last two chunks if remainder is tiny (< 2 words)
+        if len(boundaries) >= 3 and (boundaries[-1] - boundaries[-2]) < 2:
+            boundaries = boundaries[:-2] + [boundaries[-1]]
+        _emit_chunks(boundaries)
+
     return result
 
 
