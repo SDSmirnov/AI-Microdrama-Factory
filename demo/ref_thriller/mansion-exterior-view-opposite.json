@@ -1,0 +1,8 @@
+{
+  "name": "Mansion-Exterior-View-Opposite",
+  "logline_subject_info": "The view from the mansion's entrance, looking out over the empty courtyard where guests and press would stand.",
+  "visual_desc": "LOCATION TYPE: Grand entrance courtyard of a luxurious neoclassical palace. PRIMARY DIRECTION (camera faces): South \u2014 away from the main doors. NORTH (background / behind viewer): The top step of the mansion's grand staircase. The massive wooden doors and columns are just out of frame behind the camera's position. SOUTH (foreground / far end): An expansive, open courtyard paved with large, clean stone slabs, leading towards an unseen outer gate or garden. EAST (left when facing South): The corner of the mansion's yellow stucco facade is visible, extending away from the viewer. WEST (right when facing South): The other corner of the mansion's facade mirrors the east side. GROUND: Grey stone paving slabs of the courtyard. SKY/ATMOSPHERE: Bright, clear daylight. The scene is empty of people. The building has yellow walls, massive gray columns, and a balcony. The grand entrance has a wide staircase with at least 3-4 steps.",
+  "type": "Outdoor",
+  "video_visual_desc": "Wide shot from the top of the mansion steps, looking out over a vast, empty stone-paved courtyard. Bright daylight.",
+  "style_reference": "Mansion-Exterior-View-Primary"
+}

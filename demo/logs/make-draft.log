@@ -1,0 +1,176 @@
+make casting
+make[1]: Entering directory 'MIH.E01'
+python cli.py --llm openrouter --style vertical_9_16_microdrama casting s01e01.txt
+INFO: 📂 Loading prompts from lib/prompting/vertical_9_16_microdrama/
+INFO:   📝 Override: style.md from custom_prompts/
+INFO:   📝 Override: setting.md from custom_prompts/
+INFO:   📝 Override: config.json from custom_prompts/
+INFO:   📚 Character refs: 0 with PNG, 0 missing PNG
+INFO: 
+🎭 CASTING: Identifying characters/locations/objects...
+INFO:   ✅ Saved reference JSON: Reporter
+INFO:   ✅ Saved reference JSON: Groom
+INFO:   ✅ Saved reference JSON: Mansion-Exterior-View-Opposite
+INFO:   ✅ Saved reference JSON: Bride
+INFO:   ✅ Saved reference JSON: Mansion-Exterior-View-Primary
+INFO:   ✅ Saved reference JSON: Elderly-Man
+INFO:   ✅ Saved reference JSON: CN-NEWS-Microphone
+INFO:   ✅ Saved reference JSON: Wedding-Bouquet
+INFO:   ✅ Saved reference JSON: Mansion-Hall-View-From-Entrance
+INFO:   ✅ Saved reference JSON: Wheelchair
+INFO:   ✅ Saved reference JSON: Mansion-Hall-View-To-Entrance
+INFO: 
+🔍 CASTING PASS 2: Enriching refs with specific prop/set details...
+INFO:   ✏️  Enriched: Reporter (+51 chars)
+INFO:   ✏️  Enriched: Groom (+44 chars)
+INFO:   ✏️  Enriched: Mansion-Exterior-View-Opposite (+132 chars)
+INFO:   ✏️  Enriched: Bride (+43 chars)
+INFO:   ✏️  Enriched: Mansion-Exterior-View-Primary (+116 chars)
+INFO:   ✏️  Enriched: Elderly-Man (+18 chars)
+INFO:   ✏️  Enriched: CN-NEWS-Microphone (+60 chars)
+INFO:   ✏️  Enriched: Mansion-Hall-View-From-Entrance (+137 chars)
+INFO:   ✏️  Enriched: Mansion-Hall-View-To-Entrance (+113 chars)
+INFO:   ✅ Enrichment pass done: 9/9 refs updated.
+INFO: 
+✅ Done. Reference JSONs in ref_thriller/
+make[1]: Leaving directory 'MIH.E01'
+make refs
+make[1]: Entering directory 'MIH.E01'
+python cli.py --llm openrouter --style vertical_9_16_microdrama refs
+INFO: 📂 Loading prompts from lib/prompting/vertical_9_16_microdrama/
+INFO:   📝 Override: style.md from custom_prompts/
+INFO:   📝 Override: setting.md from custom_prompts/
+INFO:   📝 Override: config.json from custom_prompts/
+INFO: 
+🎭 RENDER REFS: Generating missing character reference portraits...
+INFO:   📋 11 references to render.
+INFO:   🎬 Rendering reference: Wheelchair
+INFO:     ✅ Saved ref_thriller/wheelchair.png
+INFO:   🎬 Rendering reference: CN-NEWS-Microphone
+INFO:     ✅ Saved ref_thriller/cn-news-microphone.png
+INFO:   🎬 Rendering reference: Mansion-Exterior-View-Primary
+INFO:     ✅ Saved ref_thriller/mansion-exterior-view-primary.png
+INFO:   🎬 Rendering reference: Groom
+INFO:     ✅ Saved ref_thriller/groom.png
+INFO:   🎬 Rendering reference: Wedding-Bouquet
+INFO:     ✅ Saved ref_thriller/wedding-bouquet.png
+INFO:   🎬 Rendering reference: Bride
+INFO:     ✅ Saved ref_thriller/bride.png
+INFO:   🎬 Rendering reference: Mansion-Exterior-View-Opposite
+INFO:     ✅ Saved ref_thriller/mansion-exterior-view-opposite.png
+INFO:   🎬 Rendering reference: Elderly-Man
+INFO:     ✅ Saved ref_thriller/elderly-man.png
+INFO:   🎬 Rendering reference: Reporter
+INFO:     ✅ Saved ref_thriller/reporter.png
+INFO:   🎬 Rendering reference: Mansion-Hall-View-From-Entrance
+INFO:     ✅ Saved ref_thriller/mansion-hall-view-from-entrance.png
+INFO:   🎬 Rendering reference: Mansion-Hall-View-To-Entrance
+INFO:     ✅ Saved ref_thriller/mansion-hall-view-to-entrance.png
+INFO: 
+✅ Done. Reference PNGs in ref_thriller/
+make[1]: Leaving directory 'MIH.E01'
+make room-anchors
+make[1]: Entering directory 'MIH.E01'
+python cli.py --llm openrouter --style vertical_9_16_microdrama room-anchors
+INFO: 📂 Loading prompts from lib/prompting/vertical_9_16_microdrama/
+INFO:   📝 Override: style.md from custom_prompts/
+INFO:   📝 Override: setting.md from custom_prompts/
+INFO:   📝 Override: config.json from custom_prompts/
+INFO:   📚 Character refs: 11 with PNG, 0 missing PNG
+INFO:   📐 Generating anchor_points for 2 ref(s).
+INFO:   🔍 Mansion-Exterior-View-Primary ...
+INFO:   ✅ Mansion-Exterior-View-Primary: 3 zones, 10 objects
+INFO:   🔍 Mansion-Hall-View-From-Entrance ...
+INFO:   ✅ Mansion-Hall-View-From-Entrance: 3 zones, 8 objects
+INFO:   ✅ room-anchors done.
+INFO: 
+✅ Done. Anchor points written to ref JSONs in ref_thriller/
+make[1]: Leaving directory 'MIH.E01'
+make screenplay
+make[1]: Entering directory 'MIH.E01'
+python cli.py --llm openrouter --style vertical_9_16_microdrama screenplay s01e01.txt
+INFO: 📂 Loading prompts from lib/prompting/vertical_9_16_microdrama/
+INFO:   📝 Override: style.md from custom_prompts/
+INFO:   📝 Override: setting.md from custom_prompts/
+INFO:   📝 Override: config.json from custom_prompts/
+INFO:   📚 Character refs: 11 with PNG, 0 missing PNG
+INFO: 
+🎥 MASTER SCREENWRITER: Preparing screenplay...
+INFO: 
+🎥 MASTER CINEMATOGRAPHER: Preparing Keyframes for episode 1...
+INFO:     🎬 4-pass generation: scene 1
+INFO:       ✅ Pass 1 done (9 panel stubs)
+INFO:       ✅ Pass 1A done (9 states)
+INFO:       ✅ Pass 2 done (9 visuals)
+INFO:       ✅ Pass 3 done (9 motion/audio entries)
+INFO:       ✅ Merged: 9 panels
+INFO: CINEMATOGRAPHER: Ready Keyframes for episode 1
+INFO:   💾 Episode 1: raw checkpoint written
+INFO: 
+🎥 MASTER CINEMATOGRAPHER: Preparing Keyframes for episode 2...
+INFO:     🎬 4-pass generation: scene 1
+INFO:       ✅ Pass 1 done (9 panel stubs)
+INFO:       ✅ Pass 1A done (9 states)
+INFO:       ✅ Pass 2 done (9 visuals)
+INFO:       ✅ Pass 3 done (9 motion/audio entries)
+INFO:       ✅ Merged: 9 panels
+INFO: CINEMATOGRAPHER: Ready Keyframes for episode 2
+INFO:   💾 Episode 2: raw checkpoint written
+INFO: Processing episode: 1 scene start: 0
+INFO: Processing episode: 2 scene start: 1
+INFO:   📝 Saved image prompt: cinematic_render/image_prompts/scene_001.md
+INFO:   📝 Saved image prompt: cinematic_render/image_prompts/scene_002.md
+INFO: 
+✅ Done. JSONs in cinematic_render/, prompts in cinematic_render/image_prompts/
+make[1]: Leaving directory 'MIH.E01'
+make disposition
+make[1]: Entering directory 'MIH.E01'
+cp cinematic_render/animation_metadata.json cinematic_render/animation_metadata_before_disposition.json
+python cli.py --llm openrouter --style vertical_9_16_microdrama disposition all
+INFO: 📂 Loading prompts from lib/prompting/vertical_9_16_microdrama/
+INFO:   📝 Override: style.md from custom_prompts/
+INFO:   📝 Override: setting.md from custom_prompts/
+INFO:   📝 Override: config.json from custom_prompts/
+INFO:   📚 Character refs: 11 with PNG, 0 missing PNG
+INFO:   📐 Scene 1 [Mansion Exterior] anchor=Mansion-Exterior-View-Primary panels=[1, 2, 3, 4, 5, 6, 7, 8, 9] ...
+INFO:       🔄 Panel 5: view swapped ['Mansion-Exterior-View-Primary'] → ['Mansion-Exterior-View-Opposite'] [Category A face shot, Elderly-Man faces away from entrance (toward couple on stairs) → camera on far side → To-Entrance; current From-Entrance wrong → swap=true.]
+INFO:       ✅ Spatial disposition: 9/9 panels for scene 1, 1 view(s) corrected
+WARNING:       ⚠️  180-rule: panel 4→5: camera axis flipped From-Entrance→To-Entrance (look_dir dot=-1.00)
+WARNING:       ⚠️  180-rule: panel 5→6: camera axis flipped To-Entrance→From-Entrance (look_dir dot=-1.00)
+INFO:       🎭 Puppet: 3/9 panels rewritten deterministically
+INFO:   📐 Scene 2 [Mansion Hall] anchor=Mansion-Hall-View-From-Entrance panels=[1, 2, 3, 4, 5, 6, 7, 8, 9] ...
+INFO:       🔄 Panel 3: view swapped ['Mansion-Hall-View-From-Entrance'] → ['Mansion-Hall-View-To-Entrance'] [Category A face shot, Groom faces away from entrance → camera on far side → To-Entrance; current From-Entrance wrong → swap=true.]
+INFO:       🔄 Panel 7: view swapped ['Mansion-Hall-View-From-Entrance'] → ['Mansion-Hall-View-To-Entrance'] [Category A face shot, Groom faces away from entrance → camera on far side → To-Entrance; current From-Entrance wrong → swap=true.]
+INFO:       ✅ Spatial disposition: 9/9 panels for scene 2, 2 view(s) corrected
+WARNING:       ⚠️  180-rule: panel 2→3: camera axis flipped From-Entrance→To-Entrance (look_dir dot=-1.00)
+WARNING:       ⚠️  180-rule: panel 3→4: camera axis flipped To-Entrance→From-Entrance (look_dir dot=-1.00)
+WARNING:       ⚠️  180-rule: panel 6→7: camera axis flipped From-Entrance→To-Entrance (look_dir dot=-1.00)
+WARNING:       ⚠️  180-rule: panel 7→8: camera axis flipped To-Entrance→From-Entrance (look_dir dot=-1.00)
+INFO:       🎭 Puppet: 9/9 panels rewritten deterministically
+INFO: ✅ animation_metadata.json updated: 2 scene(s) with visual_disposition
+make[1]: Leaving directory 'MIH.E01'
+make storyboard
+make[1]: Entering directory 'MIH.E01'
+python cli.py --llm openrouter --style vertical_9_16_microdrama storyboard all all
+INFO: 📂 Loading prompts from lib/prompting/vertical_9_16_microdrama/
+INFO:   📝 Override: style.md from custom_prompts/
+INFO:   📝 Override: setting.md from custom_prompts/
+INFO:   📝 Override: config.json from custom_prompts/
+INFO:   📚 Character refs: 11 with PNG, 0 missing PNG
+INFO: 
+🎬 RENDER GRIDS: Generating scene grid images...
+INFO:   📋 Loaded 2 scene(s) from animation_metadata.json
+INFO:   📋 2 scene(s) to process.
+INFO:   📎 Scene 1 refs: ['Reporter', 'Mansion-Exterior-View-Opposite', 'Bride', 'Groom', 'Wheelchair', 'CN-NEWS-Microphone', 'Mansion-Exterior-View-Primary', 'Elderly-Man', 'Wedding-Bouquet']
+INFO:   📎 Scene 2 refs: ['Mansion-Hall-View-To-Entrance', 'Bride', 'Groom', 'Mansion-Hall-View-From-Entrance', 'Wedding-Bouquet']
+INFO:   🎨 Rendering scene 2 (single_grid_animation)...
+INFO:   🎨 Rendering scene 1 (single_grid_animation)...
+INFO:     ✅ Scene 2 passed grid QA (attempt 1)
+INFO:     ✅ Saved cinematic_render/scene_002_grid_combined.png
+WARNING: Grid 1536x2752 not evenly divisible by 3x3 — panels will have 1px drift on right/bottom edges
+INFO:     ✅ Scene 1 passed grid QA (attempt 1)
+INFO:     ✅ Saved cinematic_render/scene_001_grid_combined.png
+WARNING: Grid 1536x2752 not evenly divisible by 3x3 — panels will have 1px drift on right/bottom edges
+INFO: 
+✅ Done.
+make[1]: Leaving directory 'MIH.E01'

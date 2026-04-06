@@ -1,0 +1,123 @@
+{
+  "name": "Mansion-Exterior-View-Primary",
+  "logline_subject_info": "The grand front entrance of a luxurious mansion, viewed from the position of the assembled press and guests.",
+  "visual_desc": "LOCATION TYPE: Grand entrance of a luxurious neoclassical palace. PRIMARY DIRECTION (camera faces): North \u2014 toward the main doors. NORTH (background / far end): A set of massive, ornate double doors made of dark, polished wood with brass handles, set into the building's facade. The doors are at the top of a wide, four-step stone staircase. The facade wall is a warm yellow stucco. Flanking the entrance are two massive, grey stone columns supporting a second-story balcony with an iron railing. SOUTH (foreground / behind viewer): An open stone-paved courtyard area, empty, where crowds would gather. The ground is clean and well-maintained. EAST (right when facing North): The yellow stucco facade of the mansion continues, with a tall arched window visible. WEST (left when facing North): The yellow facade continues, mirroring the east side with another tall arched window. GROUND: Wide, grey stone steps and paving stones. SKY/ATMOSPHERE: Bright, clear daylight, suggesting a celebratory mid-day event. The scene is empty of people. The building has yellow walls, massive gray columns, and a balcony. The massive double doors are the swing-out type.",
+  "type": "Outdoor",
+  "video_visual_desc": "Wide shot of a luxurious mansion's grand entrance with yellow walls, grey columns, a wide staircase, and massive wooden doors. Bright daylight. Empty.",
+  "style_reference": "Mansion-Exterior-View-Primary",
+  "anchor_points": {
+    "axes": "X = fraction of courtyard width: 0 = West side, 1 = East side. Y = fraction of courtyard depth: 0 = South gate (entrance), 1 = North doors (far side). Z = fraction of height: 0 = ground, 1 = sky. View-To-Entrance (from doors to gate) mirrors X (e.g., West side at x=0.1 becomes frame-right) and reverses Y depth.",
+    "room_m": [
+      18,
+      30
+    ],
+    "objects": [
+      {
+        "id": "main-doors",
+        "label": "Main Doors",
+        "x": 0.5,
+        "y": 1.0,
+        "z": 0.1,
+        "notes": "Ornate double doors at the top of the stairs, centered on the north facade."
+      },
+      {
+        "id": "stairs",
+        "label": "Stairs to Main Doors",
+        "x": 0.5,
+        "y": 0.95,
+        "z": 0.0,
+        "notes": "Four wide stone steps leading up to the main doors."
+      },
+      {
+        "id": "west-column",
+        "label": "West Column",
+        "x": 0.42,
+        "y": 0.9,
+        "z": 0.0,
+        "notes": "Massive grey stone column to the image-left of the main doors."
+      },
+      {
+        "id": "east-column",
+        "label": "East Column",
+        "x": 0.58,
+        "y": 0.9,
+        "z": 0.0,
+        "notes": "Massive grey stone column to the image-right of the main doors."
+      },
+      {
+        "id": "balcony",
+        "label": "Balcony",
+        "x": 0.5,
+        "y": 1.0,
+        "z": 0.4,
+        "notes": "Second-story balcony with iron railing, located directly above the main doors."
+      },
+      {
+        "id": "west-window",
+        "label": "West Window",
+        "x": 0.15,
+        "y": 1.0,
+        "z": 0.15,
+        "notes": "Arched window on the west wing of the facade."
+      },
+      {
+        "id": "east-window",
+        "label": "East Window",
+        "x": 0.85,
+        "y": 1.0,
+        "z": 0.15,
+        "notes": "Arched window on the east wing of the facade."
+      },
+      {
+        "id": "courtyard-gate",
+        "label": "Courtyard Gate",
+        "x": 0.5,
+        "y": 0.0,
+        "z": 0.0,
+        "notes": "Iron gate at the south entrance to the courtyard."
+      },
+      {
+        "id": "west-gatepost",
+        "label": "West Gatepost",
+        "x": 0.4,
+        "y": 0.0,
+        "z": 0.0,
+        "notes": "Stone gatepost on the west side of the courtyard gate."
+      },
+      {
+        "id": "east-gatepost",
+        "label": "East Gatepost",
+        "x": 0.6,
+        "y": 0.0,
+        "z": 0.0,
+        "notes": "Stone gatepost on the east side of the courtyard gate."
+      }
+    ],
+    "zones": [
+      {
+        "id": "entrance-threshold",
+        "label": "Entrance Threshold",
+        "x": 0.5,
+        "y": 0.9,
+        "visual_disposition_hint": "Standing on the stone paving at the base of the stairs, centered on the main doors. The stairs and doors are in the immediate background, framed by the west (image-left) and east (image-right) columns. DEPTH: courtyard foreground \u2192 stairs mid-ground \u2192 main doors background.",
+        "visual_disposition_hint_to_entrance": "Standing on the top step, looking out over the courtyard toward the gate. The west (now frame-right) and east (now frame-left) columns are in the immediate foreground. The courtyard gate is visible in the center background. DEPTH: main doors foreground \u2192 courtyard mid-ground \u2192 courtyard gate background."
+      },
+      {
+        "id": "courtyard-center",
+        "label": "Courtyard Center",
+        "x": 0.5,
+        "y": 0.5,
+        "visual_disposition_hint": "Standing in the middle of the open stone courtyard, looking towards the mansion. The entire entrance facade with its doors, columns, and balcony is visible in the background. DEPTH: entrance gate foreground \u2192 courtyard mid-ground \u2192 mansion facade background.",
+        "visual_disposition_hint_to_entrance": "Standing in the middle of the open stone courtyard, looking towards the gate. The courtyard gate is centered in the background, with the mansion facade behind the camera. DEPTH: mansion facade foreground \u2192 courtyard mid-ground \u2192 courtyard gate background."
+      },
+      {
+        "id": "courtyard-gate-area",
+        "label": "Courtyard Gate Area",
+        "x": 0.5,
+        "y": 0.1,
+        "visual_disposition_hint": "Standing just inside the courtyard gate, looking towards the mansion. The gateposts are in the immediate foreground on the image-left and image-right. The mansion facade is visible in the far background across the courtyard. DEPTH: courtyard gate foreground \u2192 open courtyard mid-ground \u2192 mansion facade background.",
+        "visual_disposition_hint_to_entrance": "Standing near the mansion doors, looking across the courtyard towards the gate. The gate is centered in the background, with its west gatepost on the frame-right and east gatepost on the frame-left. DEPTH: mansion facade foreground \u2192 open courtyard mid-ground \u2192 courtyard gate background."
+      }
+    ]
+  }
+}

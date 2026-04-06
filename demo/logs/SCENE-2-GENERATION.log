@@ -1,0 +1,146 @@
+python cli.py --llm openrouter --style vertical_9_16_microdrama panel-by-panel-with-qa 2 all --threshold 5 --max-attempts 2
+INFO: 📂 Loading prompts from lib/prompting/vertical_9_16_microdrama/
+INFO:   📝 Override: style.md from custom_prompts/
+INFO:   📝 Override: setting.md from custom_prompts/
+INFO:   📝 Override: config.json from custom_prompts/
+INFO:   📚 Character refs: 11 with PNG, 0 missing PNG
+INFO: 📂 Loaded 11 refs from ref_thriller
+INFO: 
+============================================================
+INFO: 🎬 Scene 2 · Panel 1/9
+INFO: ============================================================
+INFO:   🎨 Rendering 002_01_static.png ...
+INFO:     ✅ Saved cinematic_render/panels/002_01_static.png
+INFO: 
+  🔍 QA (attempt 1/2)...
+INFO:   ✅ Panel 1 passed QA (fidelity=10)
+INFO: 
+============================================================
+INFO: 🎬 Scene 2 · Panel 2/9
+INFO: ============================================================
+INFO:   🎨 Rendering 002_02_static.png ...
+INFO:     ✅ Saved cinematic_render/panels/002_02_static.png
+INFO: 
+  🔍 QA (attempt 1/2)...
+INFO:   🔧 Refining panel 2 (attempt 1)...
+INFO:   🔧 Results: 2 2 {'fidelity': 5, 'character_consistency': 10, 'composition_match': 2, 'artifacts': [], 'needs_refinement': True, 'refinement_prompt': "The shot composition is incorrect. The prompt requested a 'Close-up on the Bride's face, filling the frame' with an 'extremely shallow depth of field' to blur the background. The generated image is a medium close-up with a deep depth of field that shows the entire background in focus. Please regenerate as a true close-up on the Bride's face. Her face should fill the frame. Use a very shallow depth of field to completely blur the background hall. The camera should also be positioned slightly higher, looking down, to capture her looking 'slightly upward' as described.", 'suggest_mirror': False, 'mirror_reason': '', 'shot_impossible': False, 'shot_impossible_reason': '', 'dramatic_intensity': 6, 'reasoning': "Character consistency is perfect; the Bride is an excellent match to her reference image in face, hair, and clothing. However, the composition is completely wrong. The prompt called for a tight close-up with a very shallow depth of field to isolate the character's face against a blurred background. The generated image is a medium close-up with a deep depth of field, showing the entire hall in focus. The camera angle is also wrong; she is looking directly at the camera instead of slightly upward. This fundamentally changes the shot from an intimate character moment to a formal, environmental portrait, thus requiring refinement.", 'scene_id': 2, 'panel_id': 2, 'references_expected': ['Bride', 'Wedding-Bouquet', 'Mansion-Hall-View-From-Entrance'], 'references_loaded': ['Bride', 'Wedding-Bouquet', 'Mansion-Hall-View-From-Entrance']}
+INFO: 
+============================================================
+INFO: 🔧 Refinement: Scene 2, Panel 2, Frame: static
+INFO: ============================================================
+INFO:   ✓ Loaded ref: Mansion-Hall-View-From-Entrance
+INFO:   ✓ Loaded ref: Bride
+INFO:   ✓ Loaded ref: Wedding-Bouquet
+INFO: 🎨 I2I refinement (fidelity=5, using 3 refs)...
+INFO: ✅ Saved: cinematic_render/refined/002_02_static_refined.png
+INFO:   ✅ Promoted refined → panels/002_02_static.png
+INFO: 
+  🔍 QA (attempt 2/2)...
+INFO:   ✅ Panel 2 passed QA (fidelity=8)
+INFO: 
+============================================================
+INFO: 🎬 Scene 2 · Panel 3/9
+INFO: ============================================================
+INFO:   🎨 Rendering 002_03_static.png ...
+INFO:     ✅ Saved cinematic_render/panels/002_03_static.png
+INFO: 
+  🔍 QA (attempt 1/2)...
+INFO:   ✅ Panel 3 passed QA (fidelity=10)
+INFO: 
+============================================================
+INFO: 🎬 Scene 2 · Panel 4/9
+INFO: ============================================================
+INFO:   🎨 Rendering 002_04_static.png ...
+INFO:     ✅ Saved cinematic_render/panels/002_04_static.png
+INFO: 
+  🔍 QA (attempt 1/2)...
+INFO:   ✅ Panel 4 passed QA (fidelity=9)
+INFO: 
+============================================================
+INFO: 🎬 Scene 2 · Panel 5/9
+INFO: ============================================================
+INFO:   🎨 Rendering 002_05_static.png ...
+INFO:     ✅ Saved cinematic_render/panels/002_05_static.png
+INFO: 
+  🔍 QA (attempt 1/2)...
+INFO:   🔧 Refining panel 5 (attempt 1)...
+INFO:   🔧 Results: 2 5 {'fidelity': 6, 'character_consistency': 10, 'composition_match': 3, 'artifacts': ["Incorrect shot type: Rendered as an over-the-shoulder shot with the Groom in the foreground, but the description specifies 'The Groom is off-frame'.", "Incorrect depth of field: The background is clearly visible, but the description specifies 'The background is completely out of focus'."], 'needs_refinement': True, 'refinement_prompt': "The composition is incorrect. This should be an extreme close-up on the Bride's face only. Remove the Groom's shoulder from the foreground. The background should be completely out of focus, not a clear view of the mansion hall. Maintain the Bride's current facial expression of cold contempt.", 'suggest_mirror': False, 'mirror_reason': '', 'shot_impossible': False, 'shot_impossible_reason': '', 'dramatic_intensity': 10, 'reasoning': "The character consistency is perfect, and the dramatic intensity of the Bride's expression is excellent. However, the panel fails on composition. The prompt explicitly called for an extreme close-up on the Bride with the Groom off-frame and a completely blurred background. The generated image is an over-the-shoulder shot with the Groom in the foreground and a visible background, which is a significant deviation from the script.", 'scene_id': 2, 'panel_id': 5, 'references_expected': ['Bride', 'Mansion-Hall-View-From-Entrance'], 'references_loaded': ['Bride', 'Mansion-Hall-View-From-Entrance']}
+INFO: 
+============================================================
+INFO: 🔧 Refinement: Scene 2, Panel 5, Frame: static
+INFO: ============================================================
+INFO:   ✓ Loaded ref: Mansion-Hall-View-From-Entrance
+INFO:   ✓ Loaded ref: Bride
+INFO: 🎨 I2I refinement (fidelity=6, using 2 refs)...
+INFO: ✅ Saved: cinematic_render/refined/002_05_static_refined.png
+INFO:   ✅ Promoted refined → panels/002_05_static.png
+INFO: 
+  🔍 QA (attempt 2/2)...
+WARNING:   ⚠️  Panel 5 still needs refinement after 2 attempt(s) (fidelity=6)
+INFO: 
+============================================================
+INFO: 🎬 Scene 2 · Panel 6/9
+INFO: ============================================================
+INFO:   🎨 Rendering 002_06_static.png ...
+INFO:     ✅ Saved cinematic_render/panels/002_06_static.png
+INFO: 
+  🔍 QA (attempt 1/2)...
+INFO:   ✅ Panel 6 passed QA (fidelity=9)
+INFO: 
+============================================================
+INFO: 🎬 Scene 2 · Panel 7/9
+INFO: ============================================================
+INFO:   🎨 Rendering 002_07_static.png ...
+INFO:     ✅ Saved cinematic_render/panels/002_07_static.png
+INFO: 
+  🔍 QA (attempt 1/2)...
+INFO:   🔧 Refining panel 7 (attempt 1)...
+INFO:   🔧 Results: 2 7 {'fidelity': 7, 'character_consistency': 10, 'composition_match': 6, 'artifacts': ["Background is not a 'complete blur' as described; the hall is clearly visible instead of having a 'razor-thin depth of field'."], 'needs_refinement': True, 'refinement_prompt': "The Groom's expression is too neutral and static. It should be a moment of pure shock and reaction, as if caught mid-flinch from the bouquet shattering off-screen. His eyes should be wide with shock, mouth slightly open, and jaw muscles tight. The current symmetrical, direct-to-camera stare lacks dramatic intensity. Additionally, the background should be a complete blur (razor-thin depth of field) to isolate his face, as described in the prompt. The current background is too clear.", 'suggest_mirror': False, 'mirror_reason': '', 'shot_impossible': False, 'shot_impossible_reason': '', 'dramatic_intensity': 3, 'reasoning': "The character likeness is perfect (10/10). However, the panel fails on dramatic intensity. The Groom's expression is a blank, symmetrical stare rather than the specified 'mid-flinch' shock. This makes the shot feel static and posed instead of a raw reaction. The composition also deviates from the prompt, which called for a 'razor-thin depth of field' and a 'complete blur' in the background; the rendered hall is too clear and detailed, distracting from the ECU. Refinement is needed to inject the correct emotion and adjust the depth of field.", 'scene_id': 2, 'panel_id': 7, 'references_expected': ['Groom', 'Mansion-Hall-View-To-Entrance'], 'references_loaded': ['Groom', 'Mansion-Hall-View-To-Entrance']}
+INFO: 
+============================================================
+INFO: 🔧 Refinement: Scene 2, Panel 7, Frame: static
+INFO: ============================================================
+INFO:   ✓ Loaded ref: Groom
+INFO:   ✓ Loaded ref: Mansion-Hall-View-To-Entrance
+INFO: 🎨 I2I refinement (fidelity=7, using 2 refs)...
+INFO: ✅ Saved: cinematic_render/refined/002_07_static_refined.png
+INFO:   ✅ Promoted refined → panels/002_07_static.png
+INFO: 
+  🔍 QA (attempt 2/2)...
+INFO:   ✅ Panel 7 passed QA (fidelity=9)
+INFO: 
+============================================================
+INFO: 🎬 Scene 2 · Panel 8/9
+INFO: ============================================================
+INFO:   🎨 Rendering 002_08_static.png ...
+INFO:     ✅ Saved cinematic_render/panels/002_08_static.png
+INFO: 
+  🔍 QA (attempt 1/2)...
+INFO:   🔧 Refining panel 8 (attempt 1)...
+INFO:   🔧 Results: 2 8 {'fidelity': 8, 'character_consistency': 7, 'composition_match': 9, 'dramatic_intensity': 9, 'artifacts': [], 'needs_refinement': True, 'refinement_prompt': "The Groom's facial features do not strongly match the reference image; please adjust his face to have a sharper jawline and more defined features. Also, the Bride should be on the first few steps of the grand staircase, not still on the main floor.", 'suggest_mirror': False, 'mirror_reason': '', 'shot_impossible': False, 'shot_impossible_reason': '', 'reasoning': "The panel has excellent composition and dramatic intensity, effectively conveying the emotional beat of isolation and rejection. The location is a perfect match. However, the Groom's facial likeness to the reference character is only partial, with softer features than specified. Additionally, the Bride is depicted walking on the hall floor, whereas the description states she is 'ascending the grand staircase'. These two points lower the fidelity and character consistency scores, warranting a refinement.", 'scene_id': 2, 'panel_id': 8, 'references_expected': ['Groom', 'Bride', 'Wedding-Bouquet', 'Mansion-Hall-View-From-Entrance'], 'references_loaded': ['Groom', 'Bride', 'Wedding-Bouquet', 'Mansion-Hall-View-From-Entrance']}
+INFO: 
+============================================================
+INFO: 🔧 Refinement: Scene 2, Panel 8, Frame: static
+INFO: ============================================================
+INFO:   ✓ Loaded ref: Mansion-Hall-View-From-Entrance
+INFO:   ✓ Loaded ref: Bride
+INFO:   ✓ Loaded ref: Groom
+INFO:   ✓ Loaded ref: Wedding-Bouquet
+INFO: 🎨 I2I refinement (fidelity=8, using 4 refs)...
+INFO: ✅ Saved: cinematic_render/refined/002_08_static_refined.png
+INFO:   ✅ Promoted refined → panels/002_08_static.png
+INFO: 
+  🔍 QA (attempt 2/2)...
+WARNING:   ⚠️  Panel 8 still needs refinement after 2 attempt(s) (fidelity=5)
+INFO: 
+============================================================
+INFO: 🎬 Scene 2 · Panel 9/9
+INFO: ============================================================
+INFO:   🎨 Rendering 002_09_static.png ...
+INFO:     ✅ Saved cinematic_render/panels/002_09_static.png
+INFO: 
+  🔍 QA (attempt 1/2)...
+INFO:   ✅ Panel 9 passed QA (fidelity=10)
+INFO: 
+✅ Done: 7/9 panel(s) passed QA.
+make: *** [Makefile:168: panel-by-panel-with-qa] Error 1

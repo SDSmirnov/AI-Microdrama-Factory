@@ -1,0 +1,8 @@
+{
+  "name": "Mansion-Hall-View-To-Entrance",
+  "logline_subject_info": "The view from the base of the grand staircase back towards the main entrance of the mansion's hall.",
+  "visual_desc": "ROOM SIZE: Large, opulent hall, ~15x10 m, with a high 8m ceiling. NORTH WALL (behind viewer): The base of the majestic, wide wooden staircase is visible in the immediate foreground. SOUTH WALL (opposite): The massive, dark wood double doors are centered on the far wall, appearing imposing and final. The wall is covered in rich, dark wood paneling. EAST WALL (left when facing entrance): Matching dark wood paneling, perhaps with a tall, grandfather clock or a marble bust on a pedestal. WEST WALL (right when facing entrance): Continuous dark wood paneling, possibly with a large oil painting in a gilded frame. CENTER: The polished black and white marble tiled floor stretches from the staircase to the doors, completely empty. CEILING/FLOOR: The stained-glass skylight is overhead, casting light towards the doors. The polished marble floor reflects the light. The scene is empty of people. The hall features a stained-glass ceiling and wooden wall panels. The floor is smooth, made of marble or parquet.",
+  "type": "Room",
+  "video_visual_desc": "View from a grand staircase looking back across an empty marble-floored hall towards the massive, closed main entrance doors.",
+  "style_reference": "Mansion-Hall-View-From-Entrance"
+}

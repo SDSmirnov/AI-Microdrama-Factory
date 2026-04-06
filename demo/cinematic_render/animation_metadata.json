@@ -1,0 +1,2273 @@
+{
+  "scenes": [
+    {
+      "scene_id": 1,
+      "location": "Mansion Exterior",
+      "pre_action_description": "INITIAL SPATIAL DISPOSITION:\nThe Groom and Bride stand on the top step at the main-doors of the mansion, facing the courtyard. The Reporter stands in the courtyard-center, facing them and the camera. ",
+      "camera_master": "50mm prime lens bias, primarily eye-level, capturing the scene with a cinematic and slightly intimate feel despite the grand setting.",
+      "lighting_master": "Bright, high-contrast midday sun acts as the key light, casting sharp, well-defined shadows. The white wedding dress and reflective surfaces create brilliant highlights, with minimal fill light, emphasizing the starkness between light and shadow.",
+      "scene_trajectories": [
+        {
+          "character": "Groom",
+          "goal": "To successfully complete the public wedding ceremony and begin his 'perfect' married life.",
+          "obstacle": "The need to perform for a massive audience, while being unaware that the entire marriage is a sham.",
+          "tactic": "Performative enthusiasm and loving gestures; demonstrating possession and triumph to project success.",
+          "emotional_arc": "enters elated and triumphant → peaks in a moment of perceived absolute victory at P7 → exits into an unknown, ominous private space.",
+          "arc": "The Groom successfully achieves his public goal, creating the perfect image of a triumphant, loving husband, but unknowingly walks into the trap of the private sham marriage."
+        },
+        {
+          "character": "Bride",
+          "goal": "To successfully perform her role in the public wedding ceremony without revealing its true nature.",
+          "obstacle": "Maintaining a convincing facade of love and happiness under intense public scrutiny and the Groom's genuine affection.",
+          "tactic": "Flawless mirroring of the Groom's emotions; graceful compliance with the demands of the ceremony and the crowd.",
+          "emotional_arc": "enters performing adoration → maintains the mask of a happy bride flawlessly through P8 → exits the public stage, her true state concealed.",
+          "arc": "She successfully fulfills her public duty, preserving the secret of the sham marriage and moving the arrangement to its next, private phase."
+        },
+        {
+          "character": "Elderly-Man",
+          "goal": "To witness the successful public sealing of the dynastic union he has orchestrated.",
+          "obstacle": "None in this scene; his plan is unfolding perfectly.",
+          "tactic": "Silent, satisfied observation and visible approval to legitimize the event.",
+          "emotional_arc": "enters satisfied → expresses definitive, joyful approval at P5 → exits with his objective fully achieved.",
+          "arc": "His plan for the union of the two business empires is successfully and publicly ratified, securing his legacy."
+        }
+      ],
+      "panels": [
+        {
+          "panel_index": 1,
+          "hook_type": "cold_open",
+          "duration": 4,
+          "scale": "MS",
+          "motion_intent": "The Reporter establishes the public significance of the wedding.",
+          "dialogue_seed": "Пресса уже окрестила это «свадьбой века»!",
+          "state": {
+            "actors": [
+              {
+                "name": "Groom",
+                "position": "On the top step of [stairs], directly in front of [main-doors]",
+                "pose": "standing, arm around Bride's waist",
+                "chest_direction": "toward [courtyard-gate]",
+                "motion_action": "stands still, smiling at the crowd",
+                "in_frame": true,
+                "gaze_target": "Reporter",
+                "visual_ref": "Groom",
+                "head_direction": "toward Reporter",
+                "vehicle_position": null
+              },
+              {
+                "name": "Bride",
+                "position": "On the top step of [stairs], beside Groom",
+                "pose": "standing, hand on Groom's chest",
+                "chest_direction": "toward [courtyard-gate]",
+                "motion_action": "stands still, smiling",
+                "in_frame": true,
+                "gaze_target": "Reporter",
+                "visual_ref": "Bride",
+                "head_direction": "toward Reporter",
+                "vehicle_position": null
+              },
+              {
+                "name": "Reporter",
+                "position": "At [courtyard-center], facing the mansion",
+                "pose": "standing, holding microphone toward the camera/audience",
+                "chest_direction": "toward [main-doors]",
+                "motion_action": "speaks into the microphone",
+                "in_frame": true,
+                "gaze_target": "camera/audience",
+                "visual_ref": "Reporter",
+                "head_direction": "toward camera/audience",
+                "vehicle_position": null
+              },
+              {
+                "name": "Elderly-Man",
+                "position": "At the base of the [stairs], near [west-column]",
+                "pose": "seated in wheelchair",
+                "chest_direction": "toward [main-doors]",
+                "motion_action": "watches the couple",
+                "in_frame": false,
+                "gaze_target": "Groom",
+                "visual_ref": "Elderly-Man",
+                "head_direction": "toward Groom",
+                "vehicle_position": "in wheelchair"
+              }
+            ],
+            "props": [
+              {
+                "name": "CN-NEWS-Microphone",
+                "position": "Held by Reporter",
+                "prop_change": "held up to speak"
+              },
+              {
+                "name": "Wedding-Bouquet",
+                "position": "Held by Bride",
+                "prop_change": "unchanged — held by Bride"
+              },
+              {
+                "name": "Wheelchair",
+                "position": "Occupied by Elderly-Man at base of [stairs]",
+                "prop_change": "unchanged — occupied by Elderly-Man"
+              },
+              {
+                "name": "main-doors",
+                "position": "Behind the Groom and Bride",
+                "prop_change": "unchanged — closed"
+              }
+            ],
+            "complete_disposition": "The Reporter stands at [courtyard-center] facing the Groom and Bride, who are on the top step of the [stairs] in front of the [main-doors]. The Elderly-Man is in his wheelchair near the [west-column], watching.",
+            "environment": "Bright daylight, celebratory atmosphere with a crowd filling the courtyard.",
+            "anchor_refs": [
+              "courtyard-center",
+              "stairs",
+              "main-doors",
+              "west-column"
+            ]
+          },
+          "motion_action": "The Reporter speaks into her microphone, addressing the camera, while the Groom and Bride stand smiling on the mansion steps.",
+          "visual_start": "Medium shot, camera at courtyard-center. The Reporter is at frame-center in the foreground, chest directed toward the mansion, holding a microphone up as if mid-sentence. In the background, the Groom and Bride stand at frame-center on the top step of the mansion's grand staircase, smiling for the cameras. He is in a black tuxedo, his arm around her waist. She is in a luxurious white wedding dress, her hand on his chest. The grand mansion facade with its massive columns and doors looms behind them under a bright, clear sky.",
+          "visual_end": "Medium shot, camera at courtyard-center. The Reporter remains at frame-center foreground, her expression professional and engaging as she finishes her sentence, microphone held steady. In the background, the Groom and Bride maintain their perfect smiles, a picture of public adoration, standing on the top step before the ornate mansion doors. The bright sunlight creates a strong rim light on them, separating them from the shadows of the entrance. The scene is one of controlled, public performance.",
+          "lights_and_camera": "MS, eye-level, 50mm lens. The scene is brightly lit by the midday sun, creating harsh shadows and brilliant highlights. The focus is on the Reporter in the foreground, with the couple in the background slightly softer.",
+          "references": [
+            "Reporter",
+            "Groom",
+            "Bride",
+            "CN-NEWS-Microphone",
+            "Wedding-Bouquet"
+          ],
+          "location_references": [
+            "Mansion-Exterior-View-Primary"
+          ],
+          "camera_position": "courtyard-center",
+          "drama_requirements": {
+            "shot_scale": "MS",
+            "camera_angle": "Eye-level",
+            "composition_style": "Centered",
+            "focus_priority": {
+              "primary_target": "Reporter",
+              "secondary_target": "Groom",
+              "focus_depth": "Shallow"
+            },
+            "movement_intent": {
+              "type": "Static",
+              "target_trajectory": "Hold on Reporter, with couple in background",
+              "dynamic_speed": "None"
+            },
+            "narrative_vibe": "Performative, Public Spectacle"
+          },
+          "text_safe_composition": true,
+          "panel_type": "narrative",
+          "motion_prompt": "At 0s, the Reporter is at frame-center, holding a microphone up mid-sentence, her expression professional and engaging. In the background, the Groom and Bride stand perfectly still on the mansion steps, smiling. At 0.5s, the Reporter makes a small, emphatic gesture with her free hand to punctuate her words, her gaze fixed on the camera. At 2s, she concludes her line, holding the microphone steady. Throughout the shot, the Groom and Bride in the background maintain their flawless, static smiles, like figures in a portrait, their bodies perfectly angled toward the unseen crowd. The bright sunlight creates a sharp, almost artificial rim light on them.",
+          "is_reversed": false,
+          "motion_prompt_reversed": "",
+          "dialogue": "Репортер (female): Пресса уже окрестила это «свадьбой века»!",
+          "voiceover": "",
+          "voiceover_settings": {
+            "gender": "",
+            "actor": "",
+            "age": "",
+            "tone": ""
+          },
+          "emotional_beat": "confrontation",
+          "transition_to_next": "hard_cut",
+          "sound_design": "Crisp reporter's voice over the low murmur of a large, expectant crowd and intermittent camera clicks.",
+          "caption": "Свадьба века или сделка века?",
+          "voiceover_timing": "",
+          "visual_disposition": "Reporter: Standing in the middle of the open stone courtyard, looking towards the mansion.; The entire entrance facade with its doors, columns, and balcony is visible in the background. Groom: Standing in the middle of the open stone courtyard, looking towards the mansion.; The entire entrance facade with its doors, columns, and balcony is visible in the background. Bride: Standing in the middle of the open stone courtyard, looking towards the mansion.; The entire entrance facade with its doors, columns, and balcony is visible in the background. DEPTH: Courtyard Gate → West Gatepost → East Gatepost → Reporter → Groom → Bride → West Column → East Column → Stairs to Main Doors → Main Doors → Balcony → West",
+          "anchor_refs": []
+        },
+        {
+          "panel_index": 2,
+          "hook_type": "verbal_hook",
+          "duration": 3,
+          "scale": "WS",
+          "motion_intent": "The crowd demands a public display of affection from the couple.",
+          "dialogue_seed": "Горько! Горько! Горько!",
+          "state": {
+            "actors": [
+              {
+                "name": "Groom",
+                "position": "On the top step of [stairs], directly in front of [main-doors]",
+                "pose": "standing, arm around Bride's waist",
+                "chest_direction": "toward [courtyard-gate]",
+                "motion_action": "turns his head to look at the Bride",
+                "in_frame": true,
+                "gaze_target": "Reporter",
+                "visual_ref": "Groom",
+                "head_direction": "toward Reporter",
+                "vehicle_position": null
+              },
+              {
+                "name": "Bride",
+                "position": "On the top step of [stairs], beside Groom",
+                "pose": "standing, hand on Groom's chest",
+                "chest_direction": "toward [courtyard-gate]",
+                "motion_action": "turns her head to look at the Groom",
+                "in_frame": true,
+                "gaze_target": "Reporter",
+                "visual_ref": "Bride",
+                "head_direction": "toward Reporter",
+                "vehicle_position": null
+              },
+              {
+                "name": "Reporter",
+                "position": "At [courtyard-center], facing the mansion",
+                "pose": "standing, holding microphone",
+                "chest_direction": "toward [main-doors]",
+                "motion_action": "lowers microphone slightly, watching the crowd",
+                "in_frame": true,
+                "gaze_target": "crowd",
+                "visual_ref": "Reporter",
+                "head_direction": "toward crowd",
+                "vehicle_position": null
+              },
+              {
+                "name": "Elderly-Man",
+                "position": "At the base of the [stairs], near [west-column]",
+                "pose": "seated in wheelchair",
+                "chest_direction": "toward [main-doors]",
+                "motion_action": "watches the couple expectantly",
+                "in_frame": true,
+                "gaze_target": "Groom",
+                "visual_ref": "Elderly-Man",
+                "head_direction": "toward Groom",
+                "vehicle_position": "in wheelchair"
+              }
+            ],
+            "props": [
+              {
+                "name": "CN-NEWS-Microphone",
+                "position": "Held by Reporter",
+                "prop_change": "lowered slightly"
+              },
+              {
+                "name": "Wedding-Bouquet",
+                "position": "Held by Bride",
+                "prop_change": "unchanged — held by Bride"
+              },
+              {
+                "name": "Wheelchair",
+                "position": "Occupied by Elderly-Man at base of [stairs]",
+                "prop_change": "unchanged — occupied by Elderly-Man"
+              },
+              {
+                "name": "main-doors",
+                "position": "Behind the Groom and Bride",
+                "prop_change": "unchanged — closed"
+              }
+            ],
+            "complete_disposition": "The Groom and Bride stand on the top step of the [stairs] before the [main-doors]. The Reporter is at [courtyard-center]. The Elderly-Man is near the [west-column]. The crowd chants.",
+            "environment": "The crowd chants 'Gorko!'. Guests hold up phones.",
+            "anchor_refs": [
+              "stairs",
+              "main-doors",
+              "courtyard-center",
+              "west-column"
+            ]
+          },
+          "motion_action": "The crowd chants, demanding a kiss. The Groom and Bride turn to look at each other in response.",
+          "visual_start": "Wide shot, camera at courtyard-center. The Groom and Bride are at frame-center in the mid-ground, standing on the top step of the stairs, turning to look at each other. To their frame-left, the Elderly-Man is visible at the base of the stairs in his wheelchair. In the foreground, the Reporter stands at frame-center, slightly lowering her microphone. The entire scene is filled with an unseen crowd, their presence implied by the energy and a shower of golden confetti beginning to fall. The mansion facade provides a grand backdrop under the bright sun.",
+          "visual_end": "Wide shot, camera at courtyard-center. The Groom and Bride are now fully turned toward each other on the top step, their bodies creating a private space amidst the public spectacle. The Elderly-Man at frame-left watches them with an expectant smile. The Reporter in the foreground observes the scene. Golden confetti now falls thickly around the couple, catching the bright sunlight like flecks of gold. The mansion's grand entrance frames this central moment of anticipation, with the crowd's energy palpable.",
+          "lights_and_camera": "WS, eye-level, 50mm lens. Bright, direct sunlight illuminates the entire courtyard, creating high contrast. Deep focus keeps the couple, the Elderly-Man, and the Reporter all relatively sharp.",
+          "references": [
+            "Groom",
+            "Bride",
+            "Reporter",
+            "Elderly-Man",
+            "Wheelchair",
+            "CN-NEWS-Microphone",
+            "Wedding-Bouquet"
+          ],
+          "location_references": [
+            "Mansion-Exterior-View-Primary"
+          ],
+          "camera_position": "courtyard-center",
+          "drama_requirements": {
+            "shot_scale": "WS",
+            "camera_angle": "Eye-level",
+            "composition_style": "Rule-of-thirds",
+            "focus_priority": {
+              "primary_target": "Groom",
+              "secondary_target": "Elderly-Man",
+              "focus_depth": "Deep"
+            },
+            "movement_intent": {
+              "type": "Static",
+              "target_trajectory": "Capture the entire public scene",
+              "dynamic_speed": "None"
+            },
+            "narrative_vibe": "Public Demand, Anticipation"
+          },
+          "text_safe_composition": true,
+          "panel_type": "narrative",
+          "motion_prompt": "At 0s, the Groom and Bride are on the top step, looking towards the courtyard as golden confetti begins to fall. At 0.2s, the sound of the crowd's chant reaches them. At 0.5s, the Groom slowly turns his head to look at the Bride, his public smile softening into something more intimate. At 1.2s, the Bride mirrors his action, turning to meet his gaze, her own smile becoming more hesitant. They are now fully turned toward each other as the confetti falls more thickly, creating a glittering curtain around them. The Elderly-Man at frame-left watches them, a small, expectant smile forming on his lips.",
+          "is_reversed": false,
+          "motion_prompt_reversed": "",
+          "dialogue": "Толпа (male/female): Горько! Горько! Горько!",
+          "voiceover": "",
+          "voiceover_settings": {
+            "gender": "",
+            "actor": "",
+            "age": "",
+            "tone": ""
+          },
+          "emotional_beat": "tension",
+          "transition_to_next": "hard_cut",
+          "sound_design": "The crowd's murmur swells into a loud, rhythmic chant of 'Горько!'. The sound of confetti cannons firing.",
+          "caption": "Их первый поцелуй. На публику.",
+          "voiceover_timing": "",
+          "visual_disposition": "Groom: Standing in the middle of the open stone courtyard, looking towards the mansion.; The entire entrance facade with its doors, columns, and balcony is visible in the background. Bride: Standing in the middle of the open stone courtyard, looking towards the mansion.; The entire entrance facade with its doors, columns, and balcony is visible in the background. Reporter: Standing in the middle of the open stone courtyard, looking towards the mansion.; The entire entrance facade with its doors, columns, and balcony is visible in the background. Elderly-Man: Standing in the middle of the open stone courtyard, looking towards the mansion.; The entire entrance facade with its doors, columns, and balcony is visible in the background. Wheelchair: Standing in the",
+          "anchor_refs": []
+        },
+        {
+          "panel_index": 3,
+          "hook_type": "escalation",
+          "duration": 5,
+          "scale": "CU",
+          "motion_intent": "The Groom initiates the intimate moment the crowd demands, asserting control.",
+          "dialogue_seed": "",
+          "state": {
+            "actors": [
+              {
+                "name": "Groom",
+                "position": "On the top step of [stairs], directly in front of [main-doors]",
+                "pose": "standing, turned slightly toward Bride",
+                "chest_direction": "toward Bride",
+                "motion_action": "leans in to kiss the Bride",
+                "in_frame": true,
+                "gaze_target": "Bride",
+                "visual_ref": "Groom",
+                "head_direction": "toward Bride",
+                "vehicle_position": null
+              },
+              {
+                "name": "Bride",
+                "position": "On the top step of [stairs], beside Groom",
+                "pose": "standing, turned slightly toward Groom",
+                "chest_direction": "toward Groom",
+                "motion_action": "tilts her head up to meet his kiss",
+                "in_frame": true,
+                "gaze_target": "Groom",
+                "visual_ref": "Bride",
+                "head_direction": "toward Groom",
+                "vehicle_position": null
+              },
+              {
+                "name": "Reporter",
+                "position": "At [courtyard-center], facing the mansion",
+                "pose": "standing, holding microphone",
+                "chest_direction": "toward [main-doors]",
+                "motion_action": "stays still, watching",
+                "in_frame": false,
+                "gaze_target": "Groom",
+                "visual_ref": "Reporter",
+                "head_direction": "toward Groom",
+                "vehicle_position": null
+              },
+              {
+                "name": "Elderly-Man",
+                "position": "At the base of the [stairs], near [west-column]",
+                "pose": "seated in wheelchair",
+                "chest_direction": "toward [main-doors]",
+                "motion_action": "stays still, watching",
+                "in_frame": false,
+                "gaze_target": "Groom",
+                "visual_ref": "Elderly-Man",
+                "head_direction": "toward Groom",
+                "vehicle_position": "in wheelchair"
+              }
+            ],
+            "props": [
+              {
+                "name": "CN-NEWS-Microphone",
+                "position": "Held by Reporter",
+                "prop_change": "unchanged — held by Reporter"
+              },
+              {
+                "name": "Wedding-Bouquet",
+                "position": "Held by Bride",
+                "prop_change": "unchanged — held by Bride"
+              },
+              {
+                "name": "Wheelchair",
+                "position": "Occupied by Elderly-Man at base of [stairs]",
+                "prop_change": "unchanged — occupied by Elderly-Man"
+              },
+              {
+                "name": "main-doors",
+                "position": "Behind the Groom and Bride",
+                "prop_change": "unchanged — closed"
+              }
+            ],
+            "complete_disposition": "The Groom and Bride are on the top step of the [stairs], facing each other, about to kiss. The Reporter and Elderly-Man are off-frame, watching from the courtyard.",
+            "environment": "Golden confetti begins to fall around the couple.",
+            "anchor_refs": [
+              "stairs"
+            ]
+          },
+          "motion_action": "The Groom leans in, and the Bride tilts her head up to meet him for a kiss as golden confetti starts to fall.",
+          "visual_start": "Close-up shot, camera at entrance-threshold, looking up slightly at the couple on the top step. The Groom at frame-left and the Bride at frame-right are facing each other, their faces just inches apart, eyes locked. He is in his black tuxedo, she in her white dress. His hand is visible on the small of her back. Her hand rests on his chest. Golden confetti is frozen in the air around them, catching the bright sunlight. The background is a soft-focus blur of the mansion's ornate doorway.",
+          "visual_end": "Close-up shot, camera at entrance-threshold. The Groom at frame-left has closed the final distance, his lips about to touch the Bride's at frame-right. Her head is tilted up to meet him, eyes closed in surrender to the moment. The intimacy is palpable, framed by the falling golden confetti that blurs in the foreground and background. The harsh sunlight creates a brilliant highlight on her cheekbone and the side of his face, emphasizing the sculpted perfection of the moment. The power is his; he initiates, she receives.",
+          "lights_and_camera": "CU, low-angle, 50mm lens. The key light is the high sun, creating strong highlights and shadows on their faces. The shallow depth of field isolates them completely from the background.",
+          "references": [
+            "Groom",
+            "Bride",
+            "Wedding-Bouquet"
+          ],
+          "location_references": [
+            "Mansion-Exterior-View-Primary"
+          ],
+          "camera_position": "entrance-threshold",
+          "drama_requirements": {
+            "shot_scale": "CU",
+            "camera_angle": "Low-angle",
+            "composition_style": "Rule-of-thirds",
+            "focus_priority": {
+              "primary_target": "Bride",
+              "secondary_target": "Groom",
+              "focus_depth": "Shallow"
+            },
+            "movement_intent": {
+              "type": "Static",
+              "target_trajectory": "Focus on the impending kiss",
+              "dynamic_speed": "None"
+            },
+            "narrative_vibe": "Intimate, Performative Romance"
+          },
+          "text_safe_composition": true,
+          "panel_type": "narrative",
+          "motion_prompt": "At 0s, the Groom at frame-left and Bride at frame-right are inches apart, eyes locked. Golden confetti drifts past the lens. At 0.5s, the Groom begins to lean in, closing the final distance. His hand, visible on the small of her back, gently pulls her 2-3 centimeters closer. At 1.8s, the Bride's eyelids flutter and close as she anticipates the kiss. At 2.5s, she tilts her head up slightly to meet him. From 3s to 5s, the camera holds on this moment of extreme tension, their lips millimeters apart, the air thick with falling confetti and unspoken promises. He is in control, initiating the moment.",
+          "is_reversed": false,
+          "motion_prompt_reversed": "",
+          "dialogue": "",
+          "voiceover": "Просто играй свою роль.",
+          "voiceover_settings": {
+            "gender": "female",
+            "actor": "Bride",
+            "age": "24",
+            "tone": "resigned, tense, quiet"
+          },
+          "emotional_beat": "desire",
+          "transition_to_next": "hard_cut",
+          "sound_design": "The crowd's chanting fades into a low murmur, replaced by a rising, romantic musical swell. The soft rustle of falling confetti is the primary sound.",
+          "caption": "Идеальный момент. Идеальная ложь.",
+          "voiceover_timing": "during_silence",
+          "visual_disposition": "The Groom and Bride stand facing each other on the top step of the Stairs, directly in front of the Main Doors. The camera is positioned near the base of the stairs, looking up at them.\nDEPTH: Groom & Bride → Main Doors.\nLATERAL-X: all actors center-X (x≈0.5).\nLATERAL-Y: all actors far-end (y≈0.95).",
+          "anchor_refs": []
+        },
+        {
+          "panel_index": 4,
+          "hook_type": "emotional_capture",
+          "duration": 6,
+          "scale": "MS",
+          "motion_intent": "The Groom and Bride perform the climactic kiss, sealing their public image.",
+          "dialogue_seed": "",
+          "state": {
+            "actors": [
+              {
+                "name": "Groom",
+                "position": "On the top step of [stairs], directly in front of [main-doors]",
+                "pose": "leaning in, face close to Bride's",
+                "chest_direction": "toward Bride",
+                "motion_action": "pulls the Bride closer and kisses her",
+                "in_frame": true,
+                "gaze_target": "Bride",
+                "visual_ref": "Groom",
+                "head_direction": "toward Bride",
+                "vehicle_position": null
+              },
+              {
+                "name": "Bride",
+                "position": "On the top step of [stairs], beside Groom",
+                "pose": "leaning in, head tilted up",
+                "chest_direction": "toward Groom",
+                "motion_action": "kisses the Groom back",
+                "in_frame": true,
+                "gaze_target": "Groom",
+                "visual_ref": "Bride",
+                "head_direction": "toward Groom",
+                "vehicle_position": null
+              },
+              {
+                "name": "Reporter",
+                "position": "At [courtyard-center], facing the mansion",
+                "pose": "standing, holding microphone",
+                "chest_direction": "toward [main-doors]",
+                "motion_action": "stays still, watching",
+                "in_frame": false,
+                "gaze_target": "Groom",
+                "visual_ref": "Reporter",
+                "head_direction": "toward Groom",
+                "vehicle_position": null
+              },
+              {
+                "name": "Elderly-Man",
+                "position": "At the base of the [stairs], near [west-column]",
+                "pose": "seated in wheelchair",
+                "chest_direction": "toward [main-doors]",
+                "motion_action": "stays still, watching",
+                "in_frame": false,
+                "gaze_target": "Groom",
+                "visual_ref": "Elderly-Man",
+                "head_direction": "toward Groom",
+                "vehicle_position": "in wheelchair"
+              }
+            ],
+            "props": [
+              {
+                "name": "CN-NEWS-Microphone",
+                "position": "Held by Reporter",
+                "prop_change": "unchanged — held by Reporter"
+              },
+              {
+                "name": "Wedding-Bouquet",
+                "position": "Held by Bride",
+                "prop_change": "unchanged — held by Bride"
+              },
+              {
+                "name": "Wheelchair",
+                "position": "Occupied by Elderly-Man at base of [stairs]",
+                "prop_change": "unchanged — occupied by Elderly-Man"
+              },
+              {
+                "name": "main-doors",
+                "position": "Behind the Groom and Bride",
+                "prop_change": "unchanged — closed"
+              }
+            ],
+            "complete_disposition": "The Groom and Bride are on the top step of the [stairs], faces inches apart, ready to kiss. The Reporter and Elderly-Man are off-frame.",
+            "environment": "Golden confetti falls around the couple.",
+            "anchor_refs": [
+              "stairs"
+            ]
+          },
+          "motion_action": "The Groom pulls the Bride into a passionate kiss as a shower of golden confetti rains down on them.",
+          "visual_start": "Medium shot, camera at entrance-threshold. The Groom at frame-left pulls the Bride at frame-right into a deep kiss. His arm is wrapped securely around her, asserting possession. Her body is pressed against his, one hand on his shoulder, the other holding her bouquet. They are on the top step of the mansion stairs, surrounded by a heavy shower of golden confetti that glitters in the bright sunlight. The background is the out-of-focus grand entrance of the mansion, creating a sense of a fairy-tale moment.",
+          "visual_end": "Medium shot, camera at entrance-threshold. The kiss continues, passionate and seemingly genuine. The Groom at frame-left holds the Bride at frame-right tightly, his posture triumphant. She yields to his embrace, playing the part of the smitten bride perfectly. The golden confetti storm reaches its peak, swirling around them and partially obscuring the frame, enhancing the dreamlike quality of the public performance. The sunlight catches the white silk of her dress and the sharp lines of his tuxedo, creating a high-contrast, iconic image.",
+          "lights_and_camera": "MS, eye-level, 50mm lens. Bright, direct sunlight from above creates a dramatic rim light. The confetti creates a dynamic, glittering texture across the frame. Shallow depth of field keeps the focus entirely on the couple.",
+          "references": [
+            "Groom",
+            "Bride",
+            "Wedding-Bouquet"
+          ],
+          "location_references": [
+            "Mansion-Exterior-View-Primary"
+          ],
+          "camera_position": "entrance-threshold",
+          "drama_requirements": {
+            "shot_scale": "MS",
+            "camera_angle": "Eye-level",
+            "composition_style": "Centered",
+            "focus_priority": {
+              "primary_target": "Groom",
+              "secondary_target": "Bride",
+              "focus_depth": "Shallow"
+            },
+            "movement_intent": {
+              "type": "Static",
+              "target_trajectory": "Capture the climactic kiss",
+              "dynamic_speed": "None"
+            },
+            "narrative_vibe": "Triumphant, Iconic, Performative"
+          },
+          "text_safe_composition": true,
+          "panel_type": "narrative",
+          "motion_prompt": "At 0s, the Groom at frame-left pulls the Bride at frame-right into a deep kiss, their lips meeting. At 0.5s, his arm tightens possessively around her waist, pressing her body firmly against his. At 1s, the Bride's hand, holding her bouquet, rises to rest on his shoulder as she yields to the embrace. From 1.5s to 6s, they hold the passionate kiss as a storm of golden confetti intensifies, swirling and glittering around them. The Groom's posture is dominant and triumphant, while the Bride's is one of perfect, public surrender. The scene is a flawless performance of romantic climax.",
+          "is_reversed": false,
+          "motion_prompt_reversed": "",
+          "dialogue": "",
+          "voiceover": "Моя. Наконец-то моя.",
+          "voiceover_settings": {
+            "gender": "male",
+            "actor": "Groom",
+            "age": "28",
+            "tone": "triumphant, possessive, low"
+          },
+          "emotional_beat": "triumph",
+          "transition_to_next": "j_cut",
+          "sound_design": "J-cut: The sound of the Elderly-Man's single, soft clap is heard at 5.5s. Main audio is a crescendo of romantic music mixed with the roar of the approving crowd. Heavy, continuous rustle of a massive confetti drop.",
+          "caption": "Поцелуй, скрепляющий сделку.",
+          "voiceover_timing": "during_silence",
+          "visual_disposition": "The Groom and Bride are kissing on the top step of the Stairs, directly in front of the Main Doors. The camera is positioned near the base of the stairs, looking at them.\nDEPTH: Groom & Bride → Main Doors.\nLATERAL-X: all actors center-X (x≈0.5).\nLATERAL-Y: all actors far-end (y≈0.95).",
+          "anchor_refs": []
+        },
+        {
+          "panel_index": 5,
+          "hook_type": "crystallization",
+          "duration": 6,
+          "scale": "CU",
+          "motion_intent": "The Patriarch confirms the success of the arranged union with his approval.",
+          "dialogue_seed": "",
+          "state": {
+            "actors": [
+              {
+                "name": "Groom",
+                "position": "On the top step of [stairs], directly in front of [main-doors]",
+                "pose": "embracing and kissing the Bride",
+                "chest_direction": "toward Bride",
+                "motion_action": "remains kissing the Bride",
+                "in_frame": false,
+                "gaze_target": "Bride",
+                "visual_ref": "Groom",
+                "head_direction": "toward Bride",
+                "vehicle_position": null
+              },
+              {
+                "name": "Bride",
+                "position": "On the top step of [stairs], beside Groom",
+                "pose": "embracing and kissing the Groom",
+                "chest_direction": "toward Groom",
+                "motion_action": "remains kissing the Groom",
+                "in_frame": false,
+                "gaze_target": "Groom",
+                "visual_ref": "Bride",
+                "head_direction": "toward Groom",
+                "vehicle_position": null
+              },
+              {
+                "name": "Reporter",
+                "position": "At [courtyard-center], facing the mansion",
+                "pose": "standing, holding microphone",
+                "chest_direction": "toward [main-doors]",
+                "motion_action": "stays still, watching",
+                "in_frame": false,
+                "gaze_target": "Groom",
+                "visual_ref": "Reporter",
+                "head_direction": "toward Groom",
+                "vehicle_position": null
+              },
+              {
+                "name": "Elderly-Man",
+                "position": "At the base of the [stairs], near [west-column]",
+                "pose": "seated in wheelchair, smiling",
+                "chest_direction": "toward [main-doors]",
+                "motion_action": "claps his hands together with a proud, tearful smile",
+                "in_frame": true,
+                "gaze_target": "Groom",
+                "visual_ref": "Elderly-Man",
+                "head_direction": "toward Groom",
+                "vehicle_position": "in wheelchair"
+              }
+            ],
+            "props": [
+              {
+                "name": "CN-NEWS-Microphone",
+                "position": "Held by Reporter",
+                "prop_change": "unchanged — held by Reporter"
+              },
+              {
+                "name": "Wedding-Bouquet",
+                "position": "Held by Bride",
+                "prop_change": "unchanged — held by Bride"
+              },
+              {
+                "name": "Wheelchair",
+                "position": "Occupied by Elderly-Man at base of [stairs]",
+                "prop_change": "unchanged — occupied by Elderly-Man"
+              },
+              {
+                "name": "main-doors",
+                "position": "Behind the Groom and Bride",
+                "prop_change": "unchanged — closed"
+              }
+            ],
+            "complete_disposition": "The Elderly-Man is seated in his wheelchair near the [west-column], watching the couple who are kissing on the [stairs] off-frame.",
+            "environment": "Daylight, confetti still falling in the background.",
+            "anchor_refs": [
+              "west-column",
+              "stairs"
+            ]
+          },
+          "motion_action": "The Elderly-Man, watching the kiss, smiles with tears in his eyes and begins to clap.",
+          "visual_start": "Close-up shot on the Elderly-Man, positioned near the base of the mansion stairs. He is seated in his modern black wheelchair, wearing a dark formal overcoat. His face, etched with wrinkles, is turned toward the off-screen couple, a gentle, proud smile on his lips. His deep-set eyes are glistening with unshed tears of joy. The background is a soft-focus blur of the sunlit courtyard and the cheering crowd. His hands are raised, just about to come together in applause.",
+          "visual_end": "Close-up shot on the Elderly-Man. His hands have just met in a soft clap, the motion captured mid-action. The proud, tearful smile remains on his face, his eyes still fixed on the off-screen couple. A single tear escapes and traces a path through the wrinkles on his cheek, catching the bright sunlight. This is the moment of his victory, the successful culmination of his plans. He is wearing a dark overcoat and is seated in his black wheelchair. The background remains a celebratory, sun-drenched blur.",
+          "lights_and_camera": "CU, eye-level, 50mm lens. The bright sun acts as a key light, highlighting the texture of his aged skin and the moisture in his eyes. Shallow depth of field isolates his emotional reaction.",
+          "references": [
+            "Elderly-Man",
+            "Wheelchair"
+          ],
+          "location_references": [
+            "Mansion-Exterior-View-Opposite"
+          ],
+          "camera_position": "entrance-threshold",
+          "drama_requirements": {
+            "shot_scale": "CU",
+            "camera_angle": "Eye-level",
+            "composition_style": "Rule-of-thirds",
+            "focus_priority": {
+              "primary_target": "Elderly-Man",
+              "secondary_target": null,
+              "focus_depth": "Shallow"
+            },
+            "movement_intent": {
+              "type": "Static",
+              "target_trajectory": "Capture his moment of triumph",
+              "dynamic_speed": "None"
+            },
+            "narrative_vibe": "Vindication, Sentimental, Powerful"
+          },
+          "text_safe_composition": true,
+          "panel_type": "narrative",
+          "motion_prompt": "At 0s, the Elderly-Man is seated in his wheelchair, a proud smile on his lips, his hands raised and just coming together. At 0.2s, his hands meet in a single, soft, deliberate clap. His eyes, fixed on the off-screen couple, glisten with unshed emotion. From 1s to 5s, his smile tightens, the muscles around his eyes crinkling not with joy, but with the profound satisfaction of a long-laid plan coming to fruition. His expression is one of cold, calculated victory. He holds his hands together, his posture radiating quiet, unshakeable power. The background is a celebratory, sun-drenched blur.",
+          "is_reversed": false,
+          "motion_prompt_reversed": "",
+          "dialogue": "",
+          "voiceover": "Династия в безопасности.",
+          "voiceover_settings": {
+            "gender": "male",
+            "actor": "Elderly-Man",
+            "age": "75",
+            "tone": "satisfied, cold, final"
+          },
+          "emotional_beat": "revelation",
+          "transition_to_next": "hard_cut",
+          "sound_design": "The muffled roar of the crowd and music. The single, soft clap is sharp and distinct in the foreground, followed by an encroaching quiet as the focus stays on him. A low, ominous drone begins to fade in.",
+          "caption": "Его план сработал.",
+          "voiceover_timing": "during_silence",
+          "visual_disposition": "The Elderly-Man is in his wheelchair at the base of the Stairs, near the West Column. He is looking towards the top of the stairs (away from the courtyard entrance). The background is the sunlit courtyard.\nDEPTH: Elderly-Man → Courtyard Center → Courtyard Gate.\nLATERAL-X: Elderly-Man center-X (x≈0.42).\nLATERAL-Y: Elderly-Man far-end (y≈0.9).",
+          "anchor_refs": []
+        },
+        {
+          "panel_index": 6,
+          "hook_type": "confrontation",
+          "duration": 6,
+          "scale": "MS",
+          "motion_intent": "The Groom physically claims his Bride in a final show of public triumph.",
+          "dialogue_seed": "",
+          "state": {
+            "actors": [
+              {
+                "name": "Groom",
+                "position": "On the top step of [stairs], directly in front of [main-doors]",
+                "pose": "standing, having just broken the kiss, arms still around Bride",
+                "chest_direction": "toward Bride",
+                "motion_action": "laughs and lifts the Bride into his arms",
+                "in_frame": true,
+                "gaze_target": "Bride",
+                "visual_ref": "Groom",
+                "head_direction": "toward Bride",
+                "vehicle_position": null
+              },
+              {
+                "name": "Bride",
+                "position": "On the top step of [stairs], in front of Groom",
+                "pose": "standing, facing Groom, having just broken the kiss",
+                "chest_direction": "toward Groom",
+                "motion_action": "is lifted by the Groom and wraps her arms around his neck",
+                "in_frame": true,
+                "gaze_target": "Groom",
+                "visual_ref": "Bride",
+                "head_direction": "toward Groom",
+                "vehicle_position": null
+              },
+              {
+                "name": "Reporter",
+                "position": "At [courtyard-center], facing the mansion",
+                "pose": "standing, holding microphone",
+                "chest_direction": "toward [main-doors]",
+                "motion_action": "stays still, watching",
+                "in_frame": false,
+                "gaze_target": "Groom",
+                "visual_ref": "Reporter",
+                "head_direction": "toward Groom",
+                "vehicle_position": null
+              },
+              {
+                "name": "Elderly-Man",
+                "position": "At the base of the [stairs], near [west-column]",
+                "pose": "seated in wheelchair, hands mid-clap",
+                "chest_direction": "toward [main-doors]",
+                "motion_action": "finishes clapping, watching with a smile",
+                "in_frame": false,
+                "gaze_target": "Groom",
+                "visual_ref": "Elderly-Man",
+                "head_direction": "toward Groom",
+                "vehicle_position": "in wheelchair"
+              }
+            ],
+            "props": [
+              {
+                "name": "CN-NEWS-Microphone",
+                "position": "Held by Reporter",
+                "prop_change": "unchanged — held by Reporter"
+              },
+              {
+                "name": "Wedding-Bouquet",
+                "position": "Held by Bride",
+                "prop_change": "unchanged — held by Bride"
+              },
+              {
+                "name": "Wheelchair",
+                "position": "Occupied by Elderly-Man at base of [stairs]",
+                "prop_change": "unchanged — occupied by Elderly-Man"
+              },
+              {
+                "name": "main-doors",
+                "position": "Behind the Groom and Bride",
+                "prop_change": "unchanged — closed"
+              }
+            ],
+            "complete_disposition": "The Groom and Bride are on the top step of the [stairs], having just finished their kiss. The Reporter and Elderly-Man are off-frame.",
+            "environment": "Crowd cheering, confetti falling.",
+            "anchor_refs": [
+              "stairs"
+            ]
+          },
+          "motion_action": "The Groom laughs triumphantly, breaks the kiss, and sweeps the Bride up into his arms.",
+          "visual_start": "Medium shot, camera at entrance-threshold. The Groom and Bride have just broken their kiss and are laughing, looking into each other's eyes on the top step of the mansion stairs. He is in his black tuxedo, she in her white dress. His hands are positioned on her waist, ready to lift. She holds her wedding bouquet, her arms ready to go around his neck. The air is still thick with the last of the falling golden confetti, sparkling in the bright sunlight against the backdrop of the mansion's grand doors.",
+          "visual_end": "Medium shot, camera at entrance-threshold. In a display of triumphant strength, the Groom has swept the Bride off her feet and holds her effortlessly in his arms. She is laughing, her arms wrapped securely around his neck, her white dress and veil cascading down. He looks down at her with a possessive, adoring smile. This is the peak of his public performance of ownership and love. The last of the confetti settles around them on the stone steps of the grand mansion entrance.",
+          "lights_and_camera": "MS, eye-level, 50mm lens. Bright, direct sunlight creates a halo effect around them. The motion of the lift is frozen, capturing a moment of dynamic energy.",
+          "references": [
+            "Groom",
+            "Bride",
+            "Wedding-Bouquet"
+          ],
+          "location_references": [
+            "Mansion-Exterior-View-Primary"
+          ],
+          "camera_position": "entrance-threshold",
+          "drama_requirements": {
+            "shot_scale": "MS",
+            "camera_angle": "Eye-level",
+            "composition_style": "Centered",
+            "focus_priority": {
+              "primary_target": "Groom",
+              "secondary_target": "Bride",
+              "focus_depth": "Shallow"
+            },
+            "movement_intent": {
+              "type": "Static",
+              "target_trajectory": "Capture the triumphant lift",
+              "dynamic_speed": "None"
+            },
+            "narrative_vibe": "Triumphant, Possessive, Celebratory"
+          },
+          "text_safe_composition": true,
+          "panel_type": "narrative",
+          "motion_prompt": "At 0s, the Groom and Bride are breaking their kiss, laughing into each other's eyes. At 0.5s, the Groom's smile turns triumphant as he bends his knees, securing his grip on her waist. At 1.2s, in a single, powerful and fluid motion, he sweeps her off her feet. For a split second, she is airborne before he catches her securely in his arms. At 2.5s, she instinctively wraps her arms and legs around him, laughing, her white dress and veil swirling dramatically. From 3s to 6s, he holds her effortlessly, grinning down at her with a look of pure, possessive adoration as the last of the confetti settles around them.",
+          "is_reversed": false,
+          "motion_prompt_reversed": "",
+          "dialogue": "",
+          "voiceover": "Как это всё тяжело.",
+          "voiceover_settings": {
+            "gender": "female",
+            "actor": "Bride",
+            "age": "24",
+            "tone": "weary, breathless, internal"
+          },
+          "emotional_beat": "triumph",
+          "transition_to_next": "hard_cut",
+          "sound_design": "The crowd's roar peaks in a wave of cheers and applause. The Groom's loud, triumphant laugh dominates, mixed with the Bride's lighter, performative laugh. A final, grand musical sting.",
+          "caption": "Счастливый финал для всех.",
+          "voiceover_timing": "during_silence",
+          "visual_disposition": "The Groom and Bride are on the top step of the Stairs, directly in front of the Main Doors. The Groom is lifting the Bride. The camera is positioned at the base of the stairs, looking up at them.\nDEPTH: Groom & Bride → Main Doors.\nLATERAL-X: all actors center-X (x≈0.5).\nLATERAL-Y: all actors far-end (y≈0.95).",
+          "anchor_refs": []
+        },
+        {
+          "panel_index": 7,
+          "hook_type": "pivot",
+          "duration": 3,
+          "scale": "ECU",
+          "motion_intent": "The Groom shares his personal sense of victory directly with the audience.",
+          "dialogue_seed": "VO: Everything is perfect now.",
+          "state": {
+            "actors": [
+              {
+                "name": "Groom",
+                "position": "On the top step of [stairs], directly in front of [main-doors]",
+                "pose": "standing, holding Bride in his arms",
+                "chest_direction": "toward [courtyard-gate]",
+                "motion_action": "turns his head to smile victoriously at the camera/crowd",
+                "in_frame": true,
+                "gaze_target": "crowd",
+                "visual_ref": "Groom",
+                "head_direction": "toward crowd",
+                "vehicle_position": null
+              },
+              {
+                "name": "Bride",
+                "position": "Held in Groom's arms",
+                "pose": "cradled in Groom's arms, arms around his neck",
+                "chest_direction": "upward/toward Groom",
+                "motion_action": "is held by the Groom, smiling at him",
+                "in_frame": true,
+                "gaze_target": "Groom",
+                "visual_ref": "Bride",
+                "head_direction": "toward Groom",
+                "vehicle_position": null
+              },
+              {
+                "name": "Reporter",
+                "position": "At [courtyard-center], facing the mansion",
+                "pose": "standing, watching",
+                "chest_direction": "toward [main-doors]",
+                "motion_action": "stays still, watching",
+                "in_frame": false,
+                "gaze_target": "Groom",
+                "visual_ref": "Reporter",
+                "head_direction": "toward Groom",
+                "vehicle_position": null
+              },
+              {
+                "name": "Elderly-Man",
+                "position": "At the base of the [stairs], near [west-column]",
+                "pose": "seated in wheelchair, smiling",
+                "chest_direction": "toward [main-doors]",
+                "motion_action": "stays still, watching",
+                "in_frame": false,
+                "gaze_target": "Groom",
+                "visual_ref": "Elderly-Man",
+                "head_direction": "toward Groom",
+                "vehicle_position": "in wheelchair"
+              }
+            ],
+            "props": [
+              {
+                "name": "CN-NEWS-Microphone",
+                "position": "Held by Reporter",
+                "prop_change": "unchanged — held by Reporter"
+              },
+              {
+                "name": "Wedding-Bouquet",
+                "position": "Held by Bride",
+                "prop_change": "unchanged — held by Bride"
+              },
+              {
+                "name": "Wheelchair",
+                "position": "Occupied by Elderly-Man at base of [stairs]",
+                "prop_change": "unchanged — occupied by Elderly-Man"
+              },
+              {
+                "name": "main-doors",
+                "position": "Behind the Groom and Bride",
+                "prop_change": "unchanged — closed"
+              }
+            ],
+            "complete_disposition": "The Groom stands on the top step of the [stairs], holding the Bride in his arms and facing the crowd. Other actors are off-frame.",
+            "environment": "Crowd cheering loudly.",
+            "anchor_refs": [
+              "stairs"
+            ]
+          },
+          "motion_action": "While holding the Bride, the Groom turns his head to give a victorious smile directly to the camera/crowd.",
+          "visual_start": "Extreme close-up on the Groom's face. He is holding the Bride (who is just out of the lower frame) and has turned his head slightly toward the camera. His expression is one of pure, unadulterated triumph, a confident and charming smile playing on his lips. His blue eyes, behind stylish black-rimmed glasses, are sparkling with victory. The bright sunlight catches the side of his face. The background is a complete blur of the sunlit courtyard.",
+          "visual_end": "Extreme close-up on the Groom's face. His triumphant smile widens, a flash of perfect teeth. He gives a subtle, almost imperceptible nod to the camera, a direct acknowledgment of his victory to the world. His eyes, sharp and focused behind his glasses, convey absolute certainty and satisfaction. His dark brown hair is perfectly styled. This is his moment of ultimate success, captured in the harsh, revealing sunlight. The background remains an indistinct, bright bokeh.",
+          "lights_and_camera": "ECU, eye-level, 50mm lens. Harsh key light from the sun highlights the details of his expression and the glint in his glasses. Extremely shallow depth of field obliterates the background.",
+          "references": [
+            "Groom"
+          ],
+          "location_references": [
+            "Mansion-Exterior-View-Primary"
+          ],
+          "camera_position": "entrance-threshold",
+          "drama_requirements": {
+            "shot_scale": "ECU",
+            "camera_angle": "Eye-level",
+            "composition_style": "Centered",
+            "focus_priority": {
+              "primary_target": "Groom",
+              "secondary_target": null,
+              "focus_depth": "Shallow"
+            },
+            "movement_intent": {
+              "type": "Static",
+              "target_trajectory": "Capture his victorious expression",
+              "dynamic_speed": "None"
+            },
+            "narrative_vibe": "Victorious, Confident, Direct Address"
+          },
+          "text_safe_composition": true,
+          "panel_type": "narrative",
+          "motion_prompt": "At 0s, the Groom's face is in extreme close-up, a confident smile on his lips as he looks down at the Bride (off-screen). At 0.5s, he begins to turn his head toward the camera. At 1.2s, his blue eyes, sharp behind his glasses, lock directly with the lens. His smile widens into an expression of pure, unadulterated victory. At 2.0s, he gives a single, slow, deliberate nod—a direct acknowledgment to the world. His expression of absolute satisfaction holds, unwavering, for the final second. The background is a bright, indistinct bokeh.",
+          "is_reversed": false,
+          "motion_prompt_reversed": "",
+          "dialogue": "",
+          "voiceover": "Теперь всё идеально.",
+          "voiceover_settings": {
+            "gender": "male",
+            "actor": "Groom",
+            "age": "28",
+            "tone": "cold, victorious, confident"
+          },
+          "emotional_beat": "confrontation",
+          "transition_to_next": "hard_cut",
+          "sound_design": "The roar of the crowd fades to a distant, muffled backdrop. A low, tense musical drone builds, creating a sense of unease beneath the triumphant image.",
+          "caption": "Он получил то, что хотел.",
+          "voiceover_timing": "during_silence",
+          "visual_disposition": "The Groom is on the top step of the Stairs, in front of the Main Doors, holding the Bride. He is looking towards the camera, which is positioned in the courtyard.\nDEPTH: Groom → blurred background.\nLATERAL-X: Groom center-X (x≈0.5).\nLATERAL-Y: Groom far-end (y≈0.95).",
+          "anchor_refs": []
+        },
+        {
+          "panel_index": 8,
+          "hook_type": "twist",
+          "duration": 6,
+          "scale": "MS",
+          "motion_intent": "The Groom transitions the couple from the public stage to the private domain.",
+          "dialogue_seed": "",
+          "state": {
+            "actors": [
+              {
+                "name": "Groom",
+                "position": "On the top step of [stairs], directly in front of [main-doors]",
+                "pose": "standing, holding Bride in his arms, head turned toward crowd",
+                "chest_direction": "toward [courtyard-gate]",
+                "motion_action": "turns his body around and carries the Bride through the open [main-doors]",
+                "in_frame": true,
+                "gaze_target": "camera/crowd",
+                "visual_ref": "Groom",
+                "head_direction": "toward camera/crowd",
+                "vehicle_position": null
+              },
+              {
+                "name": "Bride",
+                "position": "Held in Groom's arms",
+                "pose": "cradled in Groom's arms, arms around his neck",
+                "chest_direction": "upward/toward Groom",
+                "motion_action": "is carried by the Groom through the doors",
+                "in_frame": true,
+                "gaze_target": "Groom",
+                "visual_ref": "Bride",
+                "head_direction": "toward Groom",
+                "vehicle_position": null
+              },
+              {
+                "name": "Reporter",
+                "position": "At [courtyard-center], facing the mansion",
+                "pose": "standing, watching",
+                "chest_direction": "toward [main-doors]",
+                "motion_action": "stays still, watching",
+                "in_frame": true,
+                "gaze_target": "Groom",
+                "visual_ref": "Reporter",
+                "head_direction": "toward Groom",
+                "vehicle_position": null
+              },
+              {
+                "name": "Elderly-Man",
+                "position": "At the base of the [stairs], near [west-column]",
+                "pose": "seated in wheelchair, smiling",
+                "chest_direction": "toward [main-doors]",
+                "motion_action": "stays still, watching",
+                "in_frame": true,
+                "gaze_target": "Groom",
+                "visual_ref": "Elderly-Man",
+                "head_direction": "toward Groom",
+                "vehicle_position": "in wheelchair"
+              }
+            ],
+            "props": [
+              {
+                "name": "CN-NEWS-Microphone",
+                "position": "Held by Reporter",
+                "prop_change": "unchanged — held by Reporter"
+              },
+              {
+                "name": "Wedding-Bouquet",
+                "position": "Held by Bride",
+                "prop_change": "unchanged — held by Bride"
+              },
+              {
+                "name": "Wheelchair",
+                "position": "Occupied by Elderly-Man at base of [stairs]",
+                "prop_change": "unchanged — occupied by Elderly-Man"
+              },
+              {
+                "name": "main-doors",
+                "position": "Behind the Groom and Bride",
+                "prop_change": "are now open"
+              }
+            ],
+            "complete_disposition": "The Groom, holding the Bride, stands on the top step of the [stairs] at the now-open [main-doors], looking back at the crowd in the courtyard before entering.",
+            "environment": "The dark interior of the mansion hall is visible through the open doors.",
+            "anchor_refs": [
+              "stairs",
+              "main-doors"
+            ]
+          },
+          "motion_action": "The Groom turns and carries the Bride across the threshold, moving from the bright courtyard into the dark interior of the mansion through the [main-doors].",
+          "visual_start": "Medium shot from the courtyard-center. The Groom, still holding the Bride in his arms, is pivoting on the top step of the stairs. His back is beginning to turn to the camera as he prepares to enter the mansion. The massive, ornate wooden doors behind him are open, revealing the dark, opulent hall within. The Bride, cradled in his arms, looks over his shoulder. In the foreground, the Reporter and the Elderly-Man in his wheelchair are visible as blurred figures, watching the couple's departure.",
+          "visual_end": "Medium shot from the courtyard-center. The Groom has fully turned and takes a decisive step across the threshold, carrying the Bride from the bright sunlight of the public courtyard into the deep shadows of the private mansion hall. Their figures are now silhouetted against the bright exterior they are leaving behind. The contrast between the brilliant outdoor light and the cavernous darkness inside is stark and ominous. The blurred shapes of the Reporter and Elderly-Man remain in the foreground, witnesses to the transition.",
+          "lights_and_camera": "MS, eye-level, 50mm lens. The lighting is defined by extreme contrast between the sunlit exterior and the dark interior. The camera's focus follows the couple as they move away.",
+          "references": [
+            "Groom",
+            "Bride",
+            "Reporter",
+            "Elderly-Man",
+            "Wheelchair",
+            "CN-NEWS-Microphone",
+            "Wedding-Bouquet"
+          ],
+          "location_references": [
+            "Mansion-Exterior-View-Primary"
+          ],
+          "camera_position": "courtyard-center",
+          "drama_requirements": {
+            "shot_scale": "MS",
+            "camera_angle": "Eye-level",
+            "composition_style": "Frame-within-a-frame",
+            "focus_priority": {
+              "primary_target": "Groom",
+              "secondary_target": "main-doors",
+              "focus_depth": "Deep"
+            },
+            "movement_intent": {
+              "type": "Static",
+              "target_trajectory": "Observe the transition from public to private",
+              "dynamic_speed": "None"
+            },
+            "narrative_vibe": "Transitional, Ominous, Finality"
+          },
+          "text_safe_composition": true,
+          "panel_type": "narrative",
+          "motion_prompt": "At 0s, the Groom, holding the Bride, is pivoting on the top step, his back turning to the camera. The mansion doors stand open, revealing a dark hall. At 1s, he is fully turned away, a silhouette against the bright doorway. At 1.5s, he takes a decisive step across the threshold, carrying the Bride from the sunlit courtyard into the deep shadows of the mansion. From 2s to 6s, he walks deeper into the hall, their silhouetted forms shrinking as they are swallowed by the cavernous darkness, leaving the bright, empty doorway behind. The blurred figures of the crowd watch them go.",
+          "is_reversed": false,
+          "motion_prompt_reversed": "",
+          "dialogue": "",
+          "voiceover": "Сказка закончилась.",
+          "voiceover_settings": {
+            "gender": "female",
+            "actor": "Bride",
+            "age": "24",
+            "tone": "dread, hollow, quiet"
+          },
+          "emotional_beat": "dread",
+          "transition_to_next": "smash_cut",
+          "sound_design": "The moment they cross the threshold, all sounds of the crowd and celebration are cut off instantly. Replaced by the echoing sound of the Groom's footsteps on a marble floor in a vast, empty hall. A cold, ambient silence.",
+          "caption": "Дверь в новую жизнь. Или в тюрьму?",
+          "voiceover_timing": "during_silence",
+          "visual_disposition": "Groom: Standing in the middle of the open stone courtyard, looking towards the mansion.; The entire entrance facade with its doors, columns, and balcony is visible in the background. Bride: Standing in the middle of the open stone courtyard, looking towards the mansion.; The entire entrance facade with its doors, columns, and balcony is visible in the background. Reporter: Standing in the middle of the open stone courtyard, looking towards the mansion.; The entire entrance facade with its doors, columns, and balcony is visible in the background. Elderly-Man: Standing in the middle of the open stone courtyard, looking towards the mansion.; The entire entrance facade with its doors, columns, and balcony is visible in the background. DEPTH: Courtyard Gate →",
+          "anchor_refs": []
+        },
+        {
+          "panel_index": 9,
+          "hook_type": "tension_peak",
+          "duration": 4,
+          "scale": "ECU",
+          "motion_intent": "The closing doors trap the couple, severing the public fairy tale and beginning the private drama.",
+          "dialogue_seed": "VO: And then... the silence.",
+          "state": {
+            "actors": [
+              {
+                "name": "Groom",
+                "position": "Inside the mansion hall, just past the threshold of the [main-doors]",
+                "pose": "standing, holding Bride in his arms",
+                "chest_direction": "away from [main-doors]",
+                "motion_action": "stays still as doors close behind him",
+                "in_frame": false,
+                "gaze_target": "ahead into the hall",
+                "visual_ref": "Groom",
+                "head_direction": "ahead into the hall",
+                "vehicle_position": null
+              },
+              {
+                "name": "Bride",
+                "position": "Held in Groom's arms, inside the mansion hall",
+                "pose": "cradled in Groom's arms",
+                "chest_direction": "upward/toward Groom",
+                "motion_action": "stays still as doors close",
+                "in_frame": false,
+                "gaze_target": "Groom",
+                "visual_ref": "Bride",
+                "head_direction": "toward Groom",
+                "vehicle_position": null
+              },
+              {
+                "name": "Reporter",
+                "position": "At [courtyard-center], facing the mansion",
+                "pose": "standing, watching the doors",
+                "chest_direction": "toward [main-doors]",
+                "motion_action": "stays still, watching",
+                "in_frame": false,
+                "gaze_target": "main-doors",
+                "visual_ref": "Reporter",
+                "head_direction": "toward main-doors",
+                "vehicle_position": null
+              },
+              {
+                "name": "Elderly-Man",
+                "position": "At the base of the [stairs], near [west-column]",
+                "pose": "seated in wheelchair, watching the doors",
+                "chest_direction": "toward [main-doors]",
+                "motion_action": "stays still, watching",
+                "in_frame": false,
+                "gaze_target": "main-doors",
+                "visual_ref": "Elderly-Man",
+                "head_direction": "toward main-doors",
+                "vehicle_position": "in wheelchair"
+              }
+            ],
+            "props": [
+              {
+                "name": "CN-NEWS-Microphone",
+                "position": "Held by Reporter",
+                "prop_change": "unchanged — held by Reporter"
+              },
+              {
+                "name": "Wedding-Bouquet",
+                "position": "Held by Bride",
+                "prop_change": "unchanged — held by Bride"
+              },
+              {
+                "name": "Wheelchair",
+                "position": "Occupied by Elderly-Man at base of [stairs]",
+                "prop_change": "unchanged — occupied by Elderly-Man"
+              },
+              {
+                "name": "main-doors",
+                "position": "At the mansion entrance",
+                "prop_change": "slam shut"
+              }
+            ],
+            "complete_disposition": "The Groom and Bride are just inside the mansion, beyond the open [main-doors]. The Reporter and Elderly-Man are outside in the courtyard, watching.",
+            "environment": "The transition from bright exterior daylight to dim interior light.",
+            "anchor_refs": [
+              "main-doors"
+            ]
+          },
+          "motion_action": "The massive [main-doors] of the mansion slam shut, cutting off the view from the outside.",
+          "visual_start": "Extreme close-up on the massive, dark wood double doors of the mansion, viewed from the exterior. The two doors are swinging shut, with only a narrow vertical sliver of bright daylight visible between them. The ornate brass handles are just about to meet. The polished wood reflects the bright sunlight of the courtyard. The texture of the heavy wood grain is visible and imposing. The focus is sharp on the closing gap.",
+          "visual_end": "Extreme close-up on the massive, dark wood double doors. They have slammed shut with a sense of finality, the sound implied by their sheer weight. The frame is filled with the solid, impenetrable dark wood. The brass handles are now aligned, and the vertical sliver of light is gone, replaced by a thin black line where the doors meet. The public world is sealed out completely. The sunlight reflects off the polished surface, but the doors themselves represent a dark, unbreachable barrier.",
+          "lights_and_camera": "ECU, eye-level, 50mm lens. The lighting is the bright, direct sun of the courtyard, creating harsh reflections on the polished wood and brass. The focus is tack-sharp on the seam where the doors meet.",
+          "references": [],
+          "location_references": [
+            "Mansion-Exterior-View-Primary"
+          ],
+          "camera_position": "entrance-threshold",
+          "drama_requirements": {
+            "shot_scale": "ECU",
+            "camera_angle": "Eye-level",
+            "composition_style": "Centered",
+            "focus_priority": {
+              "primary_target": "main-doors",
+              "secondary_target": null,
+              "focus_depth": "Shallow"
+            },
+            "movement_intent": {
+              "type": "Static",
+              "target_trajectory": "Focus on the finality of the closing doors",
+              "dynamic_speed": "None"
+            },
+            "narrative_vibe": "Imprisonment, Finality, Ominous"
+          },
+          "text_safe_composition": true,
+          "panel_type": "narrative",
+          "motion_prompt": "At 0s, the massive double doors are swinging shut from the outside, a 15cm vertical sliver of light between them. The motion is heavy and inexorable. At 1.0s, the gap narrows to a thin line of light. At 1.3s, the right door slams into the frame with a deep, resonant THUD. At 1.4s, the left door crashes into it with a final, booming SLAM, the brass handles clanking once. The frame is filled with impenetrable dark wood. From 1.5s to 4s, the camera holds on the closed doors, the bright courtyard sunlight creating cold reflections on the polished, unbreachable surface.",
+          "is_reversed": false,
+          "motion_prompt_reversed": "",
+          "dialogue": "",
+          "voiceover": "А потом... тишина.",
+          "voiceover_settings": {
+            "gender": "female",
+            "actor": "Bride",
+            "age": "24",
+            "tone": "hollow, fearful, whispered"
+          },
+          "emotional_beat": "dread",
+          "transition_to_next": "hard_cut",
+          "sound_design": "A sharp, heavy THUD of the first door, immediately followed by a final, echoing SLAM. The sound reverberates for a second, then fades into absolute, oppressive silence. The voiceover is delivered into this dead quiet.",
+          "caption": "Конец. Или только начало?",
+          "voiceover_timing": "during_silence",
+          "visual_disposition": "The camera is focused on the Main Doors of the mansion, viewed from the exterior on the Entrance Threshold as they swing shut.\nDEPTH: Main Doors.\nLATERAL-X: Main Doors center-X (x≈0.5).\nLATERAL-Y: Main Doors far-end (y≈1.0).",
+          "anchor_refs": []
+        }
+      ],
+      "episode_id": 1
+    },
+    {
+      "scene_id": 2,
+      "location": "Mansion Hall",
+      "pre_action_description": "EPISODE ENTRY STATE:\n  Continues from: The massive doors have just slammed shut, plunging the scene into silence.\n  P1 opens on: The Groom, having just been enveloped in silence, begins to gently lowe",
+      "camera_master": "50mm prime lens bias, primarily eye-level, with specific high/low angles for dramatic emphasis; captures the intimate and oppressive scale of the mansion hall.",
+      "lighting_master": "Key light is the cool, diffuse, multi-colored light from a massive stained-glass skylight high above, creating long, soft shadows. Fill is minimal, relying on bounce from the polished marble floor. The overall mood is dim, somber, and cold, despite the opulent surroundings.",
+      "scene_trajectories": [
+        {
+          "character": "Groom",
+          "goal": "To begin his new, happy married life with the woman he believes loves him.",
+          "obstacle": "The Bride's immediate and brutal revelation that their marriage is a sham and she despises him.",
+          "tactic": "Attempting to continue the loving husband persona, which quickly collapses into stunned inaction as he tries to process the attack.",
+          "emotional_arc": "enters triumphant and loving → cracks into shocked confusion at P2 → exits in frozen, dawning devastation.",
+          "arc": "Total loss: he discovers his perceived victory is a lie and he is now trapped in a hostile, loveless marriage."
+        },
+        {
+          "character": "Bride",
+          "goal": "To immediately shatter the Groom's romantic illusions and establish the cold, transactional rules of their private arrangement.",
+          "obstacle": "The Groom's genuine belief that their marriage is real, requiring a swift and brutal correction.",
+          "tactic": "A calculated psychological assault using cold verbal declarations, physical rejection, and symbolic desecration of the wedding.",
+          "emotional_arc": "enters performing adoration (off-screen) → drops the mask to cold indifference at P2 → escalates to open contempt at P5 → exits having established total dominance.",
+          "arc": "Total win: she successfully seizes control of their private dynamic and demolishes his expectations, setting the terms for their future."
+        }
+      ],
+      "panels": [
+        {
+          "panel_index": 1,
+          "hook_type": "cold_open/status_reversal",
+          "duration": 4,
+          "scale": "MS",
+          "motion_intent": "Groom transitions from public triumph to private intimacy, unaware his world is about to collapse.",
+          "dialogue_seed": "",
+          "state": {
+            "actors": [
+              {
+                "name": "Groom",
+                "position": "In the [entrance-area], 1m from the [entrance-doors]",
+                "pose": "standing, holding Bride in a bridal carry",
+                "chest_direction": "toward [staircase-landing]",
+                "motion_action": "Gently lowers Bride to her feet.",
+                "in_frame": true,
+                "gaze_target": "Bride",
+                "visual_ref": "Groom",
+                "head_direction": "toward Bride",
+                "vehicle_position": null
+              },
+              {
+                "name": "Bride",
+                "position": "Held in Groom's arms, in the [entrance-area]",
+                "pose": "cradled in Groom's arms, legs off the floor",
+                "chest_direction": "upward, toward Groom",
+                "motion_action": "Is lowered to the floor by the Groom.",
+                "in_frame": true,
+                "gaze_target": "Groom",
+                "visual_ref": "Bride",
+                "head_direction": "toward Groom",
+                "vehicle_position": null
+              }
+            ],
+            "props": [
+              {
+                "name": "Wedding-Bouquet",
+                "position": "Held in Bride's left hand",
+                "prop_change": "unchanged — held by Bride"
+              },
+              {
+                "name": "main-doors",
+                "position": "At the entrance to the hall",
+                "prop_change": "unchanged — closed"
+              }
+            ],
+            "complete_disposition": "Groom stands holding the Bride in his arms in the [entrance-area], just inside the closed [entrance-doors]. The vast hall stretches out before them toward the [staircase-landing].",
+            "environment": "The hall is dim and silent after the [entrance-doors] slammed shut.",
+            "anchor_refs": [
+              "entrance-area",
+              "entrance-doors",
+              "staircase-landing"
+            ]
+          },
+          "motion_action": "The Groom gently lowers the Bride to the floor.",
+          "visual_start": "Medium shot, camera at the entrance-area of a vast, opulent mansion hall. The Groom is at frame-center foreground, holding the Bride in a classic bridal carry. He wears a perfectly tailored black tuxedo and his face, seen in three-quarter profile, is filled with adoration as he gazes down at her. The Bride is cradled in his arms, her white silk dress and fur wrap a stark contrast to his dark suit. Behind them, the massive, dark wood entrance doors are closed, and the cavernous hall with its polished checkerboard marble floor stretches into the background toward a grand staircase. The scene is lit by cool, diffuse light from a high, unseen stained-glass skylight.",
+          "visual_end": "Medium shot, same framing from the entrance-area. The Groom has gently lowered the Bride to the floor at frame-center. Her feet are now planted on the polished marble, but his arms are still loosely around her waist, maintaining their intimacy. His adoring expression remains fixed on her face. The Bride stands within his embrace, her body straight, her gaze locked on his. The vast, empty hall looms behind them, its silence a stark contrast to the implied celebration that just ended outside the closed doors. The cool, colored light from above casts long shadows on the floor.",
+          "lights_and_camera": "50mm lens, eye-level medium shot. The lighting is dim and cool, dominated by the diffuse light from the stained-glass skylight above, creating a somber, cathedral-like atmosphere. Shallow depth of field keeps the couple sharp against the slightly soft-focused grand staircase in the deep background.",
+          "references": [
+            "Groom",
+            "Bride",
+            "Wedding-Bouquet"
+          ],
+          "location_references": [
+            "Mansion-Hall-View-From-Entrance"
+          ],
+          "camera_position": "entrance-area",
+          "drama_requirements": {
+            "shot_scale": "MS",
+            "camera_angle": "Eye-level",
+            "composition_style": "Centered",
+            "focus_priority": {
+              "primary_target": "Groom",
+              "secondary_target": "Bride",
+              "focus_depth": "Shallow"
+            },
+            "movement_intent": {
+              "type": "Static",
+              "target_trajectory": "Hold on the couple's moment of transition from public to private.",
+              "dynamic_speed": "None"
+            },
+            "narrative_vibe": "Deceptive Intimacy"
+          },
+          "text_safe_composition": true,
+          "panel_type": "narrative",
+          "motion_prompt": "At 0s, the Groom stands at frame-center in the vast mansion hall, holding the Bride in a bridal carry, his face filled with adoration. He begins to bend his knees and torso, smoothly lowering her. At 1.5s, her feet make contact with the polished marble floor, her white dress pooling slightly around her ankles. The Groom does not immediately release her; his arms remain around her waist for a moment. At 2.5s, he slowly straightens up, his hands sliding from her waist to her arms, a final tender gesture. At 4s, he has fully released her and they stand a foot apart, his loving gaze still fixed on her face.",
+          "is_reversed": false,
+          "motion_prompt_reversed": "",
+          "dialogue": "",
+          "voiceover": "",
+          "voiceover_settings": {
+            "gender": "",
+            "actor": "",
+            "age": "",
+            "tone": ""
+          },
+          "voiceover_timing": "",
+          "emotional_beat": "tension",
+          "transition_to_next": "hard_cut",
+          "sound_design": "A massive door booms shut, the echo reverberating through the hall for two seconds before fading into an oppressive, heavy silence. The faint rustle of a silk dress as she is set down.",
+          "caption": "За закрытыми дверями.",
+          "visual_disposition": "Groom: View from just inside the entrance.; The checkerboard floor is in the immediate foreground. Bride: View from just inside the entrance.; The checkerboard floor is in the immediate foreground. DEPTH: Entrance Double Doors → Groom → Bride → Grandfather Clock → Bust on Pedestal → Stained-Glass Skylight → Oil Painting → Staircase Lower Section → Double Doors on Far Wall → Staircase Landing",
+          "anchor_refs": []
+        },
+        {
+          "panel_index": 2,
+          "hook_type": "verbal_hook",
+          "duration": 4,
+          "scale": "CU",
+          "motion_intent": "Bride shatters the romantic illusion with a single, cold declaration.",
+          "dialogue_seed": "Шоу окончено.",
+          "state": {
+            "actors": [
+              {
+                "name": "Groom",
+                "position": "In the [entrance-area], 1ft from Bride",
+                "pose": "standing, smiling softly, hands slightly outstretched after setting Bride down",
+                "chest_direction": "toward Bride",
+                "motion_action": "Stays still, his smile beginning to falter.",
+                "in_frame": false,
+                "gaze_target": "Bride",
+                "visual_ref": "Groom",
+                "head_direction": "toward Bride",
+                "vehicle_position": null
+              },
+              {
+                "name": "Bride",
+                "position": "In the [entrance-area], 1ft from Groom",
+                "pose": "standing stiffly, with a faint smile",
+                "chest_direction": "toward Groom",
+                "motion_action": "Her smile vanishes, she adjusts her hair with a dismissive gesture.",
+                "in_frame": true,
+                "gaze_target": "Groom",
+                "visual_ref": "Bride",
+                "head_direction": "toward Groom",
+                "vehicle_position": null
+              }
+            ],
+            "props": [
+              {
+                "name": "Wedding-Bouquet",
+                "position": "Held in Bride's left hand",
+                "prop_change": "unchanged — held by Bride"
+              },
+              {
+                "name": "main-doors",
+                "position": "At the entrance to the hall",
+                "prop_change": "unchanged — closed"
+              }
+            ],
+            "complete_disposition": "The Groom and Bride stand facing each other in the [entrance-area], a foot apart. The closed [entrance-doors] are behind them.",
+            "environment": "The hall remains dim and silent.",
+            "anchor_refs": [
+              "entrance-area",
+              "entrance-doors"
+            ]
+          },
+          "motion_action": "The Bride's smile vanishes as she adjusts her hair; the Groom's smile begins to falter in response.",
+          "visual_start": "Close-up on the Bride's face, filling the frame. She is looking slightly upward toward the off-screen Groom, a faint, polite smile on her lips. Her platinum blonde hair is perfectly styled, and her ice-blue eyes seem neutral. She wears a luxurious white fur wrap over her dress, and holds a white peony bouquet just visible at the bottom of the frame. The lighting is cool and diffuse, coming from above, highlighting her high cheekbones. The background is the blurred, dark wood paneling of the mansion hall. The Groom is off-frame.",
+          "visual_end": "Close-up on the Bride's face, same tight framing. The faint smile has vanished completely, replaced by a mask of cold indifference. Her lips are a neutral line, and her ice-blue eyes have become hard and direct, staring at the off-screen Groom with an unnerving stillness. One of her hands rises into the lower frame, fingers touching her hair in a slow, dismissive gesture of adjustment. The cool, diffuse light from the skylight now seems to make her skin look like porcelain or marble, utterly devoid of warmth. The opulent bouquet is still clutched in her other hand, below frame.",
+          "lights_and_camera": "50mm lens, eye-level close-up. Cool, diffuse top-light from the skylight emphasizes her facial structure, creating subtle shadows under her cheekbones and jaw. Extremely shallow depth of field completely blurs the background, isolating her expression.",
+          "references": [
+            "Bride",
+            "Wedding-Bouquet"
+          ],
+          "location_references": [
+            "Mansion-Hall-View-From-Entrance"
+          ],
+          "camera_position": "entrance-area",
+          "drama_requirements": {
+            "shot_scale": "CU",
+            "camera_angle": "Eye-level",
+            "composition_style": "Rule-of-thirds",
+            "focus_priority": {
+              "primary_target": "Bride",
+              "secondary_target": null,
+              "focus_depth": "Shallow"
+            },
+            "movement_intent": {
+              "type": "Static",
+              "target_trajectory": "Capture the micro-second transformation from performance to reality.",
+              "dynamic_speed": "None"
+            },
+            "narrative_vibe": "The Mask Drops"
+          },
+          "text_safe_composition": true,
+          "panel_type": "narrative",
+          "motion_prompt": "At 0s, the Bride's face is in close-up, a faint, polite smile on her lips as she looks at the off-screen Groom. At 0.5s, the muscles around her mouth relax, and the smile completely vanishes, leaving a cold, neutral line. At 1.5s, her ice-blue eyes, which were soft, become hard and direct, her gaze fixing on him with unnerving stillness. At 2.5s, her right hand slowly enters the bottom of the frame and rises, her fingers elegantly moving to brush a non-existent stray hair from her temple in a dismissive, self-contained gesture. At 4s, her hand drops away, her face now a perfect mask of indifference.",
+          "is_reversed": false,
+          "motion_prompt_reversed": "",
+          "dialogue": "Невеста (ж): Шоу окончено.",
+          "voiceover": "",
+          "voiceover_settings": {
+            "gender": "",
+            "actor": "",
+            "age": "",
+            "tone": ""
+          },
+          "voiceover_timing": "",
+          "emotional_beat": "confrontation",
+          "transition_to_next": "hard_cut",
+          "sound_design": "Silence. The soft, crisp sound of her fingers brushing against her hair is the only noise.",
+          "caption": "Маска сброшена.",
+          "visual_disposition": "Bride: View from just inside the entrance.; The checkerboard floor is in the immediate foreground. DEPTH: Entrance Double Doors → Bride → Grandfather Clock → Bust on Pedestal → Stained-Glass Skylight → Oil Painting → Staircase Lower Section → Double Doors on Far Wall → Staircase Landing",
+          "anchor_refs": []
+        },
+        {
+          "panel_index": 3,
+          "hook_type": "escalation",
+          "duration": 4,
+          "scale": "CU",
+          "motion_intent": "Groom's triumphant reality fractures as he processes the first verbal blow.",
+          "dialogue_seed": "",
+          "state": {
+            "actors": [
+              {
+                "name": "Groom",
+                "position": "In the [entrance-area], 1ft from Bride",
+                "pose": "standing, his smile gone, hands at his sides",
+                "chest_direction": "toward Bride",
+                "motion_action": "His expression shifts from a faltering smile to open confusion.",
+                "in_frame": true,
+                "gaze_target": "Bride",
+                "visual_ref": "Groom",
+                "head_direction": "toward Bride",
+                "vehicle_position": null
+              },
+              {
+                "name": "Bride",
+                "position": "In the [entrance-area], 1ft from Groom",
+                "pose": "standing stiffly, expression cold and indifferent",
+                "chest_direction": "toward Groom",
+                "motion_action": "Stays still, holding the Groom's gaze with contempt.",
+                "in_frame": false,
+                "gaze_target": "Groom",
+                "visual_ref": "Bride",
+                "head_direction": "toward Groom",
+                "vehicle_position": null
+              }
+            ],
+            "props": [
+              {
+                "name": "Wedding-Bouquet",
+                "position": "Held in Bride's left hand",
+                "prop_change": "unchanged — held by Bride"
+              },
+              {
+                "name": "main-doors",
+                "position": "At the entrance to the hall",
+                "prop_change": "unchanged — closed"
+              }
+            ],
+            "complete_disposition": "The Groom and Bride stand facing each other in the [entrance-area]. The Groom looks confused, the Bride looks cold.",
+            "environment": "The hall remains dim and silent.",
+            "anchor_refs": [
+              "entrance-area"
+            ]
+          },
+          "motion_action": "The Groom's expression changes to confusion while the Bride remains still.",
+          "visual_start": "Close-up on the Groom's face, filling the frame. He is looking slightly downward toward the off-screen Bride, his soft, loving smile just beginning to falter at the edges. Confusion flickers in his blue eyes behind his thin-rimmed glasses. He wears a classic black tuxedo and bow tie. The cool, diffuse light from the skylight above casts a soft glow on his features. The background is the blurred dark wood of the hall's entrance wall. The Bride is off-frame.",
+          "visual_end": "Close-up on the Groom's face, same tight framing. The smile is now completely gone, replaced by an expression of open, uncomprehending confusion. His brows are slightly furrowed, his mouth is parted as if to ask a question he can't form. His blue eyes are wide, searching the off-screen Bride's face for an explanation. The cool light from above seems to highlight the sudden vulnerability in his expression, the polished facade of the business heir cracking for the first time. The reflection of the hall's distant staircase is faintly visible in his glasses.",
+          "lights_and_camera": "50mm lens, eye-level close-up. The cool, diffuse top-light catches the rim of his glasses and highlights the tension in his brow. Extremely shallow depth of field isolates his bewildered expression.",
+          "references": [
+            "Groom"
+          ],
+          "location_references": [
+            "Mansion-Hall-View-To-Entrance"
+          ],
+          "camera_position": "entrance-area",
+          "drama_requirements": {
+            "shot_scale": "CU",
+            "camera_angle": "Eye-level",
+            "composition_style": "Rule-of-thirds",
+            "focus_priority": {
+              "primary_target": "Groom",
+              "secondary_target": null,
+              "focus_depth": "Shallow"
+            },
+            "movement_intent": {
+              "type": "Static",
+              "target_trajectory": "Focus on the dawning realization of a problem.",
+              "dynamic_speed": "None"
+            },
+            "narrative_vibe": "Cracks in the Facade"
+          },
+          "text_safe_composition": true,
+          "panel_type": "narrative",
+          "motion_prompt": "At 0s, the Groom's face is in close-up, a soft, loving smile directed at the off-screen Bride. At 1s, the corners of his smile begin to twitch and fall, the light in his eyes dimming as he processes her words. At 2s, his brows draw together in a slight, confused furrow. His smile is now completely gone. At 3s, his mouth parts slightly, as if he is about to speak but cannot find the words. At 4s, his expression has settled into one of pure, uncomprehending bewilderment, his wide eyes searching her face for an answer.",
+          "is_reversed": false,
+          "motion_prompt_reversed": "",
+          "dialogue": "",
+          "voiceover": "Что она имеет в виду?",
+          "voiceover_settings": {
+            "gender": "male",
+            "actor": "Groom",
+            "age": "28",
+            "tone": "confused, quiet, internal"
+          },
+          "voiceover_timing": "during_silence",
+          "emotional_beat": "shock",
+          "transition_to_next": "hard_cut",
+          "sound_design": "Deep silence. A very faint, high-frequency ringing tone begins to fade in, almost subliminally.",
+          "caption": "Первая трещина.",
+          "visual_disposition": "Groom: View from the far wall.; The entrance doors are centered in the distant background. DEPTH: Double Doors on Far Wall → Staircase Landing → Staircase Lower Section → Stained-Glass Skylight → Oil Painting → Grandfather Clock → Bust on Pedestal → Groom → Entrance Double Doors",
+          "anchor_refs": []
+        },
+        {
+          "panel_index": 4,
+          "hook_type": "escalation",
+          "duration": 5,
+          "scale": "MS",
+          "motion_intent": "Bride physically enforces the new, hostile boundary between them.",
+          "dialogue_seed": "",
+          "state": {
+            "actors": [
+              {
+                "name": "Groom",
+                "position": "In the [entrance-area], 1ft from Bride's original spot",
+                "pose": "standing frozen, expression confused",
+                "chest_direction": "toward Bride",
+                "motion_action": "Remains frozen in place, watching her.",
+                "in_frame": true,
+                "gaze_target": "Bride",
+                "visual_ref": "Groom",
+                "head_direction": "toward Bride",
+                "vehicle_position": null
+              },
+              {
+                "name": "Bride",
+                "position": "In the [entrance-area], 1ft from Groom",
+                "pose": "standing stiffly, expression cold",
+                "chest_direction": "toward Groom",
+                "motion_action": "Takes one sharp, deliberate step backward, away from the Groom.",
+                "in_frame": true,
+                "gaze_target": "Groom",
+                "visual_ref": "Bride",
+                "head_direction": "toward Groom",
+                "vehicle_position": null
+              }
+            ],
+            "props": [
+              {
+                "name": "Wedding-Bouquet",
+                "position": "Held in Bride's left hand",
+                "prop_change": "unchanged — held by Bride"
+              },
+              {
+                "name": "main-doors",
+                "position": "At the entrance to the hall",
+                "prop_change": "unchanged — closed"
+              }
+            ],
+            "complete_disposition": "The Groom stands frozen in the [entrance-area] as the Bride prepares to step away from him.",
+            "environment": "The hall remains dim and silent.",
+            "anchor_refs": [
+              "entrance-area"
+            ]
+          },
+          "motion_action": "The Bride takes a sharp step back, creating distance from the frozen Groom.",
+          "visual_start": "Medium shot from the entrance-area. The Bride is at frame-center, standing stiffly with a cold expression, her white dress stark against the dark hall. The Groom stands opposite her, his body language shifting from relaxed intimacy to a frozen, confused stillness. There is only a foot of polished marble floor between them. The grand staircase is visible in the distant background. The hall is dim, lit only by the cool, diffuse light from a high skylight, creating a sense of isolation.",
+          "visual_end": "Medium shot, same framing. The Bride has taken a single, sharp step backward, now standing at frame-center but further into the hall. The space between them has doubled, a tangible void of polished marble. Her posture is rigid, defensive. The Groom remains frozen in the foreground, his hands half-raised in a gesture of confusion as he watches her retreat. The physical distance she creates is a clear, hostile statement, visually severing their connection. The cool light from above emphasizes the empty space that has opened between them.",
+          "lights_and_camera": "50mm lens, eye-level medium shot. The focus is held on the space between them, keeping both figures slightly soft to emphasize the growing distance. The cool, dim light from the skylight makes the marble floor look like a cold, dark void.",
+          "references": [
+            "Groom",
+            "Bride",
+            "Wedding-Bouquet"
+          ],
+          "location_references": [
+            "Mansion-Hall-View-From-Entrance"
+          ],
+          "camera_position": "entrance-area",
+          "drama_requirements": {
+            "shot_scale": "MS",
+            "camera_angle": "Eye-level",
+            "composition_style": "Centered",
+            "focus_priority": {
+              "primary_target": "Bride",
+              "secondary_target": "Groom",
+              "focus_depth": "Deep"
+            },
+            "movement_intent": {
+              "type": "Static",
+              "target_trajectory": "Emphasize the creation of hostile space.",
+              "dynamic_speed": "None"
+            },
+            "narrative_vibe": "Hostile Geometry"
+          },
+          "text_safe_composition": true,
+          "panel_type": "narrative",
+          "motion_prompt": "At 0s, the Bride and Groom stand a foot apart. The Groom is frozen, his expression confused. At 0.5s, the Bride's posture straightens, becoming rigid. At 1s, she shifts her weight to her back foot and takes a single, sharp, deliberate step backward, away from him. The sound of her heel clicks sharply on the marble. At 2.5s, she has planted her foot, doubling the distance between them. She stands rigidly, her arms stiff at her sides, creating a physical barrier of empty space. The Groom remains motionless throughout, his hands lifting slightly at 3.5s in a half-formed gesture of placation or confusion before dropping again.",
+          "is_reversed": false,
+          "motion_prompt_reversed": "",
+          "dialogue": "",
+          "voiceover": "",
+          "voiceover_settings": {
+            "gender": "",
+            "actor": "",
+            "age": "",
+            "tone": ""
+          },
+          "voiceover_timing": "",
+          "emotional_beat": "confrontation",
+          "transition_to_next": "hard_cut",
+          "sound_design": "The single, sharp click of a high heel on the marble floor, which echoes loudly in the silent hall.",
+          "caption": "Она создает дистанцию.",
+          "visual_disposition": "Groom: View from just inside the entrance.; The checkerboard floor is in the immediate foreground. Bride: View from just inside the entrance.; The checkerboard floor is in the immediate foreground. DEPTH: Entrance Double Doors → Groom → Bride → Grandfather Clock → Bust on Pedestal → Stained-Glass Skylight → Oil Painting → Staircase Lower Section → Double Doors on Far Wall → Staircase Landing",
+          "anchor_refs": []
+        },
+        {
+          "panel_index": 5,
+          "hook_type": "crystallization",
+          "duration": 6,
+          "scale": "ECU",
+          "motion_intent": "Bride defines the relationship's core rule: a threat disguised as a boundary.",
+          "dialogue_seed": "Не смей ко мне приближаться.",
+          "state": {
+            "actors": [
+              {
+                "name": "Groom",
+                "position": "In the [entrance-area], 4ft from Bride",
+                "pose": "standing frozen, expression confused",
+                "chest_direction": "toward Bride",
+                "motion_action": "Stays still, absorbing her words.",
+                "in_frame": false,
+                "gaze_target": "Bride",
+                "visual_ref": "Groom",
+                "head_direction": "toward Bride",
+                "vehicle_position": null
+              },
+              {
+                "name": "Bride",
+                "position": "In the [entrance-area], 4ft from Groom, closer to the [center-hall]",
+                "pose": "standing rigidly, posture defensive",
+                "chest_direction": "toward Groom",
+                "motion_action": "Her expression hardens with disgust as she speaks.",
+                "in_frame": true,
+                "gaze_target": "Groom",
+                "visual_ref": "Bride",
+                "head_direction": "toward Groom",
+                "vehicle_position": null
+              }
+            ],
+            "props": [
+              {
+                "name": "Wedding-Bouquet",
+                "position": "Held in Bride's left hand",
+                "prop_change": "unchanged — held by Bride"
+              },
+              {
+                "name": "main-doors",
+                "position": "At the entrance to the hall",
+                "prop_change": "unchanged — closed"
+              }
+            ],
+            "complete_disposition": "The Bride stands 4ft away from the Groom in the [entrance-area], having stepped back. There is now empty space between them.",
+            "environment": "The hall remains dim and silent.",
+            "anchor_refs": [
+              "entrance-area",
+              "center-hall"
+            ]
+          },
+          "motion_action": "The Bride's expression fills with contempt as she speaks; the Groom remains still.",
+          "visual_start": "Extreme close-up on the Bride's face, angled slightly up at her. Her expression is a mask of cold contempt. Her ice-blue eyes are narrowed, fixed on the off-screen Groom with undisguised disgust. Her lips are pressed into a thin, hard line. The cool, diffuse light from the skylight carves sharp shadows under her cheekbones, making her look severe and unforgiving. A piece of her elegant platinum blonde updo is visible. The background is completely out of focus. The Groom is off-frame.",
+          "visual_end": "Extreme close-up, same tight framing on the Bride's face. Her expression hardens further, a micro-muscle twitching in her jaw. Her eyes gleam with a chilling intensity as she delivers her warning to the off-screen Groom. The disgust is now mixed with a clear threat. The cool light seems to drain all color from her face, leaving only the piercing blue of her eyes. The texture of her skin, the slight parting of her lips as she finishes speaking, are all rendered in sharp, unforgiving detail. The power she holds is absolute and terrifyingly calm.",
+          "lights_and_camera": "50mm lens, slight low-angle extreme close-up. The cool top-light creates a harsh, dramatic effect on her face, emphasizing her power. The depth of field is razor-thin, focusing solely on her eyes.",
+          "references": [
+            "Bride"
+          ],
+          "location_references": [
+            "Mansion-Hall-View-From-Entrance"
+          ],
+          "camera_position": "entrance-area",
+          "drama_requirements": {
+            "shot_scale": "ECU",
+            "camera_angle": "Low-angle",
+            "composition_style": "Centered",
+            "focus_priority": {
+              "primary_target": "Bride's eyes",
+              "secondary_target": null,
+              "focus_depth": "Shallow"
+            },
+            "movement_intent": {
+              "type": "Static",
+              "target_trajectory": "Capture the pure venom in her expression.",
+              "dynamic_speed": "None"
+            },
+            "narrative_vibe": "Cold Fury"
+          },
+          "text_safe_composition": true,
+          "panel_type": "narrative",
+          "motion_prompt": "At 0s, the Bride's face is in an extreme close-up, her expression one of cold contempt. At 1s, her ice-blue eyes narrow slightly, her focus intensifying on the off-screen Groom. At 2s, a tiny muscle in her jaw twitches, a flicker of controlled rage beneath the surface. Her lips, pressed into a thin line, part slightly as she begins to speak. From 2.5s to 5s, her lips form the words of her threat, with minimal movement, her expression remaining a mask of disgust. At 6s, her lips press back together, the threat delivered and hanging in the air.",
+          "is_reversed": false,
+          "motion_prompt_reversed": "",
+          "dialogue": "Невеста (ж): Не смей ко мне приближаться.",
+          "voiceover": "",
+          "voiceover_settings": {
+            "gender": "",
+            "actor": "",
+            "age": "",
+            "tone": ""
+          },
+          "voiceover_timing": "",
+          "emotional_beat": "rage",
+          "transition_to_next": "hard_cut",
+          "sound_design": "Her voice is a low, menacing whisper that cuts through the silence, each word sharp and clear with a faint, cold echo.",
+          "caption": "Его приговор.",
+          "visual_disposition": "Bride: View from just inside the entrance.; The checkerboard floor is in the immediate foreground. DEPTH: Entrance Double Doors → Bride → Grandfather Clock → Bust on Pedestal → Stained-Glass Skylight → Oil Painting → Staircase Lower Section → Double Doors on Far Wall → Staircase Landing",
+          "anchor_refs": []
+        },
+        {
+          "panel_index": 6,
+          "hook_type": "confrontation",
+          "duration": 6,
+          "scale": "MS",
+          "motion_intent": "Bride desecrates a symbol of their marriage to finalize her rejection.",
+          "dialogue_seed": "",
+          "state": {
+            "actors": [
+              {
+                "name": "Groom",
+                "position": "In the [entrance-area], 4ft from Bride",
+                "pose": "standing frozen, expression confused",
+                "chest_direction": "toward Bride",
+                "motion_action": "Flinches slightly as the bouquet hits the floor.",
+                "in_frame": true,
+                "gaze_target": "Bride",
+                "visual_ref": "Groom",
+                "head_direction": "toward Bride",
+                "vehicle_position": null
+              },
+              {
+                "name": "Bride",
+                "position": "In the [entrance-area], 4ft from Groom, closer to the [center-hall]",
+                "pose": "standing rigidly, her arm raised to throw",
+                "chest_direction": "toward Groom",
+                "motion_action": "Throws the wedding bouquet onto the marble floor between them.",
+                "in_frame": true,
+                "gaze_target": "Groom",
+                "visual_ref": "Bride",
+                "head_direction": "toward Groom",
+                "vehicle_position": null
+              }
+            ],
+            "props": [
+              {
+                "name": "Wedding-Bouquet",
+                "position": "Held in Bride's left hand",
+                "prop_change": "Is thrown to the floor, landing on the marble between the Bride and Groom."
+              },
+              {
+                "name": "main-doors",
+                "position": "At the entrance to the hall",
+                "prop_change": "unchanged — closed"
+              }
+            ],
+            "complete_disposition": "The Bride and Groom stand 4ft apart in the [entrance-area]. She is poised to throw the bouquet.",
+            "environment": "The hall remains dim and silent.",
+            "anchor_refs": [
+              "entrance-area",
+              "center-hall"
+            ]
+          },
+          "motion_action": "The Bride throws her bouquet onto the floor; the Groom flinches.",
+          "visual_start": "Medium shot from the entrance-area. The Bride stands at frame-center, her body rigid with anger. Her right arm is raised, her hand gripping the white wedding bouquet tightly, poised to throw it. Her face is a mask of disgust, directed at the Groom. The Groom is in the foreground, his body language frozen, watching her with a stunned expression. The polished marble floor separates them. The vast, dim hall with its distant staircase forms the cold, empty background, lit by the skylight.",
+          "visual_end": "Medium shot, same framing. The Bride's arm has completed its motion, and she now stands with her hand falling to her side, her expression cold and final. The white wedding bouquet is captured mid-fall, a blur of white and green against the dark marble floor, about to shatter on the ground between them. The Groom in the foreground has flinched, his shoulders slightly hunched, his face a picture of shock as he witnesses this symbolic act of desecration. The cool light from above catches the falling petals, freezing a moment of violent rejection.",
+          "lights_and_camera": "50mm lens, eye-level medium shot. Deep focus to keep both the Groom's reaction in the foreground and the Bride's action in the mid-ground sharp. The cool, dim light from the skylight highlights the white bouquet against the dark floor.",
+          "references": [
+            "Groom",
+            "Bride",
+            "Wedding-Bouquet"
+          ],
+          "location_references": [
+            "Mansion-Hall-View-From-Entrance"
+          ],
+          "camera_position": "entrance-area",
+          "drama_requirements": {
+            "shot_scale": "MS",
+            "camera_angle": "Eye-level",
+            "composition_style": "Rule-of-thirds",
+            "focus_priority": {
+              "primary_target": "Wedding-Bouquet",
+              "secondary_target": "Groom",
+              "focus_depth": "Deep"
+            },
+            "movement_intent": {
+              "type": "Static",
+              "target_trajectory": "Capture the symbolic violence of the act.",
+              "dynamic_speed": "None"
+            },
+            "narrative_vibe": "Symbolic Violence"
+          },
+          "text_safe_composition": true,
+          "panel_type": "narrative",
+          "motion_prompt": "At 0s, the Bride stands with her right arm raised, gripping the wedding bouquet. The Groom watches, stunned. At 0.5s, her wrist snaps forward with violent precision, releasing the bouquet. From 1s to 2s, the bouquet travels through the air in a clean arc, a blur of white against the dark hall. At 2.1s, it impacts the marble floor between them. At 2.5s, the Groom flinches visibly, his shoulders hunching and his head jerking back slightly. From 3s to 6s, the Bride's arm slowly lowers to her side as she watches him, her expression cold and satisfied. The bouquet lies broken on the floor.",
+          "is_reversed": false,
+          "motion_prompt_reversed": "",
+          "dialogue": "",
+          "voiceover": "",
+          "voiceover_settings": {
+            "gender": "",
+            "actor": "",
+            "age": "",
+            "tone": ""
+          },
+          "voiceover_timing": "",
+          "emotional_beat": "shock",
+          "transition_to_next": "hard_cut",
+          "sound_design": "A sharp whoosh of air as the bouquet is thrown, followed by a dull, heavy thud as it hits the marble floor. The sound echoes sharply.",
+          "caption": "Символ любви уничтожен.",
+          "visual_disposition": "Groom: View from just inside the entrance.; The checkerboard floor is in the immediate foreground. Bride: View from just inside the entrance.; The checkerboard floor is in the immediate foreground. DEPTH: Entrance Double Doors → Groom → Bride → Grandfather Clock → Bust on Pedestal → Stained-Glass Skylight → Oil Painting → Staircase Lower Section → Double Doors on Far Wall → Staircase Landing",
+          "anchor_refs": []
+        },
+        {
+          "panel_index": 7,
+          "hook_type": "pivot",
+          "duration": 4,
+          "scale": "ECU",
+          "motion_intent": "Groom's confusion curdles into the horrifying realization of his entrapment.",
+          "dialogue_seed": "This... this was the deal?",
+          "state": {
+            "actors": [
+              {
+                "name": "Groom",
+                "position": "In the [entrance-area], 4ft from Bride's former position",
+                "pose": "standing, flinching slightly",
+                "chest_direction": "toward Bride's former position",
+                "motion_action": "His expression shifts from confusion to dawning shock and hurt.",
+                "in_frame": true,
+                "gaze_target": "Bride",
+                "visual_ref": "Groom",
+                "head_direction": "toward Bride",
+                "vehicle_position": null
+              },
+              {
+                "name": "Bride",
+                "position": "In the [entrance-area], 4ft from Groom, closer to the [center-hall]",
+                "pose": "standing rigidly, arm falling to her side after the throw",
+                "chest_direction": "toward Groom",
+                "motion_action": "Turns her back on the Groom and begins walking toward the [staircase-lower-right].",
+                "in_frame": false,
+                "gaze_target": null,
+                "visual_ref": "Bride",
+                "head_direction": "toward staircase-lower-right",
+                "vehicle_position": null
+              }
+            ],
+            "props": [
+              {
+                "name": "Wedding-Bouquet",
+                "position": "On the marble floor, between the Groom and where the Bride was standing",
+                "prop_change": "unchanged — on the floor"
+              },
+              {
+                "name": "main-doors",
+                "position": "At the entrance to the hall",
+                "prop_change": "unchanged — closed"
+              }
+            ],
+            "complete_disposition": "The Groom stands frozen in the [entrance-area], while the Bride, having thrown the bouquet, stands ready to depart. The bouquet lies on the floor between them.",
+            "environment": "The faint sound of the bouquet's impact echoes slightly.",
+            "anchor_refs": [
+              "entrance-area",
+              "center-hall",
+              "staircase-lower-right"
+            ]
+          },
+          "motion_action": "The Bride turns and walks away toward the staircase as the Groom's expression shifts to shock.",
+          "visual_start": "Extreme close-up on the Groom's face. His expression is caught in the middle of a flinch, eyes wide behind his glasses, mouth slightly open in shock from the bouquet hitting the floor off-screen. The muscles in his jaw are tight. The cool, diffuse light from the skylight reflects off his glasses, obscuring his eyes for a moment. The background is a complete blur of the dark hall. The Bride is off-frame.",
+          "visual_end": "Extreme close-up, same tight framing on the Groom's face. The flinch has subsided, and the immediate shock is now curdling into a deeper, more horrifying realization. His eyes, no longer obscured, are wide with dawning hurt and disbelief. His brow is furrowed, and his lips are slightly parted as the full weight of the situation begins to land. The cool light emphasizes the paleness of his skin, the vulnerability now completely exposed. He looks utterly broken and lost.",
+          "lights_and_camera": "50mm lens, eye-level extreme close-up. The lighting is cool and soft, but the proximity to the face makes every micro-expression stark and clear. Razor-thin depth of field isolates his face from the world.",
+          "references": [
+            "Groom"
+          ],
+          "location_references": [
+            "Mansion-Hall-View-To-Entrance"
+          ],
+          "camera_position": "entrance-area",
+          "drama_requirements": {
+            "shot_scale": "ECU",
+            "camera_angle": "Eye-level",
+            "composition_style": "Centered",
+            "focus_priority": {
+              "primary_target": "Groom's eyes",
+              "secondary_target": null,
+              "focus_depth": "Shallow"
+            },
+            "movement_intent": {
+              "type": "Static",
+              "target_trajectory": "Trace the emotional journey from shock to devastation.",
+              "dynamic_speed": "None"
+            },
+            "narrative_vibe": "The World Breaks"
+          },
+          "text_safe_composition": true,
+          "panel_type": "narrative",
+          "motion_prompt": "At 0s, the Groom's face is in an extreme close-up, caught in a flinch. At 1s, the flinch subsides, but his eyes remain wide with shock. At 2s, his focus shifts from the off-screen action to something internal; his eyes lose focus for a moment. At 2.5s, his brow furrows deeply as comprehension begins to dawn, the shock turning into a look of dawning, sickening horror. At 4s, his lips part, a silent gasp, as the full weight of his situation settles in. His face is pale, his expression utterly broken.",
+          "is_reversed": false,
+          "motion_prompt_reversed": "",
+          "dialogue": "",
+          "voiceover": "Так вот в чем дело?",
+          "voiceover_settings": {
+            "gender": "male",
+            "actor": "Groom",
+            "age": "28",
+            "tone": "breathless, dawning horror"
+          },
+          "voiceover_timing": "during_silence",
+          "emotional_beat": "revelation",
+          "transition_to_next": "hard_cut",
+          "sound_design": "The high-pitched ringing sound intensifies, joined by the low, muffled, accelerating thump of a heartbeat.",
+          "caption": "Цена сделки.",
+          "visual_disposition": "Groom: View from the far wall.; The entrance doors are centered in the distant background. DEPTH: Double Doors on Far Wall → Staircase Landing → Staircase Lower Section → Stained-Glass Skylight → Oil Painting → Grandfather Clock → Bust on Pedestal → Groom → Entrance Double Doors",
+          "anchor_refs": []
+        },
+        {
+          "panel_index": 8,
+          "hook_type": "twist",
+          "duration": 6,
+          "scale": "WS",
+          "motion_intent": "Groom is visually rendered insignificant, abandoned in the vast, cold space of his new life.",
+          "dialogue_seed": "",
+          "state": {
+            "actors": [
+              {
+                "name": "Groom",
+                "position": "In the [entrance-area], standing near the discarded bouquet",
+                "pose": "standing, expression of dawning shock",
+                "chest_direction": "toward [staircase-landing]",
+                "motion_action": "Takes one slow step toward the discarded bouquet.",
+                "in_frame": true,
+                "gaze_target": "Bride",
+                "visual_ref": "Groom",
+                "head_direction": "toward Bride",
+                "vehicle_position": null
+              },
+              {
+                "name": "Bride",
+                "position": "Halfway across the [center-hall], walking toward the [staircase-lower-right]",
+                "pose": "walking away, back to the Groom",
+                "chest_direction": "toward [staircase-lower-right]",
+                "motion_action": "Walks to the [staircase-lower-right] and begins to ascend the stairs.",
+                "in_frame": true,
+                "gaze_target": null,
+                "visual_ref": "Bride",
+                "head_direction": "toward staircase-landing",
+                "vehicle_position": null
+              }
+            ],
+            "props": [
+              {
+                "name": "Wedding-Bouquet",
+                "position": "On the marble floor in the [entrance-area]",
+                "prop_change": "unchanged — on the floor"
+              },
+              {
+                "name": "main-doors",
+                "position": "At the entrance to the hall",
+                "prop_change": "unchanged — closed"
+              }
+            ],
+            "complete_disposition": "The Groom stands in the [entrance-area], watching as the Bride walks across the [center-hall] toward the [staircase-lower-right]. The bouquet is on the floor near him.",
+            "environment": "The sound of the Bride's solitary footsteps echoes in the large hall.",
+            "anchor_refs": [
+              "entrance-area",
+              "center-hall",
+              "staircase-lower-right",
+              "staircase-landing"
+            ]
+          },
+          "motion_action": "The Bride walks to and ascends the staircase, while the Groom takes a slow step toward the bouquet.",
+          "visual_start": "Wide shot from the entrance-area, looking deep into the mansion hall. The Groom is a small, solitary figure in his black tuxedo, standing in the foreground near the frame-center, looking lost. The discarded white bouquet is a small patch of light on the dark marble floor near him. In the deep mid-ground, the Bride is walking away, her back to the camera, a determined figure in white ascending the grand staircase at the far end of the hall. The sheer scale of the hall, with its high ceiling and checkerboard floor, dwarfs them both, emphasizing their isolation.",
+          "visual_end": "Wide shot, same framing. The Groom has taken a single, slow, hesitant step toward the discarded bouquet, his posture slumped in defeat. He is now a slightly larger but still insignificant figure in the vast space. The Bride has continued her ascent and is now nearly at the top of the grand staircase in the far background, about to disappear from view. The distance between them is immense, an unbridgeable chasm of polished marble and cold air, starkly lit by the diffuse light from the stained-glass skylight.",
+          "lights_and_camera": "35mm lens, eye-level wide shot. The deep focus keeps the entire hall sharp, from the Groom in the foreground to the Bride on the distant stairs. The cool, dim light from the skylight creates a vast, lonely atmosphere, with the marble floor reflecting the emptiness.",
+          "references": [
+            "Groom",
+            "Bride",
+            "Wedding-Bouquet"
+          ],
+          "location_references": [
+            "Mansion-Hall-View-From-Entrance"
+          ],
+          "camera_position": "entrance-area",
+          "drama_requirements": {
+            "shot_scale": "WS",
+            "camera_angle": "Eye-level",
+            "composition_style": "Leading-lines",
+            "focus_priority": {
+              "primary_target": "Groom",
+              "secondary_target": "Bride",
+              "focus_depth": "Deep"
+            },
+            "movement_intent": {
+              "type": "Static",
+              "target_trajectory": "Visually communicate the Groom's isolation and entrapment.",
+              "dynamic_speed": "None"
+            },
+            "narrative_vibe": "Oppressive Emptiness"
+          },
+          "text_safe_composition": true,
+          "panel_type": "narrative",
+          "motion_prompt": "At 0s, the Groom is a small figure in the vast hall, while the Bride is walking toward the distant staircase. From 0s to 4s, she walks with a steady, determined pace, her back straight, never looking back. She reaches the base of the grand staircase. At 4.5s, the Groom, who has been frozen, takes a single, slow, hesitant step toward the discarded bouquet on the floor, his shoulders slumping. From 4.5s to 6s, the Bride begins to ascend the stairs, her figure shrinking with distance. The Groom remains hunched over after his one step, looking down.",
+          "is_reversed": false,
+          "motion_prompt_reversed": "",
+          "dialogue": "",
+          "voiceover": "",
+          "voiceover_settings": {
+            "gender": "",
+            "actor": "",
+            "age": "",
+            "tone": ""
+          },
+          "voiceover_timing": "",
+          "emotional_beat": "grief",
+          "transition_to_next": "hard_cut",
+          "sound_design": "The lonely, rhythmic click of the Bride's heels on the marble floor, then on the stairs, growing fainter and more distant. The Groom's single, soft shuffle of a footstep.",
+          "caption": "Один в своем новом замке.",
+          "visual_disposition": "Groom: View from just inside the entrance.; The checkerboard floor is in the immediate foreground. Bride: A wide, symmetrical view of the hall.; The checkerboard floor fills the lower half of the frame. DEPTH: Entrance Double Doors → Groom → Grandfather Clock → Bust on Pedestal → Bride → Stained-Glass Skylight → Oil Painting → Staircase Lower Section → Double Doors on Far Wall → Staircase Landing",
+          "anchor_refs": []
+        },
+        {
+          "panel_index": 9,
+          "hook_type": "tension_peak",
+          "duration": 6,
+          "scale": "ECU",
+          "motion_intent": "Groom is frozen before the discarded symbol of his marriage, forced to confront the beautiful lie.",
+          "dialogue_seed": "My life... is a lie.",
+          "state": {
+            "actors": [
+              {
+                "name": "Groom",
+                "position": "In the [center-hall], one step away from the discarded bouquet",
+                "pose": "standing, looking down",
+                "chest_direction": "toward [staircase-landing]",
+                "motion_action": "Stops, his shoe inches from the bouquet, frozen in place.",
+                "in_frame": true,
+                "gaze_target": "Wedding-Bouquet",
+                "visual_ref": "Groom",
+                "head_direction": "down at Wedding-Bouquet",
+                "vehicle_position": null
+              },
+              {
+                "name": "Bride",
+                "position": "On the [staircase-lower-right], halfway up to the [staircase-landing]",
+                "pose": "walking up the stairs, back to the camera",
+                "chest_direction": "toward [staircase-landing]",
+                "motion_action": "Continues walking up the stairs, disappearing from view.",
+                "in_frame": false,
+                "gaze_target": null,
+                "visual_ref": "Bride",
+                "head_direction": "up the stairs",
+                "vehicle_position": null
+              }
+            ],
+            "props": [
+              {
+                "name": "Wedding-Bouquet",
+                "position": "On the marble floor in the [center-hall]",
+                "prop_change": "unchanged — on the floor"
+              },
+              {
+                "name": "main-doors",
+                "position": "At the entrance to the hall",
+                "prop_change": "unchanged — closed"
+              }
+            ],
+            "complete_disposition": "The Groom stands in the [center-hall], his foot near the discarded bouquet on the floor. The Bride is now on the [staircase-lower-right], ascending toward the [staircase-landing].",
+            "environment": "The hall falls silent as the Bride's footsteps fade.",
+            "anchor_refs": [
+              "center-hall",
+              "staircase-lower-right",
+              "staircase-landing"
+            ]
+          },
+          "motion_action": "The Groom stops, frozen, looking down at the bouquet as the Bride exits up the stairs.",
+          "visual_start": "Extreme close-up, high-angle shot looking down. The frame is dominated by the discarded wedding bouquet lying on the black and white checkerboard marble floor. The white peonies and cream roses are slightly bruised from the impact. The tip of the Groom's impeccably polished black dress shoe is visible at the upper edge of the frame, paused inches away from the flowers. The cool, diffuse light from the skylight above creates soft shadows around the bouquet, making it look like a funeral offering. The Groom's face is out of frame.",
+          "visual_end": "Extreme close-up, same high-angle shot. The Groom's shoe remains frozen, inches from the bouquet. The only change is the subtle shift in light as his unseen body blocks more of it, casting a deeper shadow over the ruined flowers. The bouquet lies still, a symbol of a beautiful lie, now discarded on the cold, hard floor. The stillness is absolute, a perfect visual representation of the Groom's paralysis and the death of his hopes. The scene is silent, somber, and final.",
+          "lights_and_camera": "50mm lens, high-angle extreme close-up. The shot is focused sharply on the bouquet, with the Groom's shoe at the edge of the shallow depth of field. The cool top-light from the skylight illuminates the scene with a melancholic, sterile quality.",
+          "references": [
+            "Groom",
+            "Wedding-Bouquet"
+          ],
+          "location_references": [
+            "Mansion-Hall-View-From-Entrance"
+          ],
+          "camera_position": "center-hall",
+          "drama_requirements": {
+            "shot_scale": "ECU",
+            "camera_angle": "High-angle",
+            "composition_style": "Centered",
+            "focus_priority": {
+              "primary_target": "Wedding-Bouquet",
+              "secondary_target": "Groom's shoe",
+              "focus_depth": "Shallow"
+            },
+            "movement_intent": {
+              "type": "Static",
+              "target_trajectory": "Force the viewer to confront the broken symbol of the marriage.",
+              "dynamic_speed": "None"
+            },
+            "narrative_vibe": "The Beautiful Lie"
+          },
+          "text_safe_composition": true,
+          "panel_type": "narrative",
+          "motion_prompt": "At 0s, the high-angle shot shows the discarded bouquet on the marble floor, the tip of the Groom's polished shoe inches away. The scene is perfectly still. At 2s, a shadow begins to creep over the bouquet as the Groom's unseen body leans forward slightly, blocking more of the overhead light. The shadow slowly darkens the bruised white petals. From 3s to 6s, the scene holds this new state of deeper shadow. Nothing else moves. The Groom's shoe remains frozen, a silent sentinel next to the ruined symbol of his marriage. The stillness is absolute, conveying his paralysis.",
+          "is_reversed": false,
+          "motion_prompt_reversed": "",
+          "dialogue": "",
+          "voiceover": "Моя жизнь... ложь.",
+          "voiceover_settings": {
+            "gender": "male",
+            "actor": "Groom",
+            "age": "28",
+            "tone": "broken, desolate, whispered"
+          },
+          "voiceover_timing": "during_silence",
+          "emotional_beat": "dread",
+          "transition_to_next": "hard_cut",
+          "sound_design": "Absolute, profound silence. The ringing and heartbeat from the previous panel have completely faded, leaving a vacuum.",
+          "caption": "Красивая ложь.",
+          "visual_disposition": "Groom: View from just inside the entrance.; The checkerboard floor is in the immediate foreground. DEPTH: Entrance Double Doors → Groom → Grandfather Clock → Bust on Pedestal → Stained-Glass Skylight → Oil Painting → Staircase Lower Section → Double Doors on Far Wall → Staircase Landing",
+          "anchor_refs": []
+        }
+      ],
+      "episode_id": 2
+    }
+  ],
+  "config": {
+    "episodes_count": 2,
+    "format": {
+      "type": "single_grid_animation",
+      "panel_count_options": [
+        6,
+        9
+      ],
+      "panel_aspect_ratio": "9:16",
+      "frames_per_panel": 2
+    },
+    "image_generation": {
+      "aspect_ratio": "9:16",
+      "resolution": "2K",
+      "image_size": "2K"
+    },
+    "animation": {
+      "enabled": true,
+      "keyframe_type": "start"
+    },
+    "slicing": {
+      "enabled": true,
+      "frame_types": [
+        "start",
+        "end"
+      ]
+    },
+    "dialogue": {
+      "enabled": true,
+      "placement": "metadata_only"
+    },
+    "captions": {
+      "enabled": false
+    },
+    "transitions": {
+      "enabled": true,
+      "gap_threshold": "4h",
+      "style": "visual_rhyme"
+    },
+    "reference_characters": {
+      "enabled": true,
+      "auto_cast": true
+    },
+    "vertical": {
+      "safe_zone_top_pct": 15,
+      "safe_zone_bottom_pct": 20
+    }
+  }
+}

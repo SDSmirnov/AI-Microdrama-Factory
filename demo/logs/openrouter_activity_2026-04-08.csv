@@ -1,0 +1,117 @@
+created_at,cost_total,cost_web_search,cost_cache,cost_file_processing,byok_usage_inference,tokens_prompt,tokens_completion,tokens_reasoning,tokens_cached,model_permaslug,provider_name,variant,cancelled,streamed,user,finish_reason_raw,finish_reason_normalized,generation_time_ms,time_to_first_token_ms,app_name,api_key_name
+2026-04-08 11:07:55.789,0.026358,,,,0,5983,1888,1799,0,google/gemini-2.5-pro,Google,standard,false,true,,STOP,stop,19710,2710,,critic-api
+2026-04-08 11:05:33.204,0.070906,,,0,0,4352,1630,0,0,google/gemini-3.1-flash-image-preview-20260226,Google AI Studio,standard,false,true,,STOP,stop,17193,17066,,critic-api
+2026-04-08 11:04:45.523,0.024608,,,0,0,5903,1723,1360,0,google/gemini-2.5-pro,Google AI Studio,standard,false,true,,STOP,stop,17884,4188,,critic-api
+2026-04-08 11:04:21.635,0.070143,,,0,0,3637,1495,0,0,google/gemini-3.1-flash-image-preview-20260226,Google AI Studio,standard,false,true,,STOP,stop,16892,16802,,critic-api
+2026-04-08 11:03:38.935,0.028108,,,0,0,5903,2073,1801,0,google/gemini-2.5-pro,Google AI Studio,standard,false,true,,STOP,stop,20665,4404,,critic-api
+2026-04-08 11:03:21.376,0.02713,,,,0,5848,1982,1786,0,google/gemini-2.5-pro,Google,standard,false,true,,STOP,stop,24470,8105,,critic-api
+2026-04-08 11:03:01.289,0.070987,,,0,0,7575,1120,0,0,google/gemini-3.1-flash-image-preview-20260226,Google,standard,false,true,,STOP,stop,30386,30258,,critic-api
+2026-04-08 11:02:36.832,0.07033,,,0,0,6261,1120,0,0,google/gemini-3.1-flash-image-preview-20260226,Google,standard,false,true,,STOP,stop,38453,38413,,critic-api
+2026-04-08 11:01:58.878,0.025228,,,0,0,5903,1785,1480,0,google/gemini-2.5-pro,Google AI Studio,standard,false,true,,STOP,stop,18248,3706,,critic-api
+2026-04-08 11:01:52.422,0.024196,,,0,0,4269,1886,1673,0,google/gemini-2.5-pro,Google AI Studio,standard,false,true,,STOP,stop,17705,4027,,critic-api
+2026-04-08 11:01:34.600,0.070439,,,0,0,3634,1594,0,0,google/gemini-3.1-flash-image-preview-20260226,Google AI Studio,standard,false,true,,STOP,stop,16544,16457,,critic-api
+2026-04-08 11:01:30.796,0.069868,,,0,0,2858,1533,0,0,google/gemini-3.1-flash-image-preview-20260226,Google AI Studio,standard,false,true,,STOP,stop,16382,16205,,critic-api
+2026-04-08 11:01:05.639,0.025655,,,,0,4268,2032,1728,0,google/gemini-2.5-pro,Google,standard,false,true,,STOP,stop,20752,5565,,critic-api
+2026-04-08 11:00:49.389,0.027168,,,0,0,5903,1979,1740,0,google/gemini-2.5-pro,Google AI Studio,standard,false,true,,STOP,stop,21080,5248,,critic-api
+2026-04-08 11:00:32.698,0.069728,,,0,0,5057,1120,0,0,google/gemini-3.1-flash-image-preview-20260226,Google,standard,false,true,,STOP,stop,27596,27480,,critic-api
+2026-04-08 11:00:07.146,0.070987,,,0,0,7575,1120,0,0,google/gemini-3.1-flash-image-preview-20260226,Google,standard,false,true,,STOP,stop,35000,34930,,critic-api
+2026-04-08 10:59:41.890,0.028072,,,,0,4898,2195,1990,0,google/gemini-2.5-pro,Google,standard,false,true,,STOP,stop,20961,6378,,critic-api
+2026-04-08 10:59:23.823,0.069498,,,0,0,2857,1410,0,0,google/gemini-3.1-flash-image-preview-20260226,Google AI Studio,standard,false,true,,STOP,stop,13886,13803,,critic-api
+2026-04-08 10:58:31.447,0.027652,,,,0,4898,2153,1784,0,google/gemini-2.5-pro,Google,standard,false,true,,STOP,stop,49269,13501,,critic-api
+2026-04-08 10:58:12.014,0.069904,,,0,0,3416,1452,0,0,google/gemini-3.1-flash-image-preview-20260226,Google AI Studio,standard,false,true,,STOP,stop,14939,14873,,critic-api
+2026-04-08 10:57:36.441,0.025572,,,,0,5242,1902,1679,0,google/gemini-2.5-pro,Google,standard,false,true,,STOP,stop,33422,13121,,critic-api
+2026-04-08 10:57:14.180,0.070311,,,0,0,4315,1438,0,0,google/gemini-3.1-flash-image-preview-20260226,Google AI Studio,standard,false,true,,STOP,stop,15597,15504,,critic-api
+2026-04-08 10:56:32.913,0.023475,,,,0,4268,1814,1467,0,google/gemini-2.5-pro,Google,standard,false,true,,STOP,stop,36890,9807,,critic-api
+2026-04-08 10:55:15.437,0.069838,,,0,0,5276,1120,0,0,google/gemini-3.1-flash-image-preview-20260226,Google,standard,false,true,,STOP,stop,71916,71897,,critic-api
+2026-04-08 10:54:55.896,0.021535,,,,0,4268,1620,1297,0,google/gemini-2.5-pro,Google,standard,false,true,,STOP,stop,15733,5956,,critic-api
+2026-04-08 10:54:34.311,0.069772,,,0,0,3446,1403,0,0,google/gemini-3.1-flash-image-preview-20260226,Google AI Studio,standard,false,true,,STOP,stop,16567,16532,,critic-api
+2026-04-08 10:54:11.691,0.025411,,,,0,4601,1966,1773,0,google/gemini-2.5-pro,Google,standard,false,true,,STOP,stop,20122,6344,,critic-api
+2026-04-08 10:53:48.749,0.070672,,,0,0,4304,1560,0,0,google/gemini-3.1-flash-image-preview-20260226,Google AI Studio,standard,false,true,,STOP,stop,16496,16360,,critic-api
+2026-04-08 10:53:19.628,0.028382,,,,0,3634,2384,2167,0,google/gemini-2.5-pro,Google,standard,false,true,,STOP,stop,24693,7356,,critic-api
+2026-04-08 10:52:59.762,0.06975,,,0,0,3421,1400,0,0,google/gemini-3.1-flash-image-preview-20260226,Google AI Studio,standard,false,true,,STOP,stop,15498,15435,,critic-api
+2026-04-08 10:52:33.758,0.027387,,,,0,3630,2285,2010,0,google/gemini-2.5-pro,Google,standard,false,true,,STOP,stop,23535,5715,,critic-api
+2026-04-08 10:50:42.830,0.070459,,,0,0,6519,1120,0,0,google/gemini-3.1-flash-image-preview-20260226,Google,standard,false,true,,STOP,stop,104441,104415,,critic-api
+2026-04-08 10:50:13.330,0.030327,,,,0,3630,2579,2225,0,google/gemini-2.5-pro,Google,standard,false,true,,STOP,stop,24975,5279,,critic-api
+2026-04-08 10:49:19.894,0.07032,,,0,0,6241,1120,0,0,google/gemini-3.1-flash-image-preview-20260226,Google,standard,false,true,,STOP,stop,46818,46792,,critic-api
+2026-04-08 10:49:04.219,0.026211,,,,0,5345,1953,1761,0,google/gemini-2.5-pro,Google,standard,false,true,,STOP,stop,22603,8007,,critic-api
+2026-04-08 10:48:45.352,0.06959,,,0,0,2939,1427,0,0,google/gemini-3.1-flash-image-preview-20260226,Google AI Studio,standard,false,true,,STOP,stop,15288,15216,,critic-api
+2026-04-08 10:48:44.717,0.023928,,,,0,3703,1930,1726,0,google/gemini-2.5-pro,Google,standard,false,true,,STOP,stop,31612,12917,,critic-api
+2026-04-08 10:48:18.591,0.070578,,,0,0,4663,1469,0,0,google/gemini-3.1-flash-image-preview-20260226,Google AI Studio,standard,false,true,,STOP,stop,18494,18422,,critic-api
+2026-04-08 10:47:14.645,0.022632,,,0,0,5346,1595,1314,0,google/gemini-2.5-pro,Google AI Studio,standard,false,true,,STOP,stop,17628,4438,,critic-api
+2026-04-08 10:45:11.826,0.069228,,,0,0,4057,1120,0,0,google/gemini-3.1-flash-image-preview-20260226,Google,standard,false,true,,STOP,stop,118822,118744,,critic-api
+2026-04-08 10:44:43.356,0.031591,,,,0,5345,2491,2093,0,google/gemini-2.5-pro,Google,standard,false,true,,STOP,stop,25951,7355,,critic-api
+2026-04-08 10:44:26.905,0.06959,,,0,0,2939,1427,0,0,google/gemini-3.1-flash-image-preview-20260226,Google AI Studio,standard,false,true,,STOP,stop,13132,13039,,critic-api
+2026-04-08 10:43:59.760,0.032286,,,,0,6725,2388,1994,0,google/gemini-2.5-pro,Google,standard,false,true,,STOP,stop,25480,7628,,critic-api
+2026-04-08 10:43:10.648,0.073462,,,0,0,12524,1120,0,0,google/gemini-3.1-flash-image-preview-20260226,Google,standard,false,true,,STOP,stop,39349,39321,,critic-api
+2026-04-08 10:42:21.595,0.030287,,,0,0,6726,2188,1798,0,google/gemini-2.5-pro,Google AI Studio,standard,false,true,,STOP,stop,22539,4427,,critic-api
+2026-04-08 10:41:38.500,0.073436,,,0,0,12472,1120,0,0,google/gemini-3.1-flash-image-preview-20260226,Google,standard,false,true,,STOP,stop,32775,32660,,critic-api
+2026-04-08 10:40:46.339,0.026722,,,0,0,5082,2037,1848,0,google/gemini-2.5-pro,Google AI Studio,standard,false,true,,STOP,stop,28849,3902,,critic-api
+2026-04-08 10:40:25.853,0.069906,,,0,0,3480,1442,0,0,google/gemini-3.1-flash-image-preview-20260226,Google AI Studio,standard,false,true,,STOP,stop,16372,16262,,critic-api
+2026-04-08 10:39:33.321,0.039578,,,,0,5383,3285,2849,0,google/gemini-2.5-pro,Google,standard,false,true,,STOP,stop,50150,6239,,critic-api
+2026-04-08 10:39:12.224,0.070365,,,0,0,3865,1531,0,0,google/gemini-3.1-flash-image-preview-20260226,Google AI Studio,standard,false,true,,STOP,stop,14413,14364,,critic-api
+2026-04-08 10:38:23.521,0.03589,,,0,0,5384,2916,2660,0,google/gemini-2.5-pro,Google AI Studio,standard,false,true,,STOP,stop,27196,3580,,critic-api
+2026-04-08 10:37:22.560,0.070961,,,0,0,7523,1120,0,0,google/gemini-3.1-flash-image-preview-20260226,Google,standard,false,true,,STOP,stop,53427,53396,,critic-api
+2026-04-08 10:36:43.540,0.02572,,,0,0,4696,1985,1787,0,google/gemini-2.5-pro,Google AI Studio,standard,false,true,,STOP,stop,19653,3928,,critic-api
+2026-04-08 10:36:20.624,0.026536,,,0,0,4757,2059,1697,0,google/gemini-2.5-pro,Google AI Studio,standard,false,true,,STOP,stop,21772,4809,,critic-api
+2026-04-08 10:36:09.329,0.070378,,,0,0,6356,1120,0,0,google/gemini-3.1-flash-image-preview-20260226,Google,standard,false,true,,STOP,stop,28224,28157,,critic-api
+2026-04-08 10:35:24.914,0.03108,,,0,0,4696,2521,2267,0,google/gemini-2.5-pro,Google AI Studio,standard,false,true,,STOP,stop,24903,4356,,critic-api
+2026-04-08 10:35:04.608,0.070113,,,0,0,3751,1466,0,0,google/gemini-3.1-flash-image-preview-20260226,Google AI Studio,standard,false,true,,STOP,stop,14887,14814,,critic-api
+2026-04-08 10:34:42.551,0.022855,,,,0,4724,1695,1512,0,google/gemini-2.5-pro,Google,standard,false,true,,STOP,stop,18262,6918,,critic-api
+2026-04-08 10:34:29.902,0.073445,,,0,0,12490,1120,0,0,google/gemini-3.1-flash-image-preview-20260226,Google,standard,false,true,,STOP,stop,100768,100743,,critic-api
+2026-04-08 10:34:23.627,0.070413,,,0,0,4297,1475,0,0,google/gemini-3.1-flash-image-preview-20260226,Google AI Studio,standard,false,true,,STOP,stop,12500,12379,,critic-api
+2026-04-08 10:33:43.568,0.02622,,,0,0,4400,2072,1875,0,google/gemini-2.5-pro,Google AI Studio,standard,false,true,,STOP,stop,20851,4275,,critic-api
+2026-04-08 10:33:40.255,0.028616,,,0,0,4757,2267,1896,0,google/gemini-2.5-pro,Google AI Studio,standard,false,true,,STOP,stop,24107,3918,,critic-api
+2026-04-08 10:32:52.849,0.071052,,,0,0,7704,1120,0,0,google/gemini-3.1-flash-image-preview-20260226,Google,standard,false,true,,STOP,stop,39912,39877,,critic-api
+2026-04-08 10:32:44.124,0.073437,,,0,0,12475,1120,0,0,google/gemini-3.1-flash-image-preview-20260226,Google,standard,false,true,,STOP,stop,44012,43983,,critic-api
+2026-04-08 10:32:09.671,0.02778,,,0,0,4400,2228,1948,0,google/gemini-2.5-pro,Google AI Studio,standard,false,true,,STOP,stop,22812,4701,,critic-api
+2026-04-08 10:31:18.470,0.070956,,,0,0,7513,1120,0,0,google/gemini-3.1-flash-image-preview-20260226,Google,standard,false,true,,STOP,stop,44054,44041,,critic-api
+2026-04-08 10:30:40.283,0.023646,,,0,0,4757,1770,1454,0,google/gemini-2.5-pro,Google AI Studio,standard,false,true,,STOP,stop,18694,4282,,critic-api
+2026-04-08 10:29:46.351,0.073458,,,0,0,12516,1120,0,0,google/gemini-3.1-flash-image-preview-20260226,Google,standard,false,true,,STOP,stop,45041,44990,,critic-api
+2026-04-08 10:28:51.306,0.035366,,,0,0,4757,2942,2575,0,google/gemini-2.5-pro,Google AI Studio,standard,false,true,,STOP,stop,30909,5292,,critic-api
+2026-04-08 10:28:27.779,0.071501,,,0,0,6028,1549,0,0,google/gemini-3.1-flash-image-preview-20260226,Google AI Studio,standard,false,true,,STOP,stop,14028,13970,,critic-api
+2026-04-08 10:28:02.556,0.022882,,,,0,4322,1748,1510,0,google/gemini-2.5-pro,Google,standard,false,true,,STOP,stop,17242,6200,,critic-api
+2026-04-08 10:27:35.123,0.070741,,,0,0,4443,1560,0,0,google/gemini-3.1-flash-image-preview-20260226,Google AI Studio,standard,false,true,,STOP,stop,18755,18632,,critic-api
+2026-04-08 10:27:04.392,0.026712,,,,0,4322,2131,1823,0,google/gemini-2.5-pro,Google,standard,false,true,,STOP,stop,23306,6711,,critic-api
+2026-04-08 10:26:10.969,0.072229,,,0,0,10058,1120,0,0,google/gemini-3.1-flash-image-preview-20260226,Google,standard,false,true,,STOP,stop,43866,43781,,critic-api
+2026-04-08 10:23:39.816,0.008223,,,,0,2507,509,493,0,google/gemini-2.5-pro,Google,standard,false,true,,STOP,stop,8878,8837,,critic-api
+2026-04-08 10:22:31.823,0.005028,,,,0,1719,288,272,0,google/gemini-2.5-pro,Google,standard,false,true,,STOP,stop,6497,6465,,critic-api
+2026-04-08 10:21:53.393,0.109159,,,0,0,16719,1680,0,0,google/gemini-3.1-flash-image-preview-20260226,Google,standard,false,true,,STOP,stop,81725,81641,,critic-api
+2026-04-08 10:21:49.111,0.107535,,,0,0,7482,2678,0,0,google/gemini-3.1-flash-image-preview-20260226,Google AI Studio,standard,false,true,,STOP,stop,31029,30863,,critic-api
+2026-04-08 10:20:21.210,0.073206,,,,0,12189,5797,4023,0,google/gemini-2.5-pro,Google,standard,false,true,,STOP,stop,69537,9262,,critic-api
+2026-04-08 10:19:20.916,0.073508,,,,0,12679,5766,4140,0,google/gemini-2.5-pro,Google,standard,false,true,,STOP,stop,59517,7035,,critic-api
+2026-04-08 10:17:48.116,0.089391,,,0,0,25689,5728,2088,0,google/gemini-2.5-pro,Google AI Studio,standard,false,true,,STOP,stop,52969,3407,,critic-api
+2026-04-08 10:16:10.247,0.097247,,,0,0,20014,7223,2191,0,google/gemini-2.5-pro,Google AI Studio,standard,false,true,,STOP,stop,66318,3311,,critic-api
+2026-04-08 10:14:44.806,0.083747,,,,0,11382,6952,2279,0,google/gemini-2.5-pro,Google,standard,false,true,,STOP,stop,84672,4212,,critic-api
+2026-04-08 10:13:57.086,0.040851,,,0,0,8049,3079,2022,0,google/gemini-2.5-pro,Google AI Studio,standard,false,true,,STOP,stop,27752,2522,,critic-api
+2026-04-08 10:11:59.190,0.121973,,,,0,28595,8623,4642,0,google/gemini-2.5-pro,Google,standard,false,true,,STOP,stop,117123,3158,,critic-api
+2026-04-08 10:10:23.610,0.096196,,,0,0,23205,6719,1866,0,google/gemini-2.5-pro,Google AI Studio,standard,false,true,,STOP,stop,60450,3071,,critic-api
+2026-04-08 10:09:01.830,0.113631,,,,0,10649,10032,2315,0,google/gemini-2.5-pro,Google,standard,false,true,,STOP,stop,81120,2311,,critic-api
+2026-04-08 10:08:16.635,0.056767,,,,0,7558,4732,3528,0,google/gemini-2.5-pro,Google,standard,false,true,,STOP,stop,44307,2368,,critic-api
+2026-04-08 10:06:55.183,0.106358,,,0,0,15367,8715,2900,0,google/gemini-2.5-pro,Google AI Studio,standard,false,true,,STOP,stop,80991,3539,,critic-api
+2026-04-08 10:06:12.264,0.049796,,,0,0,1853,4748,3224,0,google/gemini-2.5-pro,Google AI Studio,standard,false,true,,STOP,stop,37810,4104,,critic-api
+2026-04-08 10:05:19.826,0.05611,,,0,0,1376,5439,4013,0,google/gemini-2.5-pro,Google AI Studio,standard,false,true,,STOP,stop,44216,3967,,critic-api
+2026-04-08 10:04:55.199,0.068563,,,0,0,747,1450,0,0,google/gemini-3.1-flash-image-preview-20260226,Google AI Studio,standard,false,true,,STOP,stop,13699,13647,,critic-api
+2026-04-08 10:04:34.247,0.067368,,,0,0,336,1120,0,0,google/gemini-3.1-flash-image-preview-20260226,Google,standard,false,true,,STOP,stop,15642,15611,,critic-api
+2026-04-08 10:04:18.986,0.068377,,,0,0,170,1484,0,0,google/gemini-3.1-flash-image-preview-20260226,Google AI Studio,standard,false,true,,STOP,stop,14046,13938,,critic-api
+2026-04-08 10:04:01.916,0.06727,,,0,0,140,1120,0,0,google/gemini-3.1-flash-image-preview-20260226,Google,standard,false,true,,STOP,stop,15499,15410,,critic-api
+2026-04-08 10:03:40.694,0.067855,,,0,0,1310,1120,0,0,google/gemini-3.1-flash-image-preview-20260226,Google,standard,false,true,,STOP,stop,19193,19125,,critic-api
+2026-04-08 10:03:16.576,0.067291,,,0,0,182,1120,0,0,google/gemini-3.1-flash-image-preview-20260226,Google,standard,false,true,,STOP,stop,19013,18958,,critic-api
+2026-04-08 10:03:00.515,0.068428,,,0,0,123,1509,0,0,google/gemini-3.1-flash-image-preview-20260226,Google AI Studio,standard,false,true,,STOP,stop,14924,14817,,critic-api
+2026-04-08 10:02:48.981,0.067866,,,0,0,192,1310,0,0,google/gemini-3.1-flash-image-preview-20260226,Google AI Studio,standard,false,true,,STOP,stop,10090,10025,,critic-api
+2026-04-08 10:02:33.121,0.068557,,,0,0,273,1527,0,0,google/gemini-3.1-flash-image-preview-20260226,Google AI Studio,standard,false,true,,STOP,stop,14340,14221,,critic-api
+2026-04-08 10:02:15.186,0.067271,,,0,0,142,1120,0,0,google/gemini-3.1-flash-image-preview-20260226,Google,standard,false,true,,STOP,stop,16696,16641,,critic-api
+2026-04-08 10:01:58.597,0.068527,,,0,0,134,1540,0,0,google/gemini-3.1-flash-image-preview-20260226,Google AI Studio,standard,false,true,,STOP,stop,15556,15478,,critic-api
+2026-04-08 10:01:18.277,0.042072,,,0,0,5482,3522,2743,0,google/gemini-2.5-pro,Google AI Studio,standard,false,true,,STOP,stop,29110,3943,,critic-api
+2026-04-08 10:00:26.036,0.064055,,,0,0,8444,5350,1930,0,google/gemini-2.5-pro,Google AI Studio,standard,false,true,,STOP,stop,51574,3259,,critic-api
+2026-04-08 09:56:49.441,0.049618,,,0,0,3935,4470,2908,0,google/gemini-2.5-pro,Google AI Studio,standard,false,true,,STOP,stop,37675,2812,,critic-api
+2026-04-08 09:55:37.646,0.071093,,,0,0,3555,6665,4177,0,google/gemini-2.5-pro,Google AI Studio,standard,false,true,,STOP,stop,65808,2587,,critic-api
+2026-04-08 09:54:35.676,0.073265,,,0,0,5524,6636,3715,0,google/gemini-2.5-pro,Google AI Studio,standard,false,true,,STOP,stop,61381,3066,,critic-api
+2026-04-08 09:53:56.537,0.048898,,,0,0,2975,4518,4148,0,google/gemini-2.5-pro,Google AI Studio,standard,false,true,,STOP,stop,38788,2388,,critic-api
+2026-04-08 09:53:42.226,0.020041,,,0,0,4865,1396,1159,0,google/gemini-2.5-pro,Google AI Studio,standard,false,true,,STOP,stop,13775,2365,,critic-api
+2026-04-08 09:50:14.281,0.039593,,,0,0,1667,3751,2256,0,google/gemini-2.5-pro,Google AI Studio,standard,false,true,,STOP,stop,36148,3034,,critic-api
+2026-04-08 09:49:35.826,0.041343,,,0,0,1667,3926,2667,0,google/gemini-2.5-pro,Google AI Studio,standard,false,true,,STOP,stop,37922,3099,,critic-api
+2026-04-08 09:48:39.381,0.039241,,,0,0,1017,3797,2171,0,google/gemini-2.5-pro,Google AI Studio,standard,false,true,,STOP,stop,37907,2177,,critic-api
+2026-04-08 09:48:37.016,0.03113,,,0,0,672,3029,2060,0,google/gemini-2.5-pro,Google AI Studio,standard,false,true,,STOP,stop,28888,2624,,critic-api
+2026-04-08 09:48:19.945,0.021253,,,0,0,1219,1973,1347,0,google/gemini-2.5-pro,Google AI Studio,standard,false,true,,STOP,stop,18873,3461,,critic-api
+2026-04-08 09:48:19.936,0.03621,,,0,0,1432,3442,2626,0,google/gemini-2.5-pro,Google AI Studio,standard,false,true,,STOP,stop,29802,2491,,critic-api
+2026-04-08 09:48:19.921,0.014577,,,0,0,950,1339,1062,0,google/gemini-2.5-pro,Google AI Studio,standard,false,true,,STOP,stop,16580,5060,,critic-api

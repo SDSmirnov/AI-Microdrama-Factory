@@ -1,0 +1,202 @@
+python cli.py --llm openrouter --style vertical_9_16_microdrama panel-by-panel-with-qa 1 all --threshold 5 --max-attempts 2
+INFO: 📂 Loading prompts from lib/prompting/vertical_9_16_microdrama/
+INFO:   📝 Override: style.md from custom_prompts/
+INFO:   📝 Override: setting.md from custom_prompts/
+INFO:   📝 Override: config.json from custom_prompts/
+INFO:   📚 Character refs: 11 with PNG, 0 missing PNG
+INFO: 📂 Loaded 11 refs from ref_thriller
+INFO: 
+============================================================
+INFO: 🎬 Scene 1 · Panel 1/9
+INFO: ============================================================
+INFO:   🎨 Rendering 001_01_static.png ...
+INFO:     ✅ Saved cinematic_render/panels/001_01_static.png
+INFO: 
+  🔍 QA (attempt 1/2)...
+INFO:   🔧 Refining panel 1 (attempt 1)...
+INFO:   🔧 Results: 1 1 {'fidelity': 9, 'character_consistency': 8, 'composition_match': 9, 'artifacts': ["Missing 'Wedding-Bouquet' from Bride's hands.", "Text on Reporter's scarf is garbled."], 'needs_refinement': True, 'refinement_prompt': "Add the 'Wedding-Bouquet' to the Bride's hands, as per the reference image. Increase the dramatic intensity to match the 'confrontation' beat: Change the Reporter's expression from neutral to a more pointed, challenging look. Change the Bride and Groom's expressions from neutral to show annoyance or forced, tense smiles, reacting to the reporter's unexpected presence.", 'suggest_mirror': False, 'mirror_reason': '', 'shot_impossible': False, 'shot_impossible_reason': '', 'dramatic_intensity': 3, 'reasoning': "The panel has excellent fidelity, character consistency (especially for the main Reporter character), and composition. The setting is a perfect match. However, it lacks the required 'confrontation' emotional beat, appearing as a static, neutral news report, resulting in a low dramatic intensity score. A key object, the Bride's bouquet, is also missing. Refinement is needed to add the missing object and inject the specified dramatic tension.", 'scene_id': 1, 'panel_id': 1, 'references_expected': ['Reporter', 'Groom', 'Bride', 'CN-NEWS-Microphone', 'Wedding-Bouquet', 'Mansion-Exterior-View-Primary'], 'references_loaded': ['Reporter', 'Groom', 'Bride', 'CN-NEWS-Microphone', 'Wedding-Bouquet', 'Mansion-Exterior-View-Primary']}
+INFO: 
+============================================================
+INFO: 🔧 Refinement: Scene 1, Panel 1, Frame: static
+INFO: ============================================================
+INFO:   ✓ Loaded ref: Groom
+INFO:   ✓ Loaded ref: Bride
+INFO:   ✓ Loaded ref: CN-NEWS-Microphone
+INFO:   ✓ Loaded ref: Wedding-Bouquet
+INFO:   ✓ Loaded ref: Mansion-Exterior-View-Primary
+INFO:   ✓ Loaded ref: Reporter
+INFO: 🎨 I2I refinement (fidelity=9, using 6 refs)...
+INFO: ✅ Saved: cinematic_render/refined/001_01_static_refined.png
+INFO:   ✅ Promoted refined → panels/001_01_static.png
+INFO: 
+  🔍 QA (attempt 2/2)...
+INFO:   ✅ Panel 1 passed QA (fidelity=9)
+INFO: 
+============================================================
+INFO: 🎬 Scene 1 · Panel 2/9
+INFO: ============================================================
+INFO:   🎨 Rendering 001_02_static.png ...
+INFO:     ✅ Saved cinematic_render/panels/001_02_static.png
+INFO: 
+  🔍 QA (attempt 1/2)...
+INFO:   🔧 Refining panel 2 (attempt 1)...
+INFO:   🔧 Results: 1 2 {'fidelity': 8, 'character_consistency': 6, 'composition_match': 6, 'dramatic_intensity': 4, 'artifacts': ["Reporter's microphone is generic black, not the required 'CN-NEWS-Microphone' with the blue logo.", 'Reporter is looking directly at the camera, breaking the fourth wall and contradicting the description.', "Reporter's scarf is missing the 'CN NEWS' logo."], 'needs_refinement': True, 'refinement_prompt': "The Reporter character needs several corrections. 1. Her microphone must be the 'CN-NEWS-Microphone' with the blue square and white logo. 2. She must not look directly at the camera; her head should be turned towards the side of the frame as if looking at an unseen crowd. 3. Her scarf should have the 'CN NEWS' logo. 4. Her pose is too static; have her slightly lower the microphone to create a sense of transition.", 'suggest_mirror': False, 'mirror_reason': '', 'shot_impossible': False, 'shot_impossible_reason': '', 'reasoning': "The panel successfully renders the overall scene, with good likenesses for the Groom, Bride, and Elderly-Man. However, it fails on key details for the Reporter: her microphone and scarf are missing the required 'CN NEWS' logo, which is a critical prop error. Furthermore, her direct-to-camera gaze breaks the narrative immersion and contradicts the script's direction for her to be looking at the crowd. This makes the composition feel like a posed photograph rather than a narrative moment. The overall dramatic intensity is low as a result.", 'scene_id': 1, 'panel_id': 2, 'references_expected': ['Groom', 'Bride', 'Reporter', 'Elderly-Man', 'Wheelchair', 'CN-NEWS-Microphone', 'Wedding-Bouquet', 'Mansion-Exterior-View-Primary'], 'references_loaded': ['Groom', 'Bride', 'Reporter', 'Elderly-Man', 'Wheelchair', 'CN-NEWS-Microphone']}
+INFO: 
+============================================================
+INFO: 🔧 Refinement: Scene 1, Panel 2, Frame: static
+INFO: ============================================================
+INFO:   ✓ Loaded ref: Groom
+INFO:   ✓ Loaded ref: Bride
+INFO:   ✓ Loaded ref: CN-NEWS-Microphone
+INFO:   ✓ Loaded ref: Wedding-Bouquet
+INFO:   ✓ Loaded ref: Mansion-Exterior-View-Primary
+INFO:   ✓ Loaded ref: Elderly-Man
+INFO:   ✓ Loaded ref: Reporter
+INFO:   ✓ Loaded ref: Wheelchair
+INFO: 🎨 I2I refinement (fidelity=8, using 8 refs)...
+INFO: ✅ Saved: cinematic_render/refined/001_02_static_refined.png
+INFO:   ✅ Promoted refined → panels/001_02_static.png
+INFO: 
+  🔍 QA (attempt 2/2)...
+WARNING:   ⚠️  Panel 2 still needs refinement after 2 attempt(s) (fidelity=2)
+INFO: 
+============================================================
+INFO: 🎬 Scene 1 · Panel 3/9
+INFO: ============================================================
+INFO:   🎨 Rendering 001_03_static.png ...
+INFO:     ✅ Saved cinematic_render/panels/001_03_static.png
+INFO: 
+  🔍 QA (attempt 1/2)...
+INFO:   🔧 Refining panel 3 (attempt 1)...
+INFO:   🔧 Results: 1 3 {'fidelity': 6, 'character_consistency': 9, 'composition_match': 4, 'dramatic_intensity': 7, 'artifacts': [], 'needs_refinement': True, 'refinement_prompt': "Refine the composition: change the shot to a Close-Up, framing the couple from the shoulders up. The camera angle should be a low angle, looking up at them. Correct the posing: the Bride's hand should be on the Groom's chest (she should not be holding the bouquet), and the Groom's hand should be on the small of her back. Increase the background blur to create a shallow depth of field.", 'suggest_mirror': False, 'mirror_reason': '', 'shot_impossible': False, 'shot_impossible_reason': '', 'reasoning': "Character consistency is excellent, with both the Bride and Groom closely matching their references. However, the panel fails on composition and key posing details. The shot is a Medium Shot from eye-level, not the requested Close-Up from a low angle. The posing is also incorrect: the Bride is holding her bouquet instead of placing her hand on the Groom's chest as described. These deviations from the script lower the fidelity and composition scores, requiring refinement.", 'scene_id': 1, 'panel_id': 3, 'references_expected': ['Groom', 'Bride', 'Wedding-Bouquet', 'Mansion-Exterior-View-Primary'], 'references_loaded': ['Groom', 'Bride', 'Wedding-Bouquet', 'Mansion-Exterior-View-Primary']}
+INFO: 
+============================================================
+INFO: 🔧 Refinement: Scene 1, Panel 3, Frame: static
+INFO: ============================================================
+INFO:   ✓ Loaded ref: Mansion-Exterior-View-Primary
+INFO:   ✓ Loaded ref: Groom
+INFO:   ✓ Loaded ref: Wedding-Bouquet
+INFO:   ✓ Loaded ref: Bride
+INFO: 🎨 I2I refinement (fidelity=6, using 4 refs)...
+INFO: ✅ Saved: cinematic_render/refined/001_03_static_refined.png
+INFO:   ✅ Promoted refined → panels/001_03_static.png
+INFO: 
+  🔍 QA (attempt 2/2)...
+INFO:   ✅ Panel 3 passed QA (fidelity=9)
+INFO: 
+============================================================
+INFO: 🎬 Scene 1 · Panel 4/9
+INFO: ============================================================
+INFO:   🎨 Rendering 001_04_static.png ...
+INFO:     ✅ Saved cinematic_render/panels/001_04_static.png
+INFO: 
+  🔍 QA (attempt 1/2)...
+INFO:   ✅ Panel 4 passed QA (fidelity=9)
+INFO: 
+============================================================
+INFO: 🎬 Scene 1 · Panel 5/9
+INFO: ============================================================
+INFO:   🎨 Rendering 001_05_static.png ...
+INFO:     ✅ Saved cinematic_render/panels/001_05_static.png
+INFO: 
+  🔍 QA (attempt 1/2)...
+INFO:   🔧 Refining panel 5 (attempt 1)...
+INFO:   🔧 Results: 1 5 {'fidelity': 9, 'character_consistency': 10, 'composition_match': 7, 'dramatic_intensity': 7, 'artifacts': [], 'needs_refinement': True, 'refinement_prompt': 'The composition is good, but the shot is a Medium Shot instead of the requested Close-Up. Please reframe as a Close-Up on the Elderly-Man, focusing on his face from the shoulders up, to better capture his proud smile and the glistening emotion in his eyes.', 'suggest_mirror': False, 'mirror_reason': '', 'shot_impossible': False, 'shot_impossible_reason': '', 'reasoning': "The panel is a very strong match to the character reference, capturing the Elderly-Man's likeness and emotion perfectly. The setting and lighting are also correct. The primary deviation is the shot framing; a Close-Up was requested to isolate the character's emotional reaction, but a wider Medium Shot was generated. While dramatically effective, it doesn't have the intimacy of the requested CU, leading to a lower composition score and a recommendation for refinement to tighten the shot.", 'scene_id': 1, 'panel_id': 5, 'references_expected': ['Elderly-Man', 'Wheelchair', 'Mansion-Exterior-View-Opposite'], 'references_loaded': ['Elderly-Man', 'Wheelchair', 'Mansion-Exterior-View-Opposite']}
+INFO: 
+============================================================
+INFO: 🔧 Refinement: Scene 1, Panel 5, Frame: static
+INFO: ============================================================
+INFO:   ✓ Loaded ref: Mansion-Exterior-View-Opposite
+INFO:   ✓ Loaded ref: Elderly-Man
+INFO:   ✓ Loaded ref: Wheelchair
+INFO: 🎨 I2I refinement (fidelity=9, using 3 refs)...
+INFO: ✅ Saved: cinematic_render/refined/001_05_static_refined.png
+INFO:   ✅ Promoted refined → panels/001_05_static.png
+INFO: 
+  🔍 QA (attempt 2/2)...
+INFO:   ✅ Panel 5 passed QA (fidelity=10)
+INFO: 
+============================================================
+INFO: 🎬 Scene 1 · Panel 6/9
+INFO: ============================================================
+INFO:   🎨 Rendering 001_06_static.png ...
+INFO:     ✅ Saved cinematic_render/panels/001_06_static.png
+INFO: 
+  🔍 QA (attempt 1/2)...
+INFO:   🔧 Refining panel 6 (attempt 1)...
+INFO:   🔧 Results: 1 6 {'fidelity': 9, 'character_consistency': 9, 'composition_match': 9, 'dramatic_intensity': 8, 'artifacts': ['Spatial inconsistency: The Groom is on the right and the Bride is on the left, which is a flip from their positions in panels 3 and 4.'], 'needs_refinement': True, 'refinement_prompt': '', 'suggest_mirror': True, 'mirror_reason': 'The Groom is on the right and the Bride is on the left. In the preceding panels (3 and 4), the Groom was consistently on the left and the Bride on the right. This panel should be horizontally flipped to maintain spatial continuity.', 'shot_impossible': False, 'shot_impossible_reason': '', 'reasoning': "The panel is a high-quality render with excellent character and location consistency. The composition and emotional tone match the description well. The only issue is that the characters' positions are spatially flipped compared to the previous panels (3 and 4), where the Groom was on the left and the Bride on the right. The panel should be horizontally mirrored to restore continuity.", 'scene_id': 1, 'panel_id': 6, 'references_expected': ['Groom', 'Bride', 'Wedding-Bouquet', 'Mansion-Exterior-View-Primary'], 'references_loaded': ['Groom', 'Bride', 'Wedding-Bouquet', 'Mansion-Exterior-View-Primary']}
+INFO: 
+============================================================
+INFO: 🔧 Refinement: Scene 1, Panel 6, Frame: static
+INFO: ============================================================
+INFO:   ✓ Loaded ref: Mansion-Exterior-View-Primary
+INFO:   ✓ Loaded ref: Groom
+INFO:   ✓ Loaded ref: Wedding-Bouquet
+INFO:   ✓ Loaded ref: Bride
+INFO: 🎨 I2I refinement (fidelity=9, using 4 refs)...
+INFO: ✅ Saved: cinematic_render/refined/001_06_static_refined.png
+INFO:   ✅ Promoted refined → panels/001_06_static.png
+INFO: 
+  🔍 QA (attempt 2/2)...
+WARNING:   ⚠️  Panel 6 still needs refinement after 2 attempt(s) (fidelity=9)
+INFO: 
+============================================================
+INFO: 🎬 Scene 1 · Panel 7/9
+INFO: ============================================================
+INFO:   🎨 Rendering 001_07_static.png ...
+INFO:     ✅ Saved cinematic_render/panels/001_07_static.png
+INFO: 
+  🔍 QA (attempt 1/2)...
+INFO:   ✅ Panel 7 passed QA (fidelity=10)
+INFO: 
+============================================================
+INFO: 🎬 Scene 1 · Panel 8/9
+INFO: ============================================================
+INFO:   🎨 Rendering 001_08_static.png ...
+INFO:     ✅ Saved cinematic_render/panels/001_08_static.png
+INFO: 
+  🔍 QA (attempt 1/2)...
+INFO:   🔧 Refining panel 8 (attempt 1)...
+INFO:   🔧 Results: 1 8 {'fidelity': 3, 'character_consistency': 7, 'composition_match': 4, 'dramatic_intensity': 0, 'artifacts': ['Spatial inconsistency: The Elderly-Man is on the right side of the frame, but was established on the left in previous panels.', 'Incorrect character posing: The Groom and Bride are in a romantic dance pose, not pivoting to enter the mansion as described.', "Incorrect character orientation: The Groom's back is not turning to the camera; the Bride is not looking over his shoulder."], 'needs_refinement': True, 'refinement_prompt': 'The pose and dramatic tone are incorrect. This should be a moment of dread, not a romantic dance. The Groom should be pivoting to carry the Bride into the dark, open doorway of the mansion, with his back starting to turn to the camera. The Bride should be looking over his shoulder. The foreground characters are spatially flipped: the Elderly-Man in the wheelchair should be on the left, and the Reporter should be more central. The overall mood should be ominous as the couple leaves the bright sunlight for the darkness of the mansion.', 'suggest_mirror': False, 'mirror_reason': '', 'shot_impossible': False, 'shot_impossible_reason': '', 'reasoning': "The panel fails to capture the described action and emotional beat. Instead of the Groom pivoting to enter the mansion, creating a sense of dread, the couple is in a static, romantic dance pose. This results in a complete failure of dramatic intensity. The composition is also incorrect due to the pose and the spatially inconsistent placement of the foreground characters (Elderly-Man and Reporter are flipped). While the main characters are recognizable, the overall execution deviates significantly from the script's intent.", 'scene_id': 1, 'panel_id': 8, 'references_expected': ['Groom', 'Bride', 'Reporter', 'Elderly-Man', 'Wheelchair', 'CN-NEWS-Microphone', 'Wedding-Bouquet', 'Mansion-Exterior-View-Primary'], 'references_loaded': ['Groom', 'Bride', 'Reporter', 'Elderly-Man', 'Wheelchair', 'CN-NEWS-Microphone']}
+INFO: 
+============================================================
+INFO: 🔧 Refinement: Scene 1, Panel 8, Frame: static
+INFO: ============================================================
+INFO:   ✓ Loaded ref: Groom
+INFO:   ✓ Loaded ref: Bride
+INFO:   ✓ Loaded ref: CN-NEWS-Microphone
+INFO:   ✓ Loaded ref: Wedding-Bouquet
+INFO:   ✓ Loaded ref: Mansion-Exterior-View-Primary
+INFO:   ✓ Loaded ref: Elderly-Man
+INFO:   ✓ Loaded ref: Reporter
+INFO:   ✓ Loaded ref: Wheelchair
+INFO: 🎨 I2I refinement (fidelity=3, using 8 refs)...
+INFO: ✅ Saved: cinematic_render/refined/001_08_static_refined.png
+INFO:   ✅ Promoted refined → panels/001_08_static.png
+INFO: 
+  🔍 QA (attempt 2/2)...
+WARNING:   ⚠️  Panel 8 still needs refinement after 2 attempt(s) (fidelity=4)
+INFO: 
+============================================================
+INFO: 🎬 Scene 1 · Panel 9/9
+INFO: ============================================================
+INFO:   🎨 Rendering 001_09_static.png ...
+INFO:     ✅ Saved cinematic_render/panels/001_09_static.png
+INFO: 
+  🔍 QA (attempt 1/2)...
+INFO:   🔧 Refining panel 9 (attempt 1)...
+INFO:   🔧 Results: 1 9 {'fidelity': 6, 'character_consistency': 0, 'composition_match': 7, 'artifacts': ["The design of the wooden doors (paneling) does not match the reference image 'Mansion-Exterior-View-Primary'.", 'The door handles are ornate, gold-colored levers, but the reference image shows simpler, dark metal vertical pull handles.', 'The shot is a Close-Up (CU), not an Extreme Close-Up (ECU) as requested in the script.'], 'needs_refinement': True, 'refinement_prompt': "The panel design of the wooden doors and the style of the door handles do not match the reference image 'Mansion-Exterior-View-Primary'. Regenerate the image to match the reference doors: dark wood with two large upper panels and two smaller lower panels, and simple dark metal vertical pull handles. The shot should also be a tighter Extreme Close-Up (ECU), focusing more narrowly on the vertical gap between the doors as they close.", 'suggest_mirror': False, 'mirror_reason': '', 'shot_impossible': False, 'shot_impossible_reason': '', 'dramatic_intensity': 8, 'reasoning': "The panel successfully captures the dramatic intent of the doors closing, creating a sense of dread and finality. However, the visual fidelity to the established location reference is low. The design of the doors, particularly the ornate paneling and the gold lever handles, directly contradicts the simpler, darker design seen in the 'Mansion-Exterior-View-Primary' reference. The shot is also a Close-Up rather than the requested Extreme Close-Up, which reduces the intended claustrophobic feeling. Refinement is needed to correct these continuity errors.", 'scene_id': 1, 'panel_id': 9, 'references_expected': ['Mansion-Exterior-View-Primary'], 'references_loaded': ['Mansion-Exterior-View-Primary']}
+INFO: 
+============================================================
+INFO: 🔧 Refinement: Scene 1, Panel 9, Frame: static
+INFO: ============================================================
+INFO:   ✓ Loaded ref: Mansion-Exterior-View-Primary
+INFO: 🎨 I2I refinement (fidelity=6, using 1 refs)...
+INFO: ✅ Saved: cinematic_render/refined/001_09_static_refined.png
+INFO:   ✅ Promoted refined → panels/001_09_static.png
+INFO: 
+  🔍 QA (attempt 2/2)...
+WARNING:   ⚠️  Panel 9 still needs refinement after 2 attempt(s) (fidelity=5)
+INFO: 
+✅ Done: 5/9 panel(s) passed QA.
+make: *** [Makefile:168: panel-by-panel-with-qa] Error 1

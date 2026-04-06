@@ -1,0 +1,24 @@
+{
+  "novels": [
+    "s01e01.txt"
+  ],
+  "scene_files": [
+    {
+      "episode": 1,
+      "has_refined": true,
+      "has_raw": true
+    },
+    {
+      "episode": 2,
+      "has_refined": true,
+      "has_raw": true
+    },
+    {
+      "episode": 3,
+      "has_refined": true,
+      "has_raw": false
+    }
+  ],
+  "has_metadata": true,
+  "storyboards": []
+}

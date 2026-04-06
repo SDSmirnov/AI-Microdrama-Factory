@@ -1,0 +1,38 @@
+[2026-04-08T12:49:35] [start] --llm openrouter logic s01e01_original.txt --output s01e01_fixed.txt
+[2026-04-08T12:50:50] [ended] --llm openrouter logic s01e01_original.txt --output s01e01_fixed.txt
+[2026-04-08T12:53:41] [start] --llm openrouter --style vertical_9_16_microdrama styles s01e01.txt
+[2026-04-08T12:57:27] [ended] --llm openrouter --style vertical_9_16_microdrama styles s01e01.txt
+[2026-04-08T13:00:25] [start] --llm openrouter --style vertical_9_16_microdrama casting s01e01.txt
+[2026-04-08T13:01:47] [ended] --llm openrouter --style vertical_9_16_microdrama casting s01e01.txt
+[2026-04-08T13:01:58] [start] --llm openrouter --style vertical_9_16_microdrama refs
+[2026-04-08T13:05:10] [ended] --llm openrouter --style vertical_9_16_microdrama refs
+[2026-04-08T13:05:15] [start] --llm openrouter --style vertical_9_16_microdrama room-anchors
+[2026-04-08T13:06:50] [ended] --llm openrouter --style vertical_9_16_microdrama room-anchors
+[2026-04-08T13:06:54] [start] --llm openrouter --style vertical_9_16_microdrama screenplay s01e01.txt
+[2026-04-08T13:19:16] [ended] --llm openrouter --style vertical_9_16_microdrama screenplay s01e01.txt
+[2026-04-08T13:19:20] [start] --llm openrouter --style vertical_9_16_microdrama disposition all
+[2026-04-08T13:21:31] [ended] --llm openrouter --style vertical_9_16_microdrama disposition all
+[2026-04-08T13:21:35] [start] --llm openrouter --style vertical_9_16_microdrama storyboard all all
+[2026-04-08T13:23:50] [ended] --llm openrouter --style vertical_9_16_microdrama storyboard all all
+[2026-04-08T13:26:05] [start] --llm openrouter --style vertical_9_16_microdrama panel-by-panel-with-qa 1 all --threshold 5 --max-attempts 2
+[2026-04-08T13:32:36] [start] --llm openrouter --style vertical_9_16_microdrama panel-by-panel-with-qa 1 2 --threshold 5 --max-attempts 2
+[2026-04-08T13:36:57] [ended] --llm openrouter --style vertical_9_16_microdrama panel-by-panel-with-qa 1 2 --threshold 5 --max-attempts 2
+[2026-04-08T13:47:48] [ended] --llm openrouter --style vertical_9_16_microdrama panel-by-panel-with-qa 1 all --threshold 5 --max-attempts 2
+[2026-04-08T13:48:13] [start] --llm openrouter --style vertical_9_16_microdrama panel-by-panel-with-qa 2 all --threshold 5 --max-attempts 2
+[2026-04-08T13:48:42] [start] --llm openrouter --style vertical_9_16_microdrama panel-by-panel-with-qa 1 9 --threshold 5 --max-attempts 2
+[2026-04-08T13:49:27] [ended] --llm openrouter --style vertical_9_16_microdrama panel-by-panel-with-qa 1 9 --threshold 5 --max-attempts 2
+[2026-04-08T14:00:30] [start] --llm openrouter --style vertical_9_16_microdrama panel-by-panel-with-qa 2 5 --threshold 5 --max-attempts 2
+[2026-04-08T14:02:24] [ended] --llm openrouter --style vertical_9_16_microdrama panel-by-panel-with-qa 2 5 --threshold 5 --max-attempts 2
+[2026-04-08T14:02:57] [start] --llm openrouter --style vertical_9_16_microdrama panel-by-panel-with-qa 2 8 --threshold 5 --max-attempts 2
+[2026-04-08T14:03:46] [ended] --llm openrouter --style vertical_9_16_microdrama panel-by-panel-with-qa 2 all --threshold 5 --max-attempts 2
+[2026-04-08T14:05:17] [ended] --llm openrouter --style vertical_9_16_microdrama panel-by-panel-with-qa 2 8 --threshold 5 --max-attempts 2
+[2026-04-08T14:05:29] [start] --llm openrouter --style vertical_9_16_microdrama panel-by-panel-with-qa 2 8 --threshold 5 --max-attempts 2
+[2026-04-08T14:05:57] [ended] --llm openrouter --style vertical_9_16_microdrama panel-by-panel-with-qa 2 8 --threshold 5 --max-attempts 2
+[2026-04-08T14:07:55] [start] --llm openrouter suno-prompt
+[2026-04-08T14:08:15] [ended] --llm openrouter suno-prompt
+[2026-04-08T14:59:49] [start] rebuild-storyboard all
+[2026-04-08T14:59:53] [ended] rebuild-storyboard all
+[2026-04-08T16:05:14] [start] srt HELL.E01.nobg.mp4 E01.srt
+[2026-04-08T16:06:12] [ended] srt HELL.E01.nobg.mp4 E01.srt
+[2026-04-08T16:07:13] [start] dynamic-subtitles HELL.E01.nobg.mp4 E01.overlay.mov --srt E01.srt --overlay-only
+[2026-04-08T16:11:35] [ended] dynamic-subtitles HELL.E01.nobg.mp4 E01.overlay.mov --srt E01.srt --overlay-only
