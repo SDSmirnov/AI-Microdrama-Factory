@@ -5,7 +5,7 @@ from pathlib import Path
 
 from lib.commands.common import _make_llm
 from lib.core.project import Project, load_project
-from lib.studio.artist import auto_cast_characters, remake_room_refs, render_character_refs, run_room_anchors
+from lib.studio.artist import auto_cast_characters, detail_room_refs, remake_room_refs, render_character_refs, run_room_anchors
 from lib.studio.critic import run_room_view_qa
 from lib.studio.stylist import analyze_novel, generate_custom_prompts
 
@@ -48,6 +48,14 @@ def cmd_casting(args):
     text = Path(args.novel).read_text(encoding='utf-8')
     auto_cast_characters(text, prompts, config, llm, project)
     logger.info(f"\n✅ Done. Reference JSONs in {project.ref_dir}/")
+
+
+def cmd_detail_rooms(args):
+    project, prompts, config = load_project(style=args.style)
+    llm = _make_llm(args.llm, project, system_prompt=prompts['screenplay'])
+    text = Path(args.novel).read_text(encoding='utf-8')
+    detail_room_refs(text, llm, project, force=args.force)
+    logger.info(f"\n✅ Done. Enriched room descriptions in {project.ref_dir}/")
 
 
 def cmd_refs(args):
@@ -97,6 +105,14 @@ def register(sub):
     p = sub.add_parser('casting', help='Identify characters and save reference JSONs')
     p.add_argument('novel', help='Novel text file')
     p.set_defaults(func=cmd_casting)
+
+    p = sub.add_parser(
+        'detail-rooms',
+        help='Enrich room ref visual_desc with named furniture, equipment, and per-character anchors',
+    )
+    p.add_argument('novel', help='Novel text file')
+    p.add_argument('--force', action='store_true', help='Re-process rooms already marked details_applied')
+    p.set_defaults(func=cmd_detail_rooms)
 
     p = sub.add_parser('refs', help='Render missing character reference portraits from existing JSONs')
     p.set_defaults(func=cmd_refs)

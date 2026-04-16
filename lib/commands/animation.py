@@ -1,12 +1,13 @@
-"""Animation commands: animation, autocut."""
+"""Animation commands: animation, autocut, quick-play."""
 import json
 import logging
 import os
 import sys
+from pathlib import Path
 
 from lib.animation.grok import GrokAnimator
 from lib.animation.veo import VeoAnimator
-from lib.commands.common import _make_vision_llm
+from lib.commands.common import _make_llm, _make_vision_llm
 from lib.core.project import Project, load_project
 from lib.studio.cutter import run_autocut
 
@@ -105,7 +106,31 @@ def cmd_autocut(args):
     logger.info(f"\n✅ Done. Trimmed clips in {args.out_dir}/")
 
 
+def cmd_quick_play(args):
+    from lib.studio.quickplay import build_quickplay
+    project = Project()
+    episodes_path = Path(args.json) if args.json else project.output_dir / "animation_episodes.json"
+    if not episodes_path.exists():
+        logger.error("❌ %s not found", episodes_path)
+        sys.exit(1)
+    llm = _make_llm(args.llm, project)
+    build_quickplay(episodes_path, Path(args.output), llm,
+                    workers=args.workers, target_seconds=args.target_seconds)
+
+
 def register(sub):
+    p = sub.add_parser('quick-play',
+                       help='Synthesize quickplay.json for 10-second multi-ref clips (Seedance/Kling/Grok)')
+    p.add_argument('--json', default=None,
+                   help='Source animation_episodes.json (default: cinematic_render/animation_episodes.json)')
+    p.add_argument('--output', default='cinematic_render/quickplay.json',
+                   help='Output path (default: cinematic_render/quickplay.json)')
+    p.add_argument('--workers', type=int, default=5,
+                   help='Parallel LLM synthesis workers (default: 5)')
+    p.add_argument('--target-seconds', type=int, choices=[6, 8, 10, 15], default=10,
+                   help='Target clip duration in seconds (default: 10)')
+    p.set_defaults(func=cmd_quick_play)
+
     p = sub.add_parser('animation', help='Generate video clips')
     p.add_argument('provider', choices=['veo', 'grok'], help='Animation provider')
     p.add_argument('scene', nargs='?', default='all', help='Scene number or "all"')

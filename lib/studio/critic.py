@@ -235,6 +235,73 @@ def _compute_background_ground_truth(panel_meta: Dict, ref_catalog: Dict[str, Di
     )
 
 
+def _compute_anchor_visibility(panel_meta: Dict, ref_catalog: Dict[str, Dict]) -> str:
+    """Return a filtered anchor visibility block for the panel's active location ref.
+
+    Includes objects named in panel.state.anchor_refs plus any anchor referenced by
+    panel.camera_position (annotated as the camera placement anchor).
+    Mirrors _panel_anchor_context from artist.py but operates on ref_catalog.
+    Returns empty string when anchor data is unavailable.
+    """
+    anchor_refs = set(panel_meta.get('state', {}).get('anchor_refs', []))
+
+    from lib.studio.artist import _anchor_visibility_block, _extract_camera_anchor_labels
+
+    # Suffix → canonical view that carries anchor_points
+    _TO_CANONICAL_SUFFIX = {
+        'View-To-Entrance':        'View-From-Entrance',
+        'View-From-Left-Wall':     'View-From-Entrance',
+        'View-From-Right-Wall':    'View-From-Entrance',
+        'View-Center-To-Far':      'View-From-Entrance',
+        'View-Center-To-Entrance': 'View-From-Entrance',
+        'View-By-Far-Wall':        'View-From-Entrance',
+        'View-By-Entrance':        'View-From-Entrance',
+        'View-Opposite':           'View-Primary',
+        'Interior-To-Entrance':    'Interior-From-Entrance',
+    }
+    _CANONICAL_SUFFIXES = {'View-From-Entrance', 'View-Primary', 'Interior-From-Entrance', 'Exterior'}
+    _ALL_SUFFIXES = set(_TO_CANONICAL_SUFFIX) | _CANONICAL_SUFFIXES
+
+    view_suffix = None
+    anchor_points = None
+    for ref_name in panel_meta.get('location_references', []):
+        matched = next((s for s in _ALL_SUFFIXES if ref_name.endswith(f'-{s}')), None)
+        if not matched:
+            continue
+        view_suffix = matched
+        canonical_suffix = _TO_CANONICAL_SUFFIX.get(matched, matched)
+        if canonical_suffix != matched:
+            base = ref_name[: -(len(matched) + 1)]
+            canonical_name = f'{base}-{canonical_suffix}'
+        else:
+            canonical_name = ref_name
+        entry = ref_catalog.get(canonical_name) or ref_catalog.get(ref_name)
+        if entry:
+            anchor_points = entry.get('json', {}).get('anchor_points')
+        break
+
+    if not anchor_points or not view_suffix:
+        return ''
+
+    camera_anchors = _extract_camera_anchor_labels(panel_meta.get('camera_position', ''), anchor_points)
+    include = anchor_refs | camera_anchors
+    if not include:
+        return ''
+
+    filtered = dict(anchor_points)
+    filtered['objects'] = [
+        obj for obj in anchor_points.get('objects', [])
+        if obj.get('label') in include
+    ]
+    if not filtered['objects']:
+        return ''
+
+    block = _anchor_visibility_block(filtered, view_suffix, frozenset(camera_anchors))
+    if not block:
+        return ''
+    return '\n## ANCHOR POSITIONS IN THIS VIEW (view-space coordinates)\n' + block
+
+
 # ---------------------------------------------------------------------------
 # Data loading
 # ---------------------------------------------------------------------------
@@ -393,6 +460,7 @@ Flag in artifacts if there is an unexplained discontinuity.
     dramatic_intensity_panel_type = "  Evaluate: is there a visible power struggle, physical threat, raw emotion on a face, or a visual secret in the frame?"
 
     spatial_ground_truth = _compute_background_ground_truth(panel_meta, ref_catalog)
+    anchor_visibility = _compute_anchor_visibility(panel_meta, ref_catalog)
 
     qa_criteria = (prompts or {}).get('qa', '')
     if qa_criteria:
@@ -438,7 +506,7 @@ Flag in artifacts if there is an unexplained discontinuity.
 """
 
     prompt = f"""{scoring_section}
-{spatial_ground_truth}
+{spatial_ground_truth}{anchor_visibility}
 ## TASK
 Analyze this PANEL IMAGE against its script description and character references.
 Score the visual fidelity and decide if the panel needs regeneration.

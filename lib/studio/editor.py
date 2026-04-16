@@ -85,6 +85,7 @@ def _regenerate_t2i(
     char_refs: list,
     aspect_ratio: str,
     prompts: dict = None,
+    anchor_context: str = '',
 ) -> bytes:
     """Full T2I regeneration for panels too broken for I2I editing."""
     disposition = panel.get('visual_disposition', '')
@@ -112,6 +113,7 @@ def _regenerate_t2i(
         + (f"Actors: {actors_line}. " if actors_line else "")
         + f"Visual: {visual_desc}. "
         + (f"Disposition: {disposition}. " if disposition else "")
+        + (f"\n{anchor_context}\n" if anchor_context else "")
         + (f"Camera/Lighting: {lighting_context}. " if lighting_context else "")
         + "CONSISTENCY RULE: Maintain IDENTICAL face, hair, clothing, and body proportions as shown in the reference images. "
         + "NO CAPTIONS. NO TEXT OVERLAYS. NO WATERMARKS. NO TEARS. NO SPITTING."
@@ -195,6 +197,11 @@ def refine_panel(
         char_refs.append("# CHARACTER/LOCATION REFERENCE LIBRARY\nUse these for accurate visual details:\n")
         char_refs.extend(ref_content)
 
+    anchor_context = ''
+    if project:
+        from lib.studio.artist import _panel_anchor_context
+        anchor_context = _panel_anchor_context(panel, project)
+
     img_bytes = None
     try:
         if force_regen:
@@ -202,7 +209,7 @@ def refine_panel(
                 f"🔄 Fidelity={fidelity} < {_REGEN_FIDELITY_THRESHOLD} — full T2I regeneration "
                 f"(using {len(loaded_refs)} refs)..."
             )
-            img_bytes = _regenerate_t2i(llm, scene, panel, visual_desc, char_refs, aspect_ratio, prompts=prompts)
+            img_bytes = _regenerate_t2i(llm, scene, panel, visual_desc, char_refs, aspect_ratio, prompts=prompts, anchor_context=anchor_context)
         else:
             logger.info(f"🎨 I2I refinement (fidelity={fidelity}, using {len(loaded_refs)} refs)...")
             disposition = panel.get('visual_disposition', '')
@@ -222,6 +229,7 @@ def refine_panel(
                 + (f"Actors: {actors_line}. " if actors_line else "")
                 + f"Panel description: {visual_desc}"
                 + (f" Spatial disposition: {disposition}" if disposition else "")
+                + (f"\n{anchor_context}" if anchor_context else "")
             )
             single_panel_spec = f"Render a SINGLE {aspect_ratio} portrait image. One panel only — no grid."
             imagery_rules = (prompts or {}).get('imagery', '').replace('{grid_layout}', single_panel_spec)

@@ -50,7 +50,7 @@ When a panel deviates for dramatic effect, flag it explicitly in `lights_and_cam
 [ACTOR_NAME]: frame-[LEFT|CENTER|RIGHT] [FG|MG|BG], [PROFILE]→gaze:[GAZE_TARGET], [POSE], [BODY_DETAIL_1], [BODY_DETAIL_2 or omit]
 ... (one ACTOR line per in_frame=true actor)
 BG: [NAMED_WALL or SURFACE], [ELEMENT_1] [sharp|soft|heavy-bokeh], [ELEMENT_2 or —]
-BGD: [DENSITY] [CROWD_TYPE], [DEPTH_PLANE], heavy-bokeh   ← include only at MS/MWS/WS/XWS when BACKGROUND ACTIVITY block is present; OMIT at ECU/CU/Macro
+BGD: [DENSITY] [CROWD_TYPE], [DEPTH_PLANE], heavy-bokeh   ← MANDATORY in EVERY MS/MWS/WS/XWS panel when BACKGROUND ACTIVITY block is present; OMIT at ECU/CU/Macro; missing BGD = checklist failure
 LIGHT: [KEY_DIRECTION], [QUALITY], [COLOR_TEMP], fill 1:[N]
 PROP: [SLUG] at [ANCHOR_or_BODY_PART], [STATE]   ← include only for stake objects or prop state changes
 CONTEXT: [≤15 words — scene-specific visual fact not encodable above]  ← omit if not needed
@@ -392,7 +392,9 @@ At tight shot scales, the camera frame physically cannot contain distant actors.
 
 ## BACKGROUND LIFE — rendering live environments
 
-When a `BACKGROUND ACTIVITY` block is injected, the location is not empty — it contains unnamed extras who make the space feel live-action. Apply these rules:
+When a `BACKGROUND ACTIVITY` block is injected, the location contains unnamed extras. The `BGD:` line is **not optional** — it is required in every eligible panel and its absence is a checklist failure.
+
+**Coverage rule — MANDATORY:** Before writing any panel, count how many panels in this batch are at `MS`, `MWS`, `WS`, or `XWS` scale. Each of those panels MUST contain a `BGD:` line in both `visual_start` and `visual_end`. A dramatic or emotionally intense panel does NOT exempt it — on the contrary, oblivious background workers during a horror beat amplify the protagonist's isolation.
 
 **Scale gate — HARD RULE:** `BGD:` line only at `MS`, `MWS`, `WS`, `XWS`. Forbidden at `ECU`, `CU`, `Macro`. At tight scales the background is geometrically out of frame.
 
@@ -405,14 +407,21 @@ Example:
 BGD: moderate bank clerks at teller counters and customers mid-transaction, mid-to-far ground, heavy-bokeh
 ```
 
+**State progression within a scene:** The BGD description should reflect the crowd's evolving narrative state across panels — do not copy-paste identically from P1 to P9. Let the background react to the drama at the appropriate pace:
+- Scene open: crowd oblivious, normal activity
+- Mid-scene escalation: some figures glancing toward the action, slowing down
+- Dramatic peak: crowd frozen, all attention on the event
+
+This state progression is encoded in `crowd_type`/movement description, not in density (density is fixed per the screenplay's `background_activity` block).
+
 **Content rules:**
 - Background figures are ALWAYS at the declared `focal_plane` (typically mid-to-far), ALWAYS `heavy-bokeh`. Never sharp.
 - Never describe individual background extras by name — describe them as type and approximate count: "two clerks", "a group of patrons".
-- Never describe their expressions or specific actions in `visual_start`/`visual_end` — only spatial presence.
+- Never describe their expressions or specific actions in `visual_start`/`visual_end` — only spatial presence and crowd state.
 - Do NOT include background extras in `references[]` — they are unnamed and have no ref slugs.
 - Background figures must never overlap the primary actors' face zone (upper 65% of frame center).
 
-**visual_end rule:** The `BGD:` line may show a subtle shift (one extra moved to a different position) but must not be the change that satisfies the ≥2-attribute-diff requirement — that must come from primary ACTOR or PROP lines.
+**visual_end rule:** The `BGD:` line may show a subtle state shift (crowd turning to look, slowing) but must not be the change that satisfies the ≥2-attribute-diff requirement — that must come from primary ACTOR or PROP lines.
 
 ---
 

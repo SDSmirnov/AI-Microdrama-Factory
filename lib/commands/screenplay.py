@@ -30,13 +30,17 @@ def cmd_screenplay(args):
     state = ProjectState.load(project.state_path())
 
     text = Path(args.novel).read_text(encoding='utf-8')
+    episodes_only = getattr(args, 'episodes_only', False)
     data = analyze_scenes_master(
         text, prompts, config, llm,
         character_info=project.character_info,
         output_dir=project.output_dir,
         state=state,
         resume=resume,
+        episodes_only=episodes_only,
     )
+    if episodes_only:
+        return
     if not data or 'scenes' not in data:
         logger.error("❌ Failed to generate screenplay.")
         sys.exit(1)
@@ -615,6 +619,8 @@ def register(sub):
     p.add_argument('novel', help='Novel text file')
     p.add_argument('--resume', action='store_true', default=False,
                    help='Skip already-completed phases (episodes/raw/refined) using pipeline_state.json')
+    p.add_argument('--episodes-only', action='store_true', default=False,
+                   help='Stop after writing animation_episodes.json (skip scene keyframe generation)')
     p.set_defaults(func=cmd_screenplay)
 
     p = sub.add_parser('scenes', help='Generate keyframes for episode(s)')

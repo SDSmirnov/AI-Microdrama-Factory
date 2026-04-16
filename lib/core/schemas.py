@@ -525,6 +525,48 @@ CHARACTER_SCHEMA = {
     }
 }
 
+ROOM_VOCABULARY_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "named_positions": {
+            "type": "array",
+            "description": (
+                "Every named character position and shared landmark in the room. "
+                "Each entry becomes a stable anchor label used verbatim across all views."
+            ),
+            "items": {
+                "type": "object",
+                "properties": {
+                    "id": {"type": "string", "description": "kebab-case anchor label, e.g. 'amanda-desk'"},
+                    "description": {
+                        "type": "string",
+                        "description": (
+                            "Full placement spec: furniture type, exact location in room, orientation, "
+                            "and items on/near it. View-neutral — no image-left/right references."
+                        ),
+                    },
+                },
+                "required": ["id", "description"],
+            },
+        },
+    },
+    "required": ["named_positions"],
+}
+
+ROOM_DETAIL_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "enriched_visual_desc": {
+            "type": "string",
+            "description": (
+                "Rewritten visual_desc for this single camera view. Incorporates all named positions "
+                "and equipment from the shared vocabulary. Preserves the camera angle of this view."
+            ),
+        },
+    },
+    "required": ["enriched_visual_desc"],
+}
+
 ENRICHMENT_SCHEMA = {
     "type": "array",
     "items": {

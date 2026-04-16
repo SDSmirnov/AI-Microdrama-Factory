@@ -49,6 +49,7 @@ Core pipeline stages:
 0b. `logic`: fix logic/physics/space continuity bugs in novel text + generate scene prerequisites appendix → `<novel>_fixed.txt`.
 1. `styles`: analyze novel + generate `custom_prompts/` overlay on top of `lib/prompting/<style>/`.
 2. `casting`: detect references and write `ref_thriller/*.json`.
+2b. `detail-rooms`: enrich room ref `visual_desc` with named furniture, equipment, and per-character anchors. Marks existing PNGs as `needs_regenerate` — run `refs` after. Accepts `FORCE=1` to re-process rooms already marked `details_applied`.
 3. `refs`: render missing reference portraits `ref_thriller/*.png`.
 3b. `remake-room-refs`: split monolithic Room/Vehicle/Outdoor refs into per-view variants (View-From-Entrance/View-To-Entrance, Exterior/Interior-*, View-Primary/View-Opposite) and render each as a separate PNG. New projects generate multi-view refs directly from `casting`; run this only to migrate old monolithic refs.
 3c. `room-anchors`: generate spatial `anchor_points` for View-From-Entrance room refs (doors, windows, furniture landmarks used by the disposition pass).
@@ -56,23 +57,19 @@ Core pipeline stages:
 5. `scenes`: generate keyframes for specific episode(s) via **4-pass pipeline** (architecture → state/`visual_ref` → visual → motion_audio) + reversal pass; upserts into metadata.
 5b. `reverse-refine`: re-run reversal pass only on an existing raw episode JSON without re-querying keyframes. Requires `SCENE=N`.
 5c. `disposition`: spatial disposition pass — writes `visual_disposition` per panel using room `anchor_points`. Handles panels with mixed room refs within a single scene by grouping consecutive panels that share the same anchor. Requires `SCENE=N` or `all`.
-5d. `3d-preview`: render axonometric (cabinet oblique) puppet layout preview PNG per scene — camera rig + character positions overlaid on anchor-point floor plan. Requires room refs with `anchor_points`. Writes `cinematic_render/preview_3d_scene_NNN.png`. Useful for validating 180-rule and spatial disposition before rendering.
+5d. `spatial-rewrite`: fixes `visual_start`/`motion_prompt` spatial contradictions using `visual_disposition` (run after `disposition`). Accepts `SCENE=N` or `all`. Backs up `animation_metadata.json` before writing.
 6. `consistency`: continuity enforcer — enrich ref JSONs from scene/location usage, re-align panel visuals to approved refs. Default: `--dry-run` (JSON only); use `--no-dry-run` or follow with `make refs` to regenerate PNGs.
 7. `storyboard`: render scene grids or individual panel images.
 7b. `panel-by-panel-with-qa`: render each panel one at a time with inline QA + refinement loop (up to `--max-attempts` retries). Requires `SCENE=N`.
 7c. `full-frame`: re-render an existing panel at a wider aspect ratio using the source PNG as reference. Requires `SCENE=N PANEL=N`; optional `AR=16:9`. Writes `cinematic_render/full_frames/NNN_PP_fullframe_<ar>.png`.
-8. `qa`: run visual fidelity checks and produce `quality_report.json`. Panels with only a spatial direction flip get `suggest_mirror=true` instead of `needs_refinement` — horizontal flip is cheaper than full re-render.
-9. `apply-qa`: auto-refine all panels flagged by QA.
-10. `accept-qa`: promote refined panels into `panels/`, backup originals.
-11. `rebuild-storyboard`: rebuild scene grid images from current `panels/`.
-12. `refinement`: manually regenerate a specific panel frame.
-13. `animation`: generate clips with `veo` or `grok`.
-14. `autocut`, `voiceover`, `tts`, `dub`, `duck`: post-production helpers.
-15. `srt`: transcribe video → SRT subtitle file (Whisper). Segments are auto-split at sentence boundaries (`.`, `!`, `?`) using word-level timestamps, producing shorter and more readable entries.
-16. `dynamic-subtitles`: burn karaoke-style subtitles; word-level or phrase-level timing; optional transparent overlay output.
-17. `suno-prompt`: generate Suno instrumental music prompt from episode metadata → `suno_prompt.txt`.
-18. `extra-panel`: generate a micro-panel not in the original screenplay → `cinematic_render/extra_panels/`.
-19. `summary`: AI-generated context summary of episode data for the next chapter → `chapter_summary.txt`.
+8. `rebuild-storyboard`: rebuild scene grid images from current `panels/`.
+9. `animation`: generate clips with `veo` or `grok`.
+10. `autocut`, `voiceover`, `tts`, `dub`, `duck`: post-production helpers.
+11. `srt`: transcribe video → SRT subtitle file (Whisper). Segments are auto-split at sentence boundaries (`.`, `!`, `?`) using word-level timestamps, producing shorter and more readable entries.
+12. `dynamic-subtitles`: burn karaoke-style subtitles; word-level or phrase-level timing; optional transparent overlay output.
+13. `suno-prompt`: generate Suno instrumental music prompt from episode metadata → `suno_prompt.txt`.
+14. `extra-panel`: generate a micro-panel not in the original screenplay → `cinematic_render/extra_panels/`.
+15. `summary`: AI-generated context summary of episode data for the next chapter → `chapter_summary.txt`.
 
 ## Install
 
@@ -85,6 +82,45 @@ Optional runtime dependencies (needed only for specific commands):
 - `pydub`, `moviepy`, `faster-whisper` for `dub`/`duck`.
 - `elevenlabs` SDK for `tts sfx`.
 - System `ffmpeg` binary for `autocut` (and generally useful for audio/video workflows).
+
+## Docker
+
+The image bakes in the code; per-series data (`custom_prompts/`, `ref_thriller/`, `cinematic_render/`, novel `.txt` files) lives outside and is mounted at runtime. One image, many series.
+
+**Build the image** (once, from repo root):
+
+```bash
+docker build -t ai-microdrama-factory:latest .
+```
+
+**Per-series layout:**
+
+```
+my-series/
+  docker-compose.yml   # copy from repo root
+  .env                 # copy .env.example, fill in API keys
+  custom_prompts/
+  ref_thriller/
+  cinematic_render/
+  s01e01.txt
+```
+
+**Run CLI commands** (from series dir):
+
+```bash
+# via compose
+docker compose run --rm factory scenes --llm gemini SCENE=1
+
+# or directly
+docker run --rm -v $(pwd):/project --env-file .env ai-microdrama-factory:latest scenes --llm gemini SCENE=1
+```
+
+**Run the web viewer:**
+
+```bash
+docker compose up webserver
+# → http://localhost:5005/web/index.html
+```
 
 ## Environment Variables
 
@@ -126,6 +162,9 @@ make styles NOVEL=s01e01.txt STYLE=vertical_9_16_microdrama
 # 3) Create/update reference cards
 make casting NOVEL=s01e01.txt
 
+# 3b) Enrich room refs with named furniture/equipment/anchor positions
+make detail-rooms NOVEL=s01e01.txt
+
 # 4) Render missing reference portraits
 make refs
 
@@ -138,33 +177,21 @@ make consistency
 # 7) Render scene grids (or panel images via PANEL=<n>)
 make storyboard SCENE=all PANEL=all
 
-# 8) Run QA
-make qa SCENE=all
-
-# 9) Auto-refine all panels flagged by QA
-make apply-qa SCENE=all
-
-# 10) Accept refined panels (promotes to panels/, backs up originals)
-make accept-qa
-
-# 11) Rebuild scene grids from updated panels/
+# 8) Rebuild scene grids if needed
 make rebuild-storyboard SCENE=all
 
-# 12) Manually refine a specific panel if needed
-make refinement SCENE=1 PANEL=3
-
-# 13) Animate clips
+# 9) Animate clips
 make animation PROVIDER=veo SCENE=all PANEL=all
 ```
 
 ## Make Targets
 
-Use `make help` to list all targets. `make draft` runs the full pipeline shortcut: `casting → refs → room-anchors → screenplay → consistency → disposition → storyboard`. Current targets:
+Use `make help` to list all targets. `make draft` runs the full pipeline shortcut: `casting → detail-rooms → refs → room-anchors → remake-room-refs → screenplay → disposition → spatial-rewrite → storyboard`. Current targets:
 
 - `init`, `workdirs`
-- `split-book`, `logic`, `styles`, `casting`, `refs`, `remake-room-refs`, `room-anchors`
-- `screenplay`, `scenes`, `reverse-refine`, `disposition`, `3d-preview`, `consistency`
-- `storyboard`, `panel-by-panel-with-qa`, `full-frame`, `qa`, `apply-qa`, `accept-qa`, `rebuild-storyboard`, `refinement`, `animation`
+- `split-book`, `logic`, `styles`, `casting`, `detail-rooms`, `refs`, `remake-room-refs`, `room-anchors`
+- `screenplay`, `scenes`, `reverse-refine`, `disposition`, `spatial-rewrite`, `consistency`
+- `storyboard`, `panel-by-panel-with-qa`, `full-frame`, `rebuild-storyboard`, `animation`
 - `autocut`, `voiceover`, `imgedit`, `tts`, `dub`, `duck`, `srt`, `dynamic-subtitles`
 - `suno-prompt`, `summary`, `draft`, `webserver`
 
@@ -199,6 +226,7 @@ Commands (all accept `--style <preset>` where relevant; default: `vertical_9_16_
 - `logic <novel> [--output path] [--workers N]`
 - `styles <novel> --style <preset>`
 - `casting <novel>`
+- `detail-rooms <novel> [--force]`
 - `refs`
 - `remake-room-refs`
 - `room-anchors`
@@ -206,14 +234,10 @@ Commands (all accept `--style <preset>` where relevant; default: `vertical_9_16_
 - `scenes [scene|all]`
 - `reverse-refine <scene>`
 - `disposition [scene|all]`
-- `3d-preview [scene|all]`
+- `spatial-rewrite [scene|all]`
 - `consistency [--dry-run|--no-dry-run]`
 - `storyboard [scene|all] [panel|all]`
-- `qa [--scene N ...] [--panel N ...] [--threshold N]`
-- `apply-qa [--scene N] [--frame start|end|static|both]`
-- `accept-qa`
 - `rebuild-storyboard [scene|all]`
-- `refinement <scene_id> <panel_id> [--frame start|end|static|both]`
 - `panel-by-panel-with-qa <scene> [panel|all] [--threshold N] [--max-attempts N]`
 - `full-frame --scene N --panel N [--aspect-ratio 16:9]`
 - `animation <veo|grok> [scene|all] [panel|all]`
@@ -250,8 +274,6 @@ Primary generated files:
 - `cinematic_render/animation_metadata.json`
 - `cinematic_render/scene_NNN_grid_combined.png`
 - `cinematic_render/panels/NNN_PP_{static|start|end}.png`
-- `cinematic_render/preview_3d_scene_NNN.png` (after `3d-preview`)
-- `cinematic_render/quality_report.json`
 - `cinematic_render/refined/*_refined.png`
 - `cinematic_render/clips/clip_*.mp4`
 - `cinematic_render/cut/clip_*_cut.mp4` + JSON reports (after `autocut`)

@@ -180,6 +180,9 @@ def analyze_episodes_master(text: str, prompts: dict, config: dict, llm: BaseLLM
     if character_info:
         lines = []
         for name, info in character_info.items():
+            if info.get('type', '') == 'Room' and 'View-From-Entrance' not in name:
+                continue
+
             desc = info.get('visual_desc') or info.get('video_visual_desc', '')
             if desc:
                 lines.append(f"- {name}: {desc}")
@@ -668,8 +671,8 @@ def _pass2_visual(
 
     bg_activity = scene_spec.get('background_activity') or {}
     bg_block = (
-        "BACKGROUND ACTIVITY — scene-level background life "
-        "(inject as BGD: line at MS/MWS/WS/XWS scale; skip at CU/ECU/Macro):\n"
+        "BACKGROUND ACTIVITY — MANDATORY BGD: line in EVERY MS/MWS/WS/XWS panel "
+        "(both visual_start and visual_end); skip at CU/ECU/Macro; state may progress across panels:\n"
         f"  crowd_type: {bg_activity.get('crowd_type', '')}\n"
         f"  density: {bg_activity.get('density', '')}\n"
         f"  movement: {bg_activity.get('movement', '')}\n"
@@ -827,7 +830,8 @@ def _pass3_motion_audio(
 
     bg_activity = scene_spec.get('background_activity') or {}
     bg_block = (
-        "BACKGROUND ACTIVITY — append AMBIENT: note per AMBIENT BACKGROUND MOTION rules:\n"
+        "BACKGROUND ACTIVITY — append AMBIENT: note in EVERY panel that has a BGD: line (MS/MWS/WS/XWS); "
+        "skip at CU/ECU/Macro; evolve crowd state to match Pass 2 BGD description for that panel:\n"
         f"  crowd_type: {bg_activity.get('crowd_type', '')}\n"
         f"  density: {bg_activity.get('density', '')}\n"
         f"  movement: {bg_activity.get('movement', '')}\n"
@@ -2023,6 +2027,7 @@ def analyze_scenes_master(
     output_dir: Path = None,
     state: ProjectState | None = None,
     resume: bool = False,
+    episodes_only: bool = False,
 ) -> dict:
     """
     Full pipeline: episodes → scenes → reversal → save JSONs.
@@ -2059,6 +2064,10 @@ def analyze_scenes_master(
         if state:
             state.mark_episodes_done(len(episodes.get('episodes', [])))
     logger.debug(episodes)
+
+    if episodes_only:
+        logger.info("✅ animation_episodes.json written — stopping (episodes-only mode).")
+        return None
 
     all_scenes: list = []
     all_episodes: list = []

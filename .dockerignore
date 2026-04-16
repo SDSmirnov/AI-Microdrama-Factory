@@ -1,0 +1,19 @@
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.DS_Store
+.env
+
+# Per-series data dirs — mounted at runtime, not baked in
+cinematic_render/
+ref_thriller/
+custom_prompts/
+book-split/
+chapter_summary.txt
+suno_prompt.txt
+web/server-info.json
+
+# Dev artifacts
+.git/
+make-archive

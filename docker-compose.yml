@@ -1,0 +1,20 @@
+services:
+  factory:
+    image: ai-microdrama-factory:latest
+    volumes:
+      - .:/project
+    env_file: .env
+
+  webserver:
+    image: ai-microdrama-factory:latest
+    volumes:
+      - .:/project
+    ports:
+      - "5005:5005"
+    entrypoint: ["sh", "-c"]
+    command:
+      - >
+        mkdir -p /project/web &&
+        cp /app/web/index.html /app/web/index.css /app/web/index.js /project/web/ &&
+        python /app/web/gen_server_info.py &&
+        python -m http.server 5005 --directory /project

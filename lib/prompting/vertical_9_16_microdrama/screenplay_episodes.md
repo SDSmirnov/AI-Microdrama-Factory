@@ -212,6 +212,10 @@ FORBIDDEN in scene_instructions: shorthand codes. These communicate nothing to t
 
 REQUIRED FORMAT — write scene_instructions as a production blueprint the scene generator can execute directly:
 
+### Author's Voice fidelity
+
+In rewritten_condensed_narrative and screenplay instructions try to keep author's voice - core ideas, humorous points, etc. which make this story distinctive and alive.
+
 ```
 EPISODE ENTRY STATE:  ← episodes 2+; omit for episode 1
   Continues from: [one sentence — what this episode's P1 picks up from the previous episode's EXIT STATE]

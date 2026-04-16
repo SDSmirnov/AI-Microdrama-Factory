@@ -1,0 +1,2511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI-MDF Lite</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:       #0d1117;
+      --surface:  #161b22;
+      --border:   #30363d;
+      --text:     #e6edf3;
+      --muted:    #8b949e;
+      --accent:   #58a6ff;
+      --green:    #3fb950;
+      --orange:   #d29922;
+      --red:      #f85149;
+      --mono:     'Fira Mono', 'Consolas', 'Courier New', monospace;
+    }
+    body { background: var(--bg); color: var(--text); font-family: system-ui, sans-serif; font-size: 14px; line-height: 1.5; }
+    a { color: var(--accent); }
+
+    /* ── Layout ── */
+    #app { display: flex; flex-direction: column; height: 100vh; }
+    header { display: flex; align-items: center; gap: 10px; padding: 0 16px; height: 48px; border-bottom: 1px solid var(--border); background: var(--surface); flex-shrink: 0; flex-wrap: nowrap; overflow: hidden; }
+    .brand { font-weight: 700; font-size: 15px; color: var(--accent); white-space: nowrap; }
+    nav { display: flex; gap: 2px; overflow-x: auto; flex-shrink: 1; }
+    .nav-btn { background: none; border: none; color: var(--muted); padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 13px; white-space: nowrap; }
+    .nav-btn:hover { background: rgba(255,255,255,.06); color: var(--text); }
+    .nav-btn.active { background: rgba(88,166,255,.15); color: var(--accent); }
+    .hdr-spacer { flex: 1; min-width: 4px; }
+    main { flex: 1; overflow: hidden; }
+    .tab { display: none; height: 100%; overflow: auto; padding: 16px 20px; }
+    .tab.active { display: block; }
+
+    /* ── Tabs: Setup ── */
+    .setup-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; height: 100%; }
+    .setup-grid > .col { display: flex; flex-direction: column; gap: 12px; overflow: auto; }
+    @media (max-width: 900px) { .setup-grid { grid-template-columns: 1fr; } }
+
+    /* ── Cards ── */
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px; }
+    .card-title { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin-bottom: 10px; }
+
+    /* ── Form elements ── */
+    label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; margin-top: 10px; }
+    label:first-child { margin-top: 0; }
+    textarea, input[type=text], input[type=number], select {
+      width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+      color: var(--text); padding: 8px 10px; font-size: 13px; font-family: inherit; resize: vertical;
+    }
+    textarea:focus, input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+    textarea.mono { font-family: var(--mono); font-size: 12px; }
+    select option { background: var(--surface); }
+
+    /* ── Buttons ── */
+    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 6px; border: 1px solid var(--border); cursor: pointer; font-size: 13px; font-weight: 500; background: var(--surface); color: var(--text); }
+    .btn:hover { background: rgba(255,255,255,.08); }
+    .btn:disabled { opacity: .45; cursor: not-allowed; }
+    .btn-primary { background: var(--accent); color: #0d1117; border-color: var(--accent); }
+    .btn-primary:hover { opacity: .9; }
+    .btn-sm { padding: 4px 10px; font-size: 12px; }
+    .btn-ghost { background: none; border-color: transparent; color: var(--muted); }
+    .btn-ghost:hover { color: var(--text); background: rgba(255,255,255,.06); }
+    .actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+    /* ── Prompt section ── */
+    .prompt-block { display: flex; flex-direction: column; gap: 10px; }
+    .prompt-header { display: flex; justify-content: space-between; align-items: center; }
+    .prompt-label { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+    .copy-btn { font-size: 11px; }
+    .prompt-area { font-family: var(--mono); font-size: 11.5px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 10px; overflow: auto; white-space: pre-wrap; word-break: break-all; max-height: 300px; color: var(--text); }
+    .response-area { display: flex; flex-direction: column; gap: 8px; }
+
+    /* ── Chips / badges ── */
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+    .badge-blue   { background: rgba(88,166,255,.15); color: var(--accent); }
+    .badge-green  { background: rgba(63,185,80,.15);  color: var(--green);  }
+    .badge-orange { background: rgba(210,153,34,.15); color: var(--orange); }
+
+    /* ── Refs / Library ── */
+    .refs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; margin-top: 12px; }
+    .ref-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+    .ref-card-name { font-weight: 600; font-size: 13px; }
+    .ref-card-type { font-size: 11px; color: var(--muted); }
+    .ref-card-desc { font-size: 12px; color: var(--muted); max-height: 60px; overflow: hidden; }
+    .ref-thumb-placeholder { width: 100%; height: 120px; background: var(--bg); border-radius: 4px; border: 1px dashed var(--border); display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 11px; cursor: pointer; }
+    .ref-thumb-placeholder:hover { border-color: var(--accent); color: var(--accent); }
+    input[type=file] { display: none; }
+
+    /* ── Scene cards (quick-play) ── */
+    .scene-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-bottom: 12px; }
+    .scene-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+    .scene-card-title { font-weight: 600; font-size: 13px; }
+    .clips-list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+    .clip-item { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 10px; font-size: 12px; font-family: var(--mono); white-space: pre-wrap; }
+
+    /* ── Screenplay viewer ── */
+    .ep-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-bottom: 12px; }
+    .ep-card-header { display: flex; gap: 10px; align-items: baseline; margin-bottom: 8px; }
+    .ep-title { font-weight: 700; font-size: 14px; }
+    .scene-block { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 10px; margin-top: 8px; }
+    .scene-meta { font-size: 11px; color: var(--muted); display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 6px; }
+    .scene-instructions { font-size: 12px; font-family: var(--mono); white-space: pre-wrap; max-height: 180px; overflow: auto; color: var(--muted); }
+
+    /* ── Validation errors ── */
+    .val-box { margin-top: 8px; }
+    .val-box ul { margin: 4px 0 0 16px; }
+    .val-box li { margin-bottom: 2px; }
+
+    /* ── Misc ── */
+    .row { display: flex; gap: 10px; align-items: center; }
+    .spacer { flex: 1; }
+    .status { font-size: 12px; color: var(--muted); }
+    .status.ok   { color: var(--green); }
+    .status.warn { color: var(--orange); }
+    hr { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
+    .empty-state { text-align: center; padding: 40px; color: var(--muted); font-size: 13px; }
+    .tip { font-size: 12px; color: var(--muted); padding: 10px 12px; background: rgba(88,166,255,.08); border-left: 3px solid var(--accent); border-radius: 0 6px 6px 0; }
+    .json-view { font-family: var(--mono); font-size: 11px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 10px; overflow: auto; white-space: pre-wrap; max-height: 250px; }
+    .tag { display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 11px; background: rgba(255,255,255,.07); color: var(--muted); font-family: var(--mono); }
+    .section-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+    .section-title { font-size: 14px; font-weight: 600; }
+    .tmpl-card-hdr { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+
+    /* ── User Guide ── */
+    #tab-userguide .card { max-width: 820px; }
+    #tab-userguide h3 { font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .07em; margin: 20px 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+    #tab-userguide > .card > p { font-size: 13px; line-height: 1.6; margin-bottom: 10px; }
+    #tab-userguide ul { margin: 0 0 10px 0; list-style: none; display: flex; flex-direction: column; gap: 5px; }
+    #tab-userguide ul li { font-size: 13px; line-height: 1.5; padding-left: 14px; position: relative; }
+    #tab-userguide ul li::before { content: '–'; position: absolute; left: 0; color: var(--muted); }
+    .guide-steps { display: flex; flex-direction: column; gap: 8px; margin-bottom: 4px; }
+    .guide-step { display: grid; grid-template-columns: 28px 1fr; gap: 10px; align-items: start; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; }
+    .guide-step-num { font-size: 11px; font-weight: 700; color: var(--accent); background: rgba(88,166,255,.12); border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+    .guide-step-num.optional { background: rgba(210,153,34,.12); color: var(--orange); }
+    .guide-step-body { display: flex; flex-direction: column; gap: 4px; }
+    .guide-step-title { font-size: 13px; font-weight: 600; }
+    .guide-step-action { font-size: 12px; color: var(--text); line-height: 1.5; }
+    .guide-step-why { font-size: 12px; color: var(--muted); line-height: 1.5; }
+    .guide-step-why strong { color: var(--muted); }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════
+     EMBEDDED TEMPLATES  (type=text/plain prevents JS parse)
+════════════════════════════════════════════════ -->
+
+<script type="text/plain" id="tmpl-style">
+# Visual Style Template
+
+## Format Specification
+FORMAT: Single 2K portrait grid (9 panel-pairs), 9:16 vertical orientation for DramaBox/ReelShort paywall microdrama
+RESOLUTION: 2K
+ASPECT_RATIO: 9:16
+
+## Rendering Style
+STYLE: Photorealistic Cinematic — contemporary drama
+CAMERA: Sony Venice 2 / Arri Alexa Mini LF (9:16 portrait crop, vertical framing)
+LENS: 35mm–85mm prime lenses, shallow depth of field, soft anamorphic oval bokeh on background elements
+POST: Subtle 35mm digital film grain, deep shadow rolloff, rich skin-tone warmth, cinema-grade color grading
+
+## Atmosphere
+ATMOSPHERE: Tension, conflict, high emotional stakes, psychological drama
+LIGHTING: Available-light-adjacent — practical sources, motivated light, dramatic shadows
+COLOR: Deep shadow blacks, warm skin tones, contrasting cool/warm highlights
+
+## Technical
+RENDER: Photorealistic 2K, sharp focus on faces and detail objects, shallow DOF blurs interiors and backgrounds
+GRAIN: Subtle 35mm digital grain — adds filmic texture without visible noise
+</script>
+
+<script type="text/plain" id="tmpl-setting">
+# World & Setting Reference
+
+## Genre & Tone
+- **Genre**: {{genre_description}}
+- **Atmosphere**: {{atmosphere_description}}
+- **Visual Tone**: {{visual_tone}}
+
+## Setting
+{{setting_description}}
+
+## Protagonist
+- **Name**: {{pov_character}}
+- **Narrator Style**: {{narrator_style}}
+- **Visual Description**: {{hero_visual_description}}
+
+## Composition Style
+{{composition_preferences}}
+
+## Special Visual Elements
+  - {{special_visual_elements}}
+
+## World-Specific Visual Details
+  - {{world_specific_details}}
+</script>
+
+<script type="text/plain" id="tmpl-casting">
+# Character Casting Template
+
+## Task
+Analyze text for KEY characters/locations/objects/rooms/vehicles and generate photorealistic character references.
+Those references will be used for vertical microdrama shots and AI video animation.
+IMPORTANT: Think as **Master Cinematographer** for 9:16 portrait format — faces dominate, close-ups are primary.
+
+## Character Description Format
+For each NEW character:
+- **Name**: Full name
+- **Visual Description**: Photorealistic actor description with specific physical features, ethnicity, age, clothing textures
+  - Face: Facial structure, eyes, hair color/style, ethnicity
+  - Build: Height, build, posture
+  - Clothing: Contemporary luxury attire with specific fabric textures
+  - Age: Specific age or range
+  - Distinctive features: Accessories, grooming, habitual gesture
+  - **Everyday Carry (EDC)**: Infer realistic carried items from gender, profession, and social context.
+    Real people do not operate via GTA inventory — they carry things somewhere physical.
+    - Men: wallet placement, phone pocket, keys (car fob + home keyring), work badge/ID if applicable
+    - Women: bag type (clutch / crossbody / tote / handbag / backpack — pick the right one for her archetype),
+      what it visibly contains or implies (wallet, phone, keys, cosmetics pouch, notebook, etc.)
+    State WHERE items are carried and WHAT the carrier looks like.
+- **Behavioral Signature**: How this character behaves under pressure — derive from their decisions, speech patterns, and reactions in the source text.
+  - Default power move: their go-to strategy to assert control or dominance
+  - Deflection strategy: how they redirect or absorb pressure when threatened
+  - Involuntary tell: the physical or verbal tic that betrays their true state
+- **Physical Vocabulary**: How this character habitually occupies space.
+  - Default posture: how they hold themselves at rest vs. under pressure
+  - Space use: how they move through a room (invade / retreat / orbit / anchor to one spot)
+  - Signature gestures: 1–2 recurring physical behaviors that define this character on screen
+
+## Character Appearance Variations
+When a character's outfit or visual context changes significantly across scenes, generate separate variation refs.
+- Primary ref captures permanent identity: face, build, hair, skin.
+- Variation ref captures outfit/context delta (e.g. Alisa-Gown, Alisa-Bathrobe).
+  - set character_ref to parent ref name
+  - set context to when this variation applies
+  - set style_reference to parent character ref name
+
+## Location/Room/Vehicle/Outdoor Description Format
+For each NEW reference:
+- Name: Full name
+- Visual Description: Photorealistic environment description using compass wall layout (MANDATORY):
+
+ROOM SIZE / LOCATION TYPE: ...
+NORTH WALL (entrance): ...
+SOUTH WALL (opposite): ...
+EAST WALL (right when entering): ...
+WEST WALL (left when entering): ...
+CENTER: ...
+CEILING/FLOOR: ...
+
+For rooms: generate TWO refs — {Name}-View-From-Entrance and {Name}-View-To-Entrance
+For vehicles: generate THREE refs — {Name}-Exterior, {Name}-Interior-From-Entrance, {Name}-Interior-To-Entrance
+For outdoor: generate TWO refs — {Name}-View-Primary, {Name}-View-Opposite
+
+## IMPORTANT Background RULES
+- Characters: EMPTY BACKGROUND
+- Locations/places: SHOW EMPTY SPACE WITHOUT PEOPLE
+- Objects: BLANK BACKGROUND
+- Vehicles and rooms: BLANK BACKGROUND, SHOW THEM EMPTY, WITHOUT PEOPLE
+
+## Reference Generation
+- Shot Type: Close-up portrait (3:4 aspect ratio)
+- Expression: Neutral, composed — with slight underlying tension
+- Lighting: Soft studio lighting with faint warm side-light
+- Background: Solid deep-charcoal backdrop
+- Quality: 8K resolution, sharp focus, photorealistic skin texture
+
+## Visual Description
+Must be verbose, precise, and contain specific features so AI model can efficiently implement without hallucinations.
+</script>
+
+<script type="text/plain" id="tmpl-screenplay-sys">
+CONTEXT: We produce VERTICAL MICRODRAMA for DramaBox / ReelShort / MyDrama (9:16 portrait).
+CAPTIVE AUDIENCE: Viewers are subscribers or pay-per-unlock. They know the show and the characters.
+Each scene can have from 6 to 12 panels, each panel is animated in ~6s clips, and full scene covers about 40-60s of screen time after edits.
+Violence and hard dramatic content allowed (fictional source).
+GOAL: Generate episode breakdown with scene_instructions. Every panel must carry dramatic weight — no filler.
+
+KEY CONSTRAINTS:
+- PORTRAIT FRAME LAW: All compositions are 9:16. Faces and close-ups are the primary dramatic instrument.
+- SAFE ZONE: Key action must stay in the middle 65% of frame height. Top 15% and bottom 20% reserved for subtitles/UI.
+- VOICEOVER IS THE SPINE: Every panel has either dialogue or voiceover. INNER MONOLOGUE HARD LIMIT: 4–5 words only.
+- DIALOGUE IS PERFORMANCE: ≤8 words per line. Staccato. Emotionally specific.
+- MUTED VIEWING: 80% of viewers watch with sound off. Every panel must convey power dynamic, emotion, and stake through image alone.
+- COLD OPEN: Panel 1 of every episode = IN MEDIAS RES. First word after "At 0s" must be a physical motion verb.
+- SOURCE FIDELITY: Only dramatize actions, words, and events present or directly implied in the source text.
+- HOOK ARCHITECTURE: Final panel of LAST episode = cliffhanger. Final panel of INTERMEDIATE episodes = tension_peak.
+</script>
+
+<script type="text/plain" id="tmpl-screenplay-eps">
+# Role: MASTER SCREENWRITER — VERTICAL MICRODRAMA (DRAMABOX / REELSHORT)
+
+You are a master screenwriter specializing in VERTICAL MICRODRAMA — the native dramatic form of DramaBox, ReelShort, and paywall short-drama platforms.
+You think in portrait frames. You write for a viewer who has already paid or subscribed and is deep in the story.
+You have 3 seconds to hook them into the episode. You have the full series to escalate. You have one frame — the final cliffhanger — to make them unlock the next series.
+
+## PLATFORM CONTEXT
+Captive audience. Viewers are already subscribed or paying per series unlock. They know the show.
+Horizontal plots across dozens of series. Each published series is one chapter in a serialized novel.
+The paywall trigger: the last episode's cliffhanger. Not a mystery hook — a RESPONSE PRESSURE hook.
+The protagonist has just received information or been confronted. The episode FREEZES before the response.
+
+## SERIES STRUCTURE
+A published series = 1, 2, 3, or 5 episodes. Each episode contains 1–3 scenes.
+After editing, each panel ≈ 3s of screen time. Total series duration: __ARC_DURATION__.
+
+**CONFIGURED SERIES SIZE: __EPISODES_COUNT__ episodes.**
+
+## SCENE STRUCTURE
+Each episode contains 1–3 scenes. Assign panel_count per scene:
+
+| panel_count | grid  | use when |
+|-------------|-------|----------|
+| 4           | 2×2   | travel, smalltalk, brief reaction |
+| 6           | 3×2   | single beat, quick confrontation |
+| 9           | 3×3   | standard confrontation, full dramatic arc (default) |
+| 10          | 5×2   | high-density multi-turn dialogue |
+| 12          | 4×3   | climactic scene, emotional peak |
+
+Allowed panel_count values: __PANEL_COUNT_OPTIONS__
+
+**Panel position rules (for N panels):**
+- P1: always cold_open or arc_pickup
+- P2 (if N ≥ 6): verbal_hook
+- P⌈N×0.44⌉: emotional_capture
+- P⌈N×0.78⌉: pivot panel — ECU, no dialogue, voiceover MANDATORY (4–5 words exactly)
+- PN (last): tension_peak (intermediate) or cliffhanger (final episode's last scene)
+
+## MANDATORY SERIES RULES
+1. SINGLE POV THROUGHOUT: Every episode shows events from one protagonist's perspective.
+2. ESCALATION MANDATE: Each episode escalates beyond the previous in stakes, emotional intensity, or new information.
+3. CLIFFHANGER ON LAST EPISODE ONLY.
+4. RESPONSE PRESSURE CLIFFHANGER: protagonist at moment before response — freeze there.
+5. CAPTIVE AUDIENCE: Panels 1–3 do NOT need to re-establish characters. Panel 1 picks up drama at HIGH TENSION.
+
+## SERIES CONFIGURATIONS
+
+### 1-episode series
+Scene: cold_open → verbal_hook → escalation → emotional_capture → crystallization → confrontation → peak → [pivot] → cliffhanger
+
+### 2-episode series
+Ep1: cold_open → verbal_hook → context → escalation → emotional_capture → rising_action → [pivot] → mid_revelation → tension_peak
+Ep2: confrontation_open → escalation_return → confrontation_build → confrontation_peak → [pivot] → twist → reversal → consequence → cliffhanger
+
+### 3-episode series (default)
+Ep1: cold_open → verbal_hook → context → first_escalation → emotional_capture → rising_action → [pivot] → mid_revelation → tension_peak
+Ep2: complication_open → escalation_return → new_obstacle → rising_pressure → [pivot] → new_revelation → stakes_raised → pre_confrontation → tension_peak
+Ep3: confrontation_open → escalation_return → confrontation_build → confrontation_peak → [pivot] → twist → reversal → consequence → cliffhanger
+
+### 5-episode series
+Ep1: cold_open → verbal_hook → first_escalation → emotional_capture → [pivot] → tension_peak
+Ep2: complication_open → new_obstacle → rising_pressure → [pivot] → tension_peak
+Ep3: deepening_open → countdown_pressure → [pivot] → point_of_no_return → tension_peak
+Ep4: last_chance_open → ultimatum → desperation_move → [pivot] → tension_peak
+Ep5: confrontation_open → confrontation_peak → [pivot] → twist → reversal → cliffhanger
+
+## KEY DRAMATIC MECHANICS
+
+**The 3-Second Law:** Every episode P1 opens mid-action — a physical event already 50% complete.
+COLD OPEN FORBIDDEN: "stands motionless", "sits still", "waits", "holds position", "gazes", "stares", "looks" — HARD FAILURE.
+
+**The 7-Second Verbal Hook:** By P2, ≤8 words crystallize the episode's central conflict.
+
+**Pivot panel P⌈N×0.78⌉:** ECU reaction shot at peak pressure. NO dialogue. VO: MANDATORY 4–5 words.
+
+**Cliffhanger types (rotate across series):**
+- RESPONSE FREEZE: protagonist receives devastating line — cut before response
+- SHOCKING REVELATION: new info reframes everything — protagonist's face at moment of understanding
+- EMOTIONAL RUPTURE: unexpected betrayal, confession, or silence
+- INTERRUPTED ACTION: cut mid-gesture, mid-word, mid-step
+
+## SCENE_INSTRUCTIONS FORMAT
+
+### EPISODE [N] PRODUCTION BLUEPRINT
+**EPISODE ENTRY STATE:** * **Continues from:** [One sentence context]
+* **P1 opens on:** [Specific action 50% complete at frame 0]
+
+**SONIC ARC:** [Crescendo/Silence map]
+
+---
+
+### THE LINEAR MANIFEST (P1–PN)
+ **PRODUCTION PROTOCOL:** You must generate the full block below for every panel $P_1$ through $P_n$. **DO NOT SUMMARIZE.** Every panel requires a unique physical delta.
+
+**P1 [COLD_OPEN | SCALE | LOCATION]**
+* **POWER:** [Who controls frame through what physical indicator]
+* **EMOTION:** [Face physics — jaw tension mm / pupil dilation / brow furrow]
+* **STAKE OBJECT:** [The prop/detail carrying the subtext]
+* **STATE:** [Visual_start to visual_end; e.g., "Hand moves from X to Y"]
+* **DIALOGUE SEED:** [≤8-word line, or "— silence —", or "VO: 4–5 words"]
+
+**P2 [VERBAL_HOOK | SCALE | LOCATION]**
+* [POWER / EMOTION / STAKE OBJECT / STATE / DIALOGUE SEED]
+
+**P3 [ESCALATION | SCALE | LOCATION]**
+* [POWER / EMOTION / STAKE OBJECT / STATE / DIALOGUE SEED]
+
+**[... Repeat for P4 through P⌈N×0.78⌉-1 ...]**
+
+**P⌈N×0.78⌉ [PIVOT | ECU | LOCATION]**
+* **POWER:** [Spatial disposition at peak pressure]
+* **EMOTION:** [Maximum inner conflict — micro-expression delta]
+* **STAKE OBJECT:** [Sensory focus point]
+* **STATE:** [The exact moment the visual shift peaks]
+* **DIALOGUE SEED:** **VO: [4–5 words exactly]**
+
+**[... Repeat for all remaining panels until PN ...]**
+
+**PN [EXIT_TYPE (Peak or Cliffhanger) | SCALE | LOCATION]**
+* **POWER / EMOTION / STAKE OBJECT / STATE / DIALOGUE SEED**
+* **EPISODE EXIT STATE:**
+    * **Location:** [Exact Coord]
+    * **Character positions:** [Distance/Orientation for continuity]
+    * **Active lighting:** [Source/Color/Intensity]
+    * **Active props:** [Final state/Position]
+    * **Next episode opens on:** [One sentence bridge]
+
+
+FORBIDDEN in scene_instructions: beat labels without content, role codes without visual content.
+
+## VISUAL_CONTINUITY_RULES (mandatory structured format)
+```
+ACTIVE LIGHTING: [color temp, key direction, fill quality]
+CHARACTER POSITIONS: [each named character — position, orientation, distance from camera]
+SPATIAL SETUP: [location; persistent furniture; sightlines]
+ACTIVE PROPS: [props in active use or plot-significant]
+STATE CHANGES THIS EPISODE: [costume damage, injuries, moved objects; "none" if clean]
+MOTIF: [active motif or "none"]
+INFORMATION STATE:
+  [Name]: [what they know | what they believe incorrectly | what they don't yet know]
+RELATIONSHIP STATE:
+  [Name]→[Name]: [relationship descriptor | current dynamic | shift]
+COMMITMENT STATE:
+  [Name]: [promise/threat/debt — status: active/fulfilled/broken]
+PROP STATE LEDGER:
+  [prop name]: [location | physical state | last interaction]
+CHARACTER STATE LEDGER:
+  [Name] (EP[N]): [costume] | [injuries] | [last active prop] | [last location] | [story state]
+```
+
+### Author's Voice fidelity
+
+In rewritten_condensed_narrative and screenplay instructions try to keep author's voice - core ideas, humorous points, etc. which make this story distinctive and alive.
+
+### Language Rules
+
+- All dialogues and voiceover, labels, interfaces **MUST BE** in Russian, as in original text``
+
+## OUTPUT FORMAT
+Return JSON:
+{
+  "characters": ["Name1", "Name2", ...],
+  "episodes": [
+    {
+      "episode_id": 1,
+      "episode_type": "pov",
+      "pov_character": "ProtagonistName",
+      "chapter_id": "chapter_1",
+      "raw_narrative": "verbatim source text excerpt, do not shorten",
+      "rewritten_condensed_narrative": "tight dramatic script with all spoken lines and physical beats",
+      "location": "primary location name",
+      "daytime": "morning|afternoon|evening|night",
+      "hook_type": "cold_open/...",
+      "visual_continuity_rules": "structured text per format above",
+      "active_questions": {
+        "macro": "series-long question",
+        "episode": "question raised this episode",
+        "scene": "immediate question",
+        "planted_this_episode": "new seed for future payoff",
+        "answered_this_episode": "none"
+      },
+      "characters": ["Name1", "Name2"],
+      "scenes": [
+        {
+          "scene_local_id": 1,
+          "location": "specific location",
+          "panel_count": 9,
+          "scene_instructions": "production blueprint per format above",
+          "initial_disposition": "Name — position/facing for each character",
+          "background_activity": {
+            "crowd_type": "",
+            "density": "none",
+            "movement": "",
+            "focal_plane": ""
+          }
+        }
+      ]
+    }
+  ]
+}
+
+SELF-AUDIT before finalizing:
+- visual_continuity_rules: all eleven sections present?
+- active_questions: all five fields filled? At least one question still open?
+- Pivot panel voiceover: exactly 4–5 words?
+- Cold open: starts mid-action, not a static pose?
+</script>
+
+<script type="text/plain" id="tmpl-quickplay">
+# VERTICAL MICRODRAMA VIDEO PROMPT GUIDE
+
+_For native-reference video models: Seedance 2.0 / Kling 3.0 / Grok Video._
+_Optimized for long-form clips (10–15s) with in-clip scale switching._
+
+---
+
+## 1. ROLE & OUTPUT
+
+- **Role**: Prompt engineer translating storyboard panels → 4 sequential video prompts for a native-reference video model.
+- **Output**: Exactly 4 prompts covering the full scene arc in order.
+- **Format**: Vertical 9:16. Real-time pacing — no montage compression.
+- **Clip length**: __TARGET__s continuous per prompt (supported range: 10–15s).
+- **Input**: A storyboard of 9–12 panels per scene. Compress into 4 clips per the mapping table below.
+
+---
+
+## 2. PANEL → CLIP MAPPING
+
+The storyboard delivers N panels (typically 9–12). You must compress into exactly 4 clips while preserving anchor panels.
+
+### Anchor Panels (NEVER merge with neighbors)
+
+These are dramaturgically load-bearing and must get their own scale segment:
+
+- **P1** — `cold_open`
+- **P⌈N×0.44⌉** — `emotional_capture`
+- **P⌈N×0.78⌉** — `pivot`
+- **P_N** — `tension_peak` or `cliffhanger`
+
+### Default Distribution Tables
+
+| Panel count | Clip 1 | Clip 2 | Clip 3 | Clip 4 |
+|-------------|--------|--------|--------|--------|
+| 9 panels    | P1–P2  | P3–P5  | P6–P7  | P8–P9  |
+| 10 panels   | P1–P2  | P3–P6  | P7–P8  | P9–P10 |
+| 11 panels   | P1–P3  | P4–P6  | P7–P8  | P9–P11 |
+| 12 panels   | P1–P3  | P4–P7  | P8–P9  | P10–P12 |
+
+### Clip Duration by Panel Load
+
+- 2 panels per clip → 10–12s
+- 3 panels per clip → 12–15s
+- 4 panels per clip → 15s (hard ceiling; split if denser)
+
+### Hard Rules
+
+- Anchor panels (see above) MUST each get a dedicated scale segment inside their clip — never collapsed into an adjacent panel
+- Dialogue from P_N MUST appear in the clip containing P_N; moving it earlier or later = HARD FAILURE
+- If a panel's `hook_type` is `pivot` or `cliffhanger`, it is ALWAYS the last panel of its clip (segment ends on unstable hold)
+
+---
+
+## 3. OUTPUT FORMAT
+
+Return EXACTLY 4 objects (one per clip):
+
+```json
+[
+  {
+    "location": {"LocationName": "@ImageN"},
+    "prompt": "Clip 1 (__TARGET__s continuous)",
+    "references": {"Name1": "@ImageN", "Name2": "@ImageN"}
+  },
+  {
+    "location": {"LocationName": "@ImageN"},
+    "prompt": "Clip 2 (__TARGET__s continuous)",
+    "references": {"Name1": "@ImageN"}
+  },
+  ...
+]
+```
+
+Rules:
+
+- No extra keys, no explanations, no markdown outside the JSON
+- `prompt` = one continuous clip text (250–450 words for multi-panel clips; 150–300 for 2-panel clips)
+- `references` = only characters/props that visibly appear in this clip
+- `location` = always the scene location with its @ImageN tag
+- Max 7 @Image tags referenced total across all clips
+- Prompts must be self-contained but state-continuous (see First-Frame Match Law, §7)
+
+---
+
+## 4. LAWS OF MOTION
+
+- **Constant Change**: no stillness > 2s. Micro-motion (breath, weight shift, finger tension) counts. ≥ 2s frozen = swipe risk.
+- **Scale Switching Allowed**: within a clip, the camera CAN change scale (MS → CU → ECU) via motivated transitions (see §5). This is the core advantage of native-reference models over I2V — use it.
+- **One Segment, One Scale**: within a single scale segment, never mix incompatible scales in the same frame. ECU face + floor detail in the same shot = HARD FAILURE.
+- **Location Lock**: character teleportation forbidden within a clip. A character moves from A to B only through traversible motion with timestamps.
+- **Frame-0 Law**: at `[0s]` every in-frame actor is in a PRE-action pose matching the reference image. EXCEPTION: the first clip's `[0s]` (cold_open P1) may open mid-action at 50%+ complete.
+
+---
+
+## 5. SCALE-SWITCHING CONTRACT
+
+A single clip may contain 1–3 scale segments, each corresponding to one storyboard panel.
+
+### Format Inside the Prompt
+
+```
+[0s–4s] SCALE: MS (panel P3, escalation)
+[4s–8s] SCALE: CU (panel P4, verbal hook) — camera pushes in during 3.5s–4s
+[8s–12s] SCALE: ECU (panel P5, pivot) — hard dolly to [Nastya]'s eyes at 7.8s
+```
+
+### Transition Verbs (always declare one between segments)
+
+- `camera pushes in` / `dolly-in` — MS → CU → ECU
+- `camera pulls back` / `dolly-out` — ECU → CU → MS
+- `lens tracks to ECU on [anchor]` — motivated by character action
+- `cut-on-motion at [time]s` — hard cut disguised by mid-motion subject
+- `camera arcs [N]° around [anchor]` — lateral transition, ≥90° for 180°-rule exemption
+
+### Scale Segment Rules
+
+- ≤3 scale segments per clip (otherwise = Scale Salad, HARD FAILURE)
+- Each new segment opens with a 0.5s "new-anchor" beat: a fresh pose description for in-frame actors. Otherwise model reads the scale change as a reset.
+- Prop + character continuity locked across segments: same grip, same anatomy word (`shoulder` ≠ `collarbone` ≠ `neck`), same relative position ±10cm
+- Dialogue speaker MUST be in CU or ECU during their line (scale segment must be sized to the speaker)
+
+---
+
+## 6. MOTION LAWS
+
+### Living Pose — Idle Motion Budget
+
+Humans are never still. Every in-frame character MUST receive at least one idle motion per second in frame. Any character frozen ≥1s without idle motion = HARD FAILURE.
+
+| State | Required idle motion (≥1 per second) |
+|-------|--------------------------------------|
+| **Listening** | weight shift 2–5cm, head tilt 3–8°, eye track to speaker, hand resettles, finger curl/uncurl, chest rise 1cm |
+| **Thinking / internal** | gaze breaks to neutral space then returns, jaw works slightly, free hand to face then drops, shoulder 1–2cm adjust |
+| **Talking** | head nods on accents 5–15°, free hand gestures, torso turns slightly, eyebrows move with tone |
+| **Stressed / waiting** | foot weight transfer every 2–3s, fingers drum or press, thumb rubs index, lips compress and release |
+
+**Secondary-character law**: "stays still", "watches", "listens" as a sole action = HARD FAILURE. Replace with a reactive proxy: weight shift, grip tighten, prop adjust, head turn ≥15°, breath rise.
+
+**Distribute idle motion across the timeline** — don't dump it at the end. Use `CONCURRENT:` lines beside the primary actor's timed beats.
+
+### Mechanical Verbs (expanded)
+
+Use ONLY these mechanical verbs for physical action:
+
+`grips` `steps` `pivots` `extends` `presses` `drops` `reaches` `releases` `leans` `pulls` `pushes` `tilts` `retracts` `rotates` `crosses` `retreats` `slides` `locks` `turns` `raises` `swings` `lowers`
+
+FORBIDDEN: emotional verbs (`hesitates`, `breaks`, `crumbles`, `melts`), metaphors (`iron grip`, `pins her`, `drinks her in`), figurative language of any kind.
+
+Encode emotional state via anatomy + measurement:
+
+- Fear → `retreats 10cm, spine presses to [wall], shoulders rise 2cm`
+- Anger → `steps 20cm toward [target], jaw clamps, chin juts 3cm toward [target]`
+- Shock → `brows flash up 0.3s then soften, hands freeze 0.5s, then reactive motion`
+- Relief → `shoulders drop 2cm, jaw releases, chest drops on exhale`
+- Contempt → `upper lip tightens unilaterally, head tilts back 5–10°, weight rearward`
+
+### Directional Lock — every direction resolves to a named target
+
+FORBIDDEN bare direction words for ANY motion subject (body, limb, head, gaze, weight):
+
+`forward` `backward` `away` `toward camera` `toward the lens` `closer` `inward` `outward`
+
+Every direction MUST resolve to a named anchor or person:
+
+- `steps forward` → `steps 20cm toward [entrance-door]`
+- `arm extends forward` → `arm extends toward [Client]`
+- `head turns toward camera` → `head turns toward [Vera]`
+- `leans forward` → `leans toward [Igor] across [glass-table]`
+- `weight shifts forward` → `weight transfers onto lead foot`
+- `gaze drifts toward lens` → `gaze tracks toward [Nastya]`
+
+### Action-Then-Reaction Law
+
+A physical contact event (strike, grab, fall, cut, drop) COMPLETES inside its scale segment. Reaction begins in the NEXT segment's first 0.5–1s.
+
+FORBIDDEN: interleaving action and reaction across the same segment's beats. Wind-up + strike + target reaction = ONE continuous arc ≤4s.
+
+### Temporal Compression Law
+
+If a physical sequence takes ≤4s in real life → encode in ONE segment, not split.
+
+- WRONG: segment A "runs to door" + segment B "opens door" + segment C "enters" = 3 segments for 3 real seconds
+- RIGHT: ONE segment covering sprint + grip + push + cross threshold
+
+### Concurrent Layer
+
+Every dialogue beat requires a `CONCURRENT:` line describing the NON-speaker's body reaction during that second. Silent listener = tableau failure.
+
+Example:
+```
+at 4s Vera: "She's not one of us."
+CONCURRENT: Lenka's right thumb presses the phone-screen 2mm, jaw tightens, chin juts 3° toward Vera.
+```
+
+### Frame-0 Law (repeat — critical)
+
+At `[0s]` every in-frame actor is in the PRE-action pose. The still image the video model grounds from is this frame — if `[0s]` describes mid-action, model and reference image diverge → jumpy first second.
+
+- WRONG at 0s: "arm already mid-swing", "body already turning", "mouth already open speaking"
+- RIGHT at 0s: "right arm at side, weight on left foot, lips closed, gaze on [target]"
+- EXCEPTION: Clip 1's `[0s]` for cold_open P1 only — may open mid-action at ≥50% complete
+
+---
+
+## 7. STATE CONTINUITY
+
+### First-Frame Match Law (replaces old Open Thread rule)
+
+Clip N+1's `[0s] STATE` must be pixel-compatible with Clip N's final frame:
+
+- Character positions: ±10cm
+- Prop positions: ±5cm
+- Grip and pose: identical body-part words (`shoulder` ≠ `collarbone`)
+- Lighting master: same key direction, color temp, time-of-day
+
+**Writing protocol**: draft Clip N+1's `[0s] STATE` by copying the LAST visible state from Clip N's closing beats, then introduce new action at `[0.5s]` or later.
+
+### Prop Continuity
+
+Props persist across clips. Once a prop appears, it MUST appear in every subsequent clip until explicitly removed (pocketed, handed off, exits frame with a character, thrown off-screen). Silent prop disappearance = HARD FAILURE.
+
+When a prop has no active change, write: `PROP: [name] unchanged — [last known position]`.
+
+### Reference Injection (timing-aware)
+
+- Tag on first VISIBLE appearance inside the clip, not first mention in text
+- If a character enters mid-clip, place the `(@ImageN)` tag at the entry timestamp:
+  - WRONG (header at 0s): `"Prompt features Maxim (@Image2). At 6s he enters."`
+  - RIGHT (tag at entry): `"...at 6s door opens, Maxim (@Image2) steps into frame"`
+- Props follow the same rule: tag at first visible beat
+- References listed before they are visible → model places them in frame at [0s] → teleport
+
+### Occlusion & Reveal (native-reference feature)
+
+Unlike I2V models, Seedance/Kling/Grok CAN render a character entering frame mid-clip from a reference image — BUT only if you describe the reveal mechanism explicitly.
+
+Valid reveal mechanisms:
+
+- **Off-frame entry**: `"at 5s [Maxim] (@Image2) enters frame-left, steps into sharp focus"`
+- **Door reveal**: `"at 4s door swings 90°, revealing [Mysterious-Man] (@Image3) 3m behind in elevator"`
+- **Rack-focus reveal**: `"at 6s focus pulls from [phone-screen] FG to [Nastya] MG, 2m behind"`
+- **Occlusion release**: `"at 3s [Lenka] steps 40cm toward [door], revealing [Kuzya] crouched behind her"`
+- **Lighting reveal**: `"at 7s fluorescent snaps on, revealing [figure] previously in shadow at [far-wall]"`
+
+HARD FAILURE: character appearing at a mid-clip timestamp without a reveal mechanism = teleport.
+
+---
+
+## 8. DRAMA ENGINE
+
+### Gaze Contract
+
+Every multi-actor segment MUST state:
+
+`GAZE_TARGET: [Ref1] → [Person/Anchor], [Ref2] → [Person/Anchor]`
+
+Update GAZE_TARGET at each scale transition if gaze shifts.
+
+- FRONTAL profile + sideways gaze at another character = CONTRADICTION; gaze must match head orientation
+- **POV Law**: `[Ref]'s POV` = that character cannot appear in frame. If they must be visible, use over-the-shoulder instead.
+- Missing or contradictory GAZE_TARGET = HARD FAILURE
+
+### Dialogue Density Budget (clip-level)
+
+Total speech budget per clip ≈ 24 chars/sec × duration:
+
+- 10s clip: max ≈240 chars (≈40 words) combined across dialogue + VO
+- 12s clip: max ≈288 chars (≈48 words)
+- 15s clip: max ≈360 chars (≈60 words)
+
+Per-line limits:
+
+- Dialogue line: ≤8 words, ≤ ~3s to deliver
+- Inner monologue (VO): 4–5 words, never narrates visible action
+- Maximum 4 speech events per clip (dialogue + VO combined)
+
+Layering rules:
+
+- ≥2 seconds of silence between two spoken lines (TTS breath room)
+- Dialogue and VO never overlap — VO fills silent beats only
+- At least **3 of 4 clips** must contain dialogue or VO
+- Silent clips allowed only when physical tension escalates visibly in place of speech
+
+Timestamp every speech event:
+
+```
+at 2s Nastya: "I can grow a frog in a pot."
+CONCURRENT: Maxim's right thumb stops clicking [cufflink], chin lifts 3°.
+at 5s (VO) Nastya: "He feels my power."
+at 8s Maxim: "You are hired. No frogs."
+```
+
+### Unstable End Pattern
+
+The last beat of every clip MUST match one of these templates:
+
+- `"Unstable hold on [subject] [action-in-progress]."`
+- `"[Actor] frozen mid-[verb], [body-part] [measurement] from [anchor]."`
+- `"[Prop] at [anchor-edge], [tilt/angle], not yet [verb]."`
+- `"[Actor]'s [body-part] [half-action], outcome not visible before clip ends."`
+
+FORBIDDEN in final beat: `settles`, `relaxes`, `resolves`, `the action is complete`, neutral standing, hands at sides, both feet planted evenly.
+
+### Content Filters
+
+FORBIDDEN visuals anywhere in the prompt:
+
+- Tears (running, brimming, glinting, tear tracks, moisture in eyes)
+- Sweat (glistening, dripping, damp skin)
+- Visible breath / vapor / breath fog / condensation
+- Saliva, drool, spittle
+- Any oral liquid
+
+Encode these as body mechanics only:
+
+- breathing → `chest drops 1cm on exhale`, `shoulders settle 2cm`
+- exertion → `jaw releases`, `shoulders rise 2cm`
+- grief → `jaw quivers 1mm`, `chin drops 5° toward chest`
+
+Facial expressions: micro only, no sustained extremes. Always include micro-motion (`fingers flex`, `chest rises`, `eyes track`).
+
+---
+
+## 9. SPATIAL RULES (9:16)
+
+### Camera Axis Declaration (REQUIRED)
+
+Every `[0s] STATE` block MUST declare camera position and facing axis:
+
+```
+CAMERA: at [room-anchor], axis toward [room-anchor2], height [eye-level|low-angle|high-angle]
+```
+
+- `at [room-anchor]`: where the camera is placed (e.g., `[entrance-door]`, `[far-wall]`, `[left-wall]`)
+- `axis toward [room-anchor2]`: what the camera points at — this defines the 180° axis for the entire clip
+- `height`: `eye-level` (default), `low-angle` (below waist), `high-angle` (above head)
+
+Every `NEW ANCHOR` block MUST confirm or update camera:
+
+```
+CAMERA: unchanged  — OR —  at [new-anchor], axis toward [room-anchor2]
+```
+
+Every in-frame actor in `STATE` and `NEW ANCHOR` MUST declare facing:
+
+```
+[RefA] at [anchor], FACING: frame-right, [pose], [body_detail].
+[RefB] at [anchor2], FACING: frame-left, [pose], [body_detail].
+```
+
+`FACING: frame-right` means the actor's gaze/nose points toward frame-right. This, combined with the declared camera axis, fully resolves who is frame-left vs frame-right and what depth ordering looks like.
+
+**Missing `CAMERA` field = HARD FAILURE. Actor without `FACING` in STATE or NEW ANCHOR = HARD FAILURE.**
+
+---
+
+### Anchor Topology
+
+Use ONLY named anchors: `[sofa]`, `[entrance-door]`, `[glass-table]`, `[panoramic-window]`, etc.
+
+Format: `"[anchor], [distance] toward [anchor2] from [Actor]"`
+
+FORBIDDEN: compass directions (N/S/E/W), vague positions ("middle of the room"), absolute coordinates, `left/right` without `frame-` prefix.
+
+### Scale & Frame Exclusion
+
+Geometric limits per scale segment:
+
+- **ECU** (~30cm from subject): only the immediate subject and objects within 30cm. No other character may appear.
+- **CU** (~1m): primary subject and any actor physically within 1m. Others excluded from frame.
+- **MS** (~3–4m): actors within 3–4m. Actors beyond 4m excluded.
+- **WS**: any actor in the location may appear.
+
+At CU/ECU segments: no timed actions for off-frame characters. An off-frame character's mention is limited to: `"[Name] is off-frame."` at the end of the segment, no actions.
+
+### Frame Density
+
+Max **1 major action per scale segment** (~4–5s). For a 3-segment clip → up to 3 major actions total, sequentially. Every other body is on idle motion only.
+
+### Vertical Framing (9:16)
+
+Faces dominate. Key subjects in the middle 65% of frame height. Top 15% and bottom 20% clear for subtitles/UI.
+
+### Two-Shot & Vertical Stacking (9:16 specific)
+
+- **Profile Two-Shot**: side-by-side actors in partial profile — default for confrontation at MS/MCU
+- **Vertical Stacking**: place [Ref1] at top-frame and [Ref2] at bottom-frame to maximize face scale — use for height-differentiated confrontation (seated + standing, child + adult)
+- FORBIDDEN: full frontal two-shot at MS — faces become too small for 9:16 readability
+
+### 180° Rule
+
+Camera axis consistent within a scale segment. Cross-axis allowed BETWEEN segments only if:
+
+- Actor physically crosses the scene mid-line during the transition, documented in the timed motion, OR
+- Camera executes an arc move ≥90° during the transition, declared explicitly: `"camera arcs 120° around [desk] from 4s to 5s"`
+
+### Mirror & Reflection Law
+
+Mirrors, glass reflections, phone screens as reflective surfaces: valid ONLY at CU/ECU segments. At MS/WS the reflection is too small to read and confuses the model.
+
+### Forbidden Composites
+
+- ECU of eyes + MS of body in same frame = Scale Salad, HARD FAILURE
+- Back-seat OTS framing toward a center-dash subject = unreadable at 9:16
+- Full-body shot with ECU-scale facial detail = HARD FAILURE
+
+---
+
+## 10. PROMPT TEMPLATE
+
+Use this skeleton for each clip. Fill every bracketed slot.
+
+```
+[0s] STATE:
+  TIME: [time of the day] in the [location] (@ImageN)
+  SCALE: [SCALE_TOKEN] — [panel_id, hook_type]
+  CAMERA: at [room-anchor], axis toward [room-anchor2], height [eye-level|low-angle|high-angle]
+  [RefA] (@ImageN) at [anchor], FACING: [frame-left|frame-right|frame-center], [pose], [body_detail].
+  [RefB] (@ImageM) [distance] toward [anchor2] from [RefA], FACING: [frame-left|frame-right], [pose], [body_detail].
+  PROP: [PropA] at [anchor_or_body_part], [state].
+  GAZE_TARGET: [RefA] looking at [target], [RefB] looking at [target]
+  LIGHT: [key_direction], [quality], [color_temp]
+
+[0s–T1s] SEGMENT 1 (panel P_i):
+  [T_a]→[T_b]: [Actor] [body_part] [verb] [measurement] to [anchor_or_person].
+  [T_b]→[T_c]: [Actor] [body_part] [verb] [measurement].
+  CONCURRENT: [OtherActor] [idle motion, anatomy + measurement].
+  at [Ts] [Speaker]: "[≤8-word dialogue]"
+  CONCURRENT: [Listener] [reactive motion].
+
+→ TRANSITION: camera pushes in during [T_n]s–[T_n+1]s to CU on [Actor].
+
+[T1s–T2s] SEGMENT 2 (panel P_i+1):
+  NEW ANCHOR: [fresh pose for in-frame actors at new scale]
+  CAMERA: unchanged — OR — at [new-anchor], axis toward [room-anchor2]
+  [InFrameActor] FACING: [frame-left|frame-right|frame-center], [pose at new scale].
+  [Tc]→[Td]: [Actor] [body_part] [verb] [measurement] to [anchor].
+  at [Ts] (VO) [Speaker]: "[4–5 word inner monologue]"
+  CONCURRENT: [OtherActor] [idle motion].
+
+→ TRANSITION: hard push-in to ECU on [Actor]'s [body_part] at [T]s.
+
+[T2s–__TARGET__s] SEGMENT 3 (panel P_i+2):
+  NEW ANCHOR: [ECU framing — subject body-part only]
+  [Te]→[Tf]: [body_part] [verb] [measurement].
+  at [Ts] [Speaker]: "[line]"
+
+  UNSTABLE END: [Actor] frozen mid-[verb], [body-part] [measurement] from [anchor]. Outcome not visible before clip ends.
+
+
+### Language Rules
+
+- All dialogues and voiceover, labels, interfaces **MUST BE** in Russian, as in original text``
+
+---
+
+## 11. PRE-FLIGHT CHECKLIST
+
+### CRITICAL (most common failures)
+
+- [ ] Every in-frame actor has idle motion every second? (Living Pose)
+- [ ] GAZE_TARGET present for every multi-actor segment and matches head orientation?
+- [ ] `[0s]` = pre-action pose matching reference image (except Clip 1 cold_open)?
+- [ ] Every direction word resolves to a named anchor or person?
+- [ ] Each clip ends on an unstable hold (one of the templates in §8)?
+- [ ] Scale transitions motivated by declared camera move or cut-on-motion?
+
+### PANEL MAPPING
+
+- [ ] Exactly 4 clips for the full scene?
+- [ ] Anchor panels (P1, P⌈N×0.44⌉, P⌈N×0.78⌉, P_N) each get a dedicated scale segment?
+- [ ] Pivot or cliffhanger panels placed as the LAST segment of their clip?
+- [ ] Dialogue from P_N appears in the clip containing P_N?
+
+### STRUCTURAL
+
+- [ ] Valid JSON array of exactly 4 objects with location/prompt/references keys?
+- [ ] Each `prompt` 250–450 words (multi-panel) or 150–300 words (2-panel)?
+- [ ] `references` contains only refs visible in that clip; max 7 @Image tags total?
+- [ ] First-Frame Match Law satisfied between Clip N and Clip N+1?
+- [ ] Props continuous across all clips, position matches previous end state?
+- [ ] Camera axis preserved within each segment; arc move declared for cross-axis transitions?
+- [ ] CU/ECU segments: no timed actions for off-frame characters?
+- [ ] ≤3 scale segments per clip?
+- [ ] `CAMERA:` field present in every `[0s] STATE`?
+- [ ] Every `NEW ANCHOR` block confirms or updates `CAMERA:`?
+- [ ] Every in-frame actor has `FACING:` declared in STATE and NEW ANCHOR?
+- [ ] Camera axis (`at → toward` vector) unchanged within clip unless arc move declared?
+
+### VERBAL
+
+- [ ] ≥3 of 4 clips contain dialogue or VO?
+- [ ] Dialogue ≤8 words/line, VO ≤5 words?
+- [ ] Clip speech budget within char-per-sec limit (see §8)?
+- [ ] ≥2s silence between consecutive spoken lines?
+- [ ] `CONCURRENT:` line present for every dialogue beat?
+- [ ] Speaker is in CU or ECU during their line?
+
+### CONTENT
+
+- [ ] No sweat, tears, vapor, breath fog, saliva, oral liquids?
+- [ ] No emotional verbs or metaphors — all physical description is anatomy + measurement?
+- [ ] No bare `forward/backward/toward camera/away`?
+- [ ] References injected at timestamp of first visible appearance, not at clip start?
+- [ ] Mid-clip character entries have a declared reveal mechanism (occlusion release, door, focus pull, lighting)?
+
+---
+
+## 12. APPENDIX — QUICK REFERENCE
+
+### Scale Tokens
+
+`ECU` `CU` `MCU` `MS` `MWS` `WS`
+
+### Camera Height Tokens
+
+`eye-level` `low-angle` `high-angle`
+
+### Actor Facing Tokens (FACING: field)
+
+`frame-left` `frame-right` `frame-center`
+
+> `frame-right` = actor's gaze/nose points toward the right edge of the frame.
+> Combined with the declared CAMERA axis, this fully resolves depth order and left/right placement.
+
+### Profile Tokens (for inter-character orientation)
+
+`FRONTAL` `3Q-FRONT` `SIDE` `3Q-REAR` `BACK`
+
+### Pose Tokens
+
+`standing` `seated` `leaning` `crouched` `kneeling` `half-risen` `perched` `prone`
+
+### Light Quality Tokens
+
+`hard` `soft` `diffuse` `rim` `flat`
+
+### Color Temp Tokens
+
+`warm` (≈3000K) `neutral` (≈5500K) `cold` (≈7000K)
+
+### Transition Verbs (between scale segments)
+
+`camera pushes in` `camera pulls back` `dolly-in` `dolly-out` `lens tracks to [ECU/CU] on [anchor]` `cut-on-motion at [T]s` `camera arcs [N]° around [anchor]` `rack focus from [FG] to [BG] at [T]s`
+
+### Emotion → Body Mechanics Quick Table
+
+| Emotion | Physical encoding |
+|---------|-------------------|
+| Fear | retreats 10–15cm, spine presses to [wall], shoulders rise 2cm, eyes sweep to exit |
+| Anger | slams palm, steps 20cm toward [target], jaw clamps, chin juts 3–5cm toward [target] |
+| Shame | gaze drops, chin drops 10° toward chest, shoulders curl inward, weight transfers to rear foot |
+| Grief | shoulders collapse 3–5cm, hands drop, gaze defocuses, jaw releases |
+| Contempt | upper lip tightens unilaterally, head tilts back 5–10°, weight rearward |
+| Shock | brows flash up 0.3s then soften, body stills 0.5s, hands freeze, then reactive motion |
+| Desire | closes distance 10–15cm, rotates to side profile, chin lifts 3° |
+| Dominance | steps 20cm toward [other], chest squared at [other] while their gaze breaks away |
+| Doubt | gaze breaks frame-right then returns, weight shifts to one foot, hand lifts toward chin then drops |
+| Relief | shoulders drop 2cm, jaw releases, chest drops on exhale, fist opens |
+</script>
+
+<!-- ═══════════════════════════════════════════════
+     LOGIC TEMPLATE
+════════════════════════════════════════════════ -->
+
+<script type="text/plain" id="tmpl-logic">
+Ты выполняешь три задачи подряд по тексту главы.
+Верни ответ строго в трёх секциях. Каждую секцию начинай с заголовка вида «## СЕКЦИЯ N».
+Между секциями ставь разделитель: строку из трёх дефисов (---).
+
+## СЕКЦИЯ 1 — ЗАНУДА-ОТЧЁТ
+
+Ты — "ЗАНУДА-ЛОГИК", строгий редактор по логике, физике и пространству.
+
+Обязательные проверки:
+
+1. ФИЗИЧЕСКАЯ ЛОГИКА:
+   - Каждое описание звука, движения, ощущения — возможно ли это физически?
+   - Соответствуют ли глаголы свойствам взаимодействующих объектов?
+   - Пример ошибки: "морось стучала" (морось не стучит — она моросит)
+   - Пример ошибки: "керамика царапнула ворс" (керамика скребёт или шуршит, но не царапает мягкий ворс)
+   - Взаимодействие с предметами, движения, падения, прыжки, бег - нет ли нарушений физики и биомеханики?
+
+2. ПРОСТРАНСТВЕННАЯ ЛОГИКА:
+   - Не телепортируются ли персонажи? Соответствуют ли расстояния времени перемещения?
+   - Видит / слышит ли персонаж то, что физически возможно с его позиции?
+   - Помещаются ли все объекты и персонажи в описанном пространстве?
+   - Не противоречат ли детали окружения (тип пола, расположение мебели) друг другу в разных частях текста?
+
+3. ВРЕМЕННАЯ ЛОГИКА:
+   - Нет ли скачков или необъяснённых дыр во времени?
+   - Может ли персонаж успеть сделать всё описанное за указанное время?
+   - Логично ли время суток / освещение / погода для хода событий?
+   - Не происходят ли одновременно действия, требующие последовательности?
+   - Тайминг слов (речь 130-150 слов в минуту) и действий?
+   - Скорость движений и перемещений?
+
+4. ЛОГИКА ПОСЛЕДСТВИЙ:
+   - Если персонаж получил травму, удар или физическое воздействие — есть ли последствия?
+   - Соответствует ли реакция тела описанному воздействию (боль, кровь, потеря равновесия)?
+   - Правовые и нормативные ограничения мира?
+
+5. ПРИЧИННО-СЛЕДСТВЕННЫЕ СВЯЗИ:
+   - Логично ли следуют события друг за другом? Нет ли пропущенных промежуточных этапов?
+   - Откуда персонаж знает то, о чём говорит? Не использует ли он знания, которые ещё не получал?
+
+Формат отчёта:
+Для каждой ошибки: • [ТИП] «цитата» → Претензия → Решение
+Если ошибок нет — написать «Ошибок не найдено».
+
+---
+
+## СЕКЦИЯ 2 — ИСПРАВЛЕННЫЙ ТЕКСТ
+
+Полный исправленный текст с учётом всех претензий из Секции 1.
+Сохраняй авторский голос, стиль, метафоры, ритм.
+Исправляй ТОЛЬКО найденные логические/физические/пространственные ошибки.
+Не добавляй новые сцены, персонажей, сюжетные повороты.
+Обсценная лексика и сцены насилия допустимы.
+
+---
+
+## СЕКЦИЯ 3 — МАСТЕР СЕТТИНГА И ДЕКОРАЦИЙ
+
+Ты — технический консультант по локациям и реквизиту для кино и театра.
+По готовому тексту главы составь техническое приложение "Мастер сеттинга и декораций" —
+список физических и пространственных предусловий, необходимых для того, чтобы все описанные
+в тексте действия были физически возможны.
+
+Для каждой локации, упомянутой в главе, укажи:
+
+1. **Локация**: название / тип пространства
+2. **Обязательные объекты**: что должно находиться в сцене и где (примерное расположение)
+3. **Пространственные требования**: минимальные расстояния, проходы, свободное пространство,
+   необходимые для описанных действий
+4. **Состояние объектов до начала сцены**: в каком виде должны быть предметы
+   (пример: "на столе лежат бумаги", "дверь приоткрыта", "стул стоит у окна")
+5. **Физические условия**: освещение, погода, время суток — если это влияет на возможность
+   описанных действий
+
+Пример рассуждения: герой спотыкается и падает на стол, сметая бумаги, поэтому:
+- нужен предмет для спотыкания (порог, ковёр, брошенная вещь, чья-то нога)
+- от точки спотыкания до стола — 1–2 м, стол в направлении падения
+- на столе до начала сцены лежат бумаги
+- свободное пространство для падения тела — не менее 1,5 м
+
+Дополнительное руководство по анализу пространства:
+
+### STEP 1 — ENVIRONMENT TYPE REASONING
+Identify the space type (office, cafe, kitchen, garage, hospital ward, prison cell, living room, etc.). List what items are TYPICALLY present in such a space: furniture, equipment, surfaces, fixtures, materials, lighting. What would a visitor notice first? What is on every desk/counter/shelf/wall in this kind of place?
+
+### STEP 2 — STORY-REQUIRED SPECIFICS
+Re-read the novel excerpt. For each character who uses this space:
+- What is their ROLE/JOB? Role determines what is on their station.
+- Which actions happen at their spot? What props must be physically present?
+- Which props are explicitly named in the text? Place them exactly.
+- Any recurring visits to the same spot? Give it a stable anchor label.
+
+Для каждой локации дай детальное описание пространства в формате компаса (NORTH/SOUTH/EAST/WEST WALL, CENTER, CEILING/FLOOR)
+с именованными якорями мебели и оборудования — это войдёт в кастинг как ref_thriller описание локации.
+
+Пиши по-русски. Будь конкретен. Это технический документ для постановщика.
+</script>
+
+<!-- ═══════════════════════════════════════════════
+     APP HTML
+════════════════════════════════════════════════ -->
+
+<div id="app">
+  <header>
+    <span class="brand">⬛ AI-MDF Lite</span>
+    <nav id="nav">
+      <button class="nav-btn" data-tab="logic">0 · Логика</button>
+      <button class="nav-btn active" data-tab="setup">1 · Настройки</button>
+      <button class="nav-btn" data-tab="cast">2 · Кастинг</button>
+      <button class="nav-btn" data-tab="screenplay">3 · Сценарий</button>
+      <button class="nav-btn" data-tab="quickplay">4 · Квик-плей</button>
+      <button class="nav-btn" data-tab="library">Библиотека</button>
+      <button class="nav-btn" data-tab="templates">Шаблоны</button>
+      <button class="nav-btn" data-tab="userguide">Справка</button>
+    </nav>
+    <div class="hdr-spacer"></div>
+    <button class="btn btn-sm btn-ghost" id="undo-btn" disabled title="Отменить последнее изменение состояния">↩ Отмена (0)</button>
+    <span id="backup-status" class="status" style="font-size:11px;white-space:nowrap;margin-left:4px"></span>
+  </header>
+
+  <main>
+
+    <!-- ── 0. LOGIC ─────────────────────────────── -->
+    <section id="tab-logic" class="tab">
+      <div class="section-row">
+        <span class="section-title">Шаг 0 — Логика <span class="badge badge-orange">необязательно</span></span>
+        <span id="logic-status" class="status">анализ не сохранён</span>
+      </div>
+      <div class="tip">Находит логические, физические и пространственные ошибки. Возвращает: отчёт занудика + исправленный текст + описания локаций (улучшает кастинг и сценарий).</div>
+      <br>
+      <div class="actions">
+        <button class="btn btn-primary" id="gen-logic-btn">Сгенерировать промпт</button>
+        <button class="btn" id="copy-logic-btn">Копировать промпт</button>
+      </div>
+      <br>
+      <div class="card">
+        <div class="card-title">Промпт</div>
+        <div id="logic-prompt" class="prompt-area" style="max-height:260px">(нажмите «Сгенерировать промпт» выше)</div>
+      </div>
+      <br>
+      <div class="card">
+        <div class="card-title">Вставьте ответ чатбота (3 секции через ---)</div>
+        <textarea id="logic-response" class="mono" rows="16" placeholder="Вставьте полный ответ чатбота — три секции: Зануда-отчёт, Исправленный текст, Мастер сеттинга..."></textarea>
+        <br>
+        <div class="actions">
+          <button class="btn btn-primary" id="save-logic-btn">Сохранить анализ</button>
+          <button class="btn btn-ghost" id="apply-fixed-btn" title="Заменить текст истории исправленным текстом из секции 2">Применить исправленный текст →</button>
+          <button class="btn btn-ghost" id="clear-logic-btn">Очистить</button>
+        </div>
+      </div>
+      <br>
+      <div id="logic-preview"></div>
+    </section>
+
+    <!-- ── 1. SETUP ─────────────────────────────── -->
+    <section id="tab-setup" class="tab active">
+      <div class="setup-grid">
+        <div class="col">
+          <div class="card">
+            <div class="card-title">Текст истории</div>
+            <textarea id="story-text" class="mono" rows="28" placeholder="Вставьте текст вашего романа / истории…"></textarea>
+          </div>
+        </div>
+        <div class="col">
+          <div class="card">
+            <div class="card-title">Конфигурация</div>
+            <label>Эпизодов в серии</label>
+            <select id="cfg-episodes">
+              <option value="1">1 эпизод</option>
+              <option value="2">2 эпизода</option>
+              <option value="3" selected>3 эпизода (по умолчанию)</option>
+              <option value="5">5 эпизодов</option>
+            </select>
+            <label>Допустимое количество панелей (через запятую)</label>
+            <input type="text" id="cfg-panels" value="4,6,9,10,12">
+            <label>Длительность клипа квик-плея (секунды)</label>
+            <select id="cfg-clip-duration">
+              <option value="6">6s</option>
+              <option value="8">8s</option>
+              <option value="10" selected>10s</option>
+              <option value="15">15s</option>
+            </select>
+          </div>
+          <div class="card">
+            <div class="card-title">Шаблон стиля <span class="badge badge-blue">редактируемый</span></div>
+            <textarea id="style-text" class="mono" rows="12"></textarea>
+          </div>
+          <div class="card">
+            <div class="card-title">Шаблон сеттинга <span class="badge badge-blue">заполните {{placeholders}}</span></div>
+            <textarea id="setting-text" class="mono" rows="18"></textarea>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── 2. CAST ─────────────────────────────── -->
+    <section id="tab-cast" class="tab">
+      <div class="section-row">
+        <span class="section-title">Шаг 2 — Кастинг персонажей</span>
+        <span id="cast-status" class="status">рефы не сохранены</span>
+      </div>
+      <div class="tip">Сгенерируйте промпт → скопируйте в чатбот (Claude, ChatGPT, Gemini) → вставьте JSON-ответ обратно.</div>
+      <br>
+      <div class="actions">
+        <button class="btn btn-primary" id="gen-casting-btn">Сгенерировать промпт</button>
+        <button class="btn" id="copy-casting-btn">Копировать промпт</button>
+      </div>
+      <br>
+      <div class="card">
+        <div class="card-title">Промпт</div>
+        <div id="casting-prompt" class="prompt-area" style="max-height:260px">(нажмите «Сгенерировать промпт» выше)</div>
+      </div>
+      <br>
+      <div class="card">
+        <div class="card-title">Вставьте ответ чатбота (JSON-массив рефов)</div>
+        <textarea id="casting-response" class="mono" rows="12" placeholder='[{"name":"...","type":"Character","visual_desc":"..."}]'></textarea>
+        <div id="cast-validation" class="val-box"></div>
+        <br>
+        <div class="actions">
+          <button class="btn btn-primary" id="parse-casting-btn">Разобрать и сохранить рефы</button>
+          <button class="btn btn-ghost" id="clear-refs-btn">Очистить все рефы</button>
+        </div>
+      </div>
+      <br>
+      <div id="casting-preview"></div>
+    </section>
+
+    <!-- ── 3. SCREENPLAY ──────────────────────── -->
+    <section id="tab-screenplay" class="tab">
+      <div class="section-row">
+        <span class="section-title">Шаг 3 — Сценарий (только эпизоды)</span>
+        <span id="screenplay-status" class="status">сценарий не сохранён</span>
+      </div>
+      <div class="tip">Генерирует промпт для разбивки на эпизоды. Требуется шаг кастинга (список персонажей).</div>
+      <br>
+      <div class="actions">
+        <button class="btn btn-primary" id="gen-screenplay-btn">Сгенерировать промпт</button>
+        <button class="btn" id="copy-screenplay-btn">Копировать промпт</button>
+      </div>
+      <br>
+      <div class="card">
+        <div class="card-title">Промпт</div>
+        <div id="screenplay-prompt" class="prompt-area" style="max-height:260px">(нажмите «Сгенерировать промпт» выше)</div>
+      </div>
+      <br>
+      <div class="card">
+        <div class="card-title">Вставьте ответ чатбота (JSON-объект)</div>
+        <textarea id="screenplay-response" class="mono" rows="12" placeholder='{"characters":[...],"episodes":[]}'></textarea>
+        <div id="screenplay-validation" class="val-box"></div>
+        <br>
+        <div class="actions">
+          <button class="btn btn-primary" id="parse-screenplay-btn">Разобрать и сохранить сценарий</button>
+          <button class="btn btn-ghost" id="clear-screenplay-btn">Очистить сценарий</button>
+        </div>
+      </div>
+      <br>
+      <div id="screenplay-preview"></div>
+    </section>
+
+    <!-- ── 4. QUICK-PLAY ──────────────────────── -->
+    <section id="tab-quickplay" class="tab">
+      <div class="section-row">
+        <span class="section-title">Шаг 4 — Промпты квик-плея</span>
+        <span id="qp-status" class="status">сценарий не загружен</span>
+      </div>
+      <div class="tip">На каждую сцену: сгенерируйте промпт → отдайте чатботу → вставьте 4 клипа обратно. Загрузите PNG рефов в Библиотеку заранее — чатботу нужны они как вложения @Image.</div>
+      <br>
+      <div id="quickplay-scenes">
+        <div class="empty-state">Сначала загрузите сценарий на шаге 3.</div>
+      </div>
+    </section>
+
+    <!-- ── LIBRARY ────────────────────────────── -->
+    <section id="tab-library" class="tab">
+      <div class="section-row">
+        <span class="section-title">Библиотека рефов</span>
+        <div class="actions">
+          <button class="btn btn-sm btn-primary" id="export-project-btn">⬇ Экспорт проекта</button>
+          <button class="btn btn-sm" id="import-project-btn">⬆ Импорт проекта</button>
+          <input type="file" id="import-project-file" accept=".json">
+          <button class="btn btn-sm btn-ghost" id="export-refs-btn">Рефы JSON</button>
+          <button class="btn btn-sm btn-ghost" id="import-refs-btn">Импорт рефов</button>
+          <input type="file" id="import-refs-file" accept=".json">
+          <button class="btn btn-sm btn-ghost" id="restore-backup-btn">↺ Бэкап</button>
+        </div>
+      </div>
+      <div id="library-grid" class="refs-grid">
+        <div class="empty-state" style="grid-column:1/-1">Выполните шаг кастинга, чтобы заполнить рефы.</div>
+      </div>
+    </section>
+
+    <!-- ── TEMPLATES ─────────────────────────── -->
+    <section id="tab-templates" class="tab">
+      <div class="section-row">
+        <span class="section-title">Шаблоны промптов</span>
+        <span class="status">Изменения применяются при следующей генерации промпта</span>
+      </div>
+      <div class="tip">Настройте под свой жанр. Кнопка «↺ Сброс» восстанавливает шаблон по умолчанию.</div>
+      <br>
+
+      <div class="card" style="margin-bottom:12px">
+        <div class="tmpl-card-hdr">
+          <div class="card-title" style="margin-bottom:0">Кастинг (tmpl-casting)</div>
+          <button class="btn btn-sm btn-ghost" onclick="resetTmpl('casting')">↺ Сброс</button>
+        </div>
+        <textarea id="tmpl-edit-casting" class="mono" rows="20"></textarea>
+      </div>
+
+      <div class="card" style="margin-bottom:12px">
+        <div class="tmpl-card-hdr">
+          <div class="card-title" style="margin-bottom:0">Контекст производства (tmpl-screenplay-sys)</div>
+          <button class="btn btn-sm btn-ghost" onclick="resetTmpl('screenplaySys')">↺ Сброс</button>
+        </div>
+        <textarea id="tmpl-edit-screenplaySys" class="mono" rows="14"></textarea>
+      </div>
+
+      <div class="card" style="margin-bottom:12px">
+        <div class="tmpl-card-hdr">
+          <div class="card-title" style="margin-bottom:0">Шаблон эпизодов сценария (tmpl-screenplay-eps)</div>
+          <button class="btn btn-sm btn-ghost" onclick="resetTmpl('screenplayEps')">↺ Сброс</button>
+        </div>
+        <textarea id="tmpl-edit-screenplayEps" class="mono" rows="30"></textarea>
+      </div>
+
+      <div class="card" style="margin-bottom:12px">
+        <div class="tmpl-card-hdr">
+          <div class="card-title" style="margin-bottom:0">Квик-плей (tmpl-quickplay)</div>
+          <button class="btn btn-sm btn-ghost" onclick="resetTmpl('quickplay')">↺ Сброс</button>
+        </div>
+        <textarea id="tmpl-edit-quickplay" class="mono" rows="30"></textarea>
+      </div>
+    </section>
+
+    <!-- ──  USER GUIDE ──────────────────────── -->
+    <section id="tab-userguide" class="tab">
+      <div class="section-row">
+        <span class="section-title">AI-MDF Lite: Краткое руководство пользователя</span>
+      </div>
+      <div class="card">
+        <p>AI-MDF Lite — браузерный инструмент для адаптации художественных текстов в производственные сценарии и видео-промпты для вертикальных микродрам (9:16, DramaBox / ReelShort).</p>
+        <p>Приложение не генерирует тексты и видео самостоятельно. Оно работает как <strong>менеджер промптов и состояний</strong>: формирует выверенные запросы для текстовых нейросетей (ChatGPT, Claude и др.), парсит и сохраняет их ответы, а в финале выдаёт готовые инструкции для видео-генераторов (Seedance, Kling, Grok).</p>
+
+        <h3>Основной рабочий процесс</h3>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">Работа строится последовательно, слева направо по вкладкам навигации.</p>
+        <div class="guide-steps">
+          <div class="guide-step">
+            <div class="guide-step-num">1</div>
+            <div class="guide-step-body">
+              <span class="guide-step-title">Настройки</span>
+              <span class="guide-step-action">Вставьте исходный текст в поле «Текст истории». Выберите количество эпизодов, лимит панелей и длительность клипа. Заполните поля-плейсхолдеры <code>{{...}}</code> в шаблоне сеттинга: жанр, атмосфера, визуальный тон, главные герои.</span>
+            </div>
+          </div>
+          <div class="guide-step">
+            <div class="guide-step-num optional">0</div>
+            <div class="guide-step-body">
+              <span class="guide-step-title">Логика <span class="badge badge-orange">опционально</span></span>
+              <span class="guide-step-action">Сгенерируйте промпт → скопируйте в чатбот → вставьте ответ (три секции через <code>---</code>) → «Сохранить анализ».</span>
+              <span class="guide-step-why">Чатбот выступает «зануды-редактором»: находит физические, пространственные и временные несостыковки, предлагает исправления и формирует требования к декорациям.</span>
+            </div>
+          </div>
+          <div class="guide-step">
+            <div class="guide-step-num">2</div>
+            <div class="guide-step-body">
+              <span class="guide-step-title">Кастинг персонажей</span>
+              <span class="guide-step-action">Сгенерируйте промпт → отправьте нейросети → вставьте JSON-массив → «Разобрать и сохранить рефы».</span>
+              <span class="guide-step-why">Нейросеть вычленяет персонажей, локации и важные предметы, создавая визуальные карточки (внешность, одежда, привычки) — фундамент визуальной консистентности.</span>
+            </div>
+          </div>
+          <div class="guide-step">
+            <div class="guide-step-num">3</div>
+            <div class="guide-step-body">
+              <span class="guide-step-title">Сценарий</span>
+              <span class="guide-step-action">Сгенерируйте промпт (автоматически включает текст + кастинг) → скопируйте JSON-ответ → сохраните.</span>
+              <span class="guide-step-why">Текст разбивается на эпизоды, сцены и панели. Прописываются ракурсы, движения в кадре и короткие диалоги по правилам удержания внимания.</span>
+            </div>
+          </div>
+          <div class="guide-step">
+            <div class="guide-step-num">4</div>
+            <div class="guide-step-body">
+              <span class="guide-step-title">Квик-плей</span>
+              <span class="guide-step-action">Для каждой сцены сгенерируйте промпт → загрузите ответ чатбота (массив из 4 строк-клипов).</span>
+              <span class="guide-step-why">Сценарные панели превращаются в детализированные режиссёрские инструкции: движения камеры, тайминги в секундах, микро-движения актёров — для покадровой генерации видео.</span>
+            </div>
+          </div>
+        </div>
+
+        <hr>
+        <h3>Библиотека и изображения</h3>
+        <ul>
+          <li><strong>Референсы:</strong> Кликните на пустое окно <code>+ Загрузить PNG</code> в карточке персонажа или локации, чтобы добавить сгенерированный референс — он подхватывается при сборке промптов квик-плея.</li>
+          <li><strong>Экспорт / Импорт:</strong> Все данные хранятся <em>только в браузере</em>. Используйте «⬇ Экспорт проекта», чтобы скачать <code>.json</code>-снимок и не потерять прогресс при очистке кэша.</li>
+        </ul>
+
+        <h3>Ключевые особенности</h3>
+        <ul>
+          <li><strong>Полный промпт ↗:</strong> На вкладке Квик-плей кнопка у каждого клипа собирает финальный текст для видео-генератора — с техническими запретами (морфинг, слёзы и т.п.) и учётом диалогов.</li>
+          <li><strong>Система бэкапов:</strong> Прогресс сохраняется автоматически. Откат — кнопка <code>↺ Бэкап</code> (Библиотека) или <code>↩ Отмена</code> (верхняя панель).</li>
+          <li><strong>Шаблоны:</strong> На вкладке «Шаблоны» можно точечно переписать системные промпты приложения для нестандартных операторских приёмов или сценарных структур.</li>
+        </ul>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- ── REF DETAIL MODAL ── -->
+<div id="ref-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:100; overflow:auto; padding:40px 20px;">
+  <div style="max-width:680px; margin:0 auto; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:20px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+      <strong id="modal-title">Реф</strong>
+      <button class="btn btn-ghost btn-sm" id="modal-close">✕ Закрыть</button>
+    </div>
+    <div style="display:grid; grid-template-columns:140px 1fr; gap:16px;">
+      <div>
+        <div id="modal-thumb" style="width:140px; height:190px; background:var(--bg); border-radius:6px; border:1px solid var(--border); overflow:hidden; display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:11px; cursor:pointer;" title="Click to upload PNG">
+          <span>кликните для загрузки</span>
+        </div>
+        <input type="file" id="modal-img-file" accept="image/png,image/jpeg,image/webp">
+        <div style="margin-top:8px; font-size:11px; color:var(--muted);">PNG / JPG / WEBP</div>
+      </div>
+      <div>
+        <label>JSON (редактируемый)</label>
+        <textarea id="modal-json" class="mono" rows="18"></textarea>
+        <div style="margin-top:8px;" class="actions">
+          <button class="btn btn-primary btn-sm" id="modal-save">Сохранить</button>
+          <button class="btn btn-sm" style="color:var(--red);" id="modal-delete">Удалить реф</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── ANIMATION WRAPPER MODAL ── -->
+<div id="anim-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:101; overflow:auto; padding:40px 20px;">
+  <div style="max-width:720px; margin:0 auto; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:20px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+      <strong>Полный промпт анимации — <span id="anim-modal-title"></span></strong>
+      <button class="btn btn-ghost btn-sm" id="anim-modal-close">✕ Закрыть</button>
+    </div>
+    <div class="actions" style="margin-bottom:10px;">
+      <label style="display:flex;align-items:center;gap:6px;margin:0;color:var(--text);font-size:13px;cursor:pointer;">
+        <input type="checkbox" id="anim-speaks" style="width:auto"> Есть диалог / озвучка
+      </label>
+      <button class="btn btn-primary btn-sm" id="anim-copy-btn">Копировать</button>
+    </div>
+    <div class="tip" style="margin-bottom:10px;">Вставьте этот промпт в Seedance / Kling / Grok вместе с @Image рефами.</div>
+    <textarea id="anim-modal-text" class="mono" rows="24" style="width:100%;resize:vertical"></textarea>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+// ─────────────────────────────────────────────────────
+// TEMPLATES
+// ─────────────────────────────────────────────────────
+function tmpl(id) { return document.getElementById(id).textContent.trim(); }
+
+const TMPL = {
+  style:         tmpl('tmpl-style'),
+  setting:       tmpl('tmpl-setting'),
+  casting:       tmpl('tmpl-casting'),
+  screenplaySys: tmpl('tmpl-screenplay-sys'),
+  screenplayEps: tmpl('tmpl-screenplay-eps'),
+  quickplay:     tmpl('tmpl-quickplay'),
+  logic:         tmpl('tmpl-logic'),
+};
+
+function getTmpl(key) {
+  const ta = document.getElementById('tmpl-edit-' + key);
+  return ta ? ta.value : TMPL[key];
+}
+
+const ANIM_PROHIBITIONS =
+`CRITICALLY FORBIDDEN: object morphing, adding new objects, adding new actors.
+NO sweat — no dripping, beading, shiny skin, or wet clothing.
+NO tears — no tear tracks, glistening eyes, or eyes filling with liquid.
+NO breath vapor or mouth condensation — no visible exhale cloud.
+NO oral liquids — no saliva, drool, foam, or spittle.
+NO theatrical facial extremes: no bared teeth in anger, no sustained gaping mouth, no frozen wide-eye terror held beyond 1s.
+NO animation of photos, photo frames or ultrasound scans.`;
+
+// ─────────────────────────────────────────────────────
+// STORAGE (IndexedDB, with localStorage migration)
+// ─────────────────────────────────────────────────────
+const NS = 'mdf:';
+const DB_NAME = 'mdf-db', DB_VER = 1, STORE = 'kv';
+let _db = null;
+
+function _openDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VER);
+    req.onupgradeneeded = e => {
+      if (!e.target.result.objectStoreNames.contains(STORE))
+        e.target.result.createObjectStore(STORE, { keyPath: 'k' });
+    };
+    req.onsuccess = e => resolve(e.target.result);
+    req.onerror   = e => reject(e.target.error);
+  });
+}
+
+function dbGet(k) {
+  return new Promise(resolve => {
+    const req = _db.transaction(STORE, 'readonly').objectStore(STORE).get(k);
+    req.onsuccess = e => resolve(e.target.result != null ? e.target.result.v : null);
+    req.onerror   = () => resolve(null);
+  });
+}
+
+function dbSet(k, v) {
+  return new Promise(resolve => {
+    const req = _db.transaction(STORE, 'readwrite').objectStore(STORE).put({ k, v });
+    req.onsuccess = () => resolve();
+    req.onerror   = e => { console.error('dbSet', k, e.target.error); resolve(); };
+  });
+}
+
+async function _migrateLS() {
+  const jsonKeys = ['refs', 'refImages', 'screenplay', 'quickplay', 'backups', 'logic'];
+  const txtKeys  = ['story', 'style', 'setting', 'cfgEp', 'cfgPan',
+                    'tmpl:casting', 'tmpl:screenplaySys', 'tmpl:screenplayEps', 'tmpl:quickplay'];
+  let any = false;
+  for (const k of jsonKeys) {
+    const v = localStorage.getItem(NS + k);
+    if (v !== null) {
+      try { await dbSet(k, JSON.parse(v)); } catch(_) {}
+      localStorage.removeItem(NS + k); any = true;
+    }
+  }
+  for (const k of txtKeys) {
+    const v = localStorage.getItem(NS + 'txt:' + k);
+    if (v !== null) {
+      await dbSet('txt:' + k, v);
+      localStorage.removeItem(NS + 'txt:' + k); any = true;
+    }
+  }
+  if (any) console.info('[mdf] Migrated localStorage → IndexedDB.');
+}
+
+const state = { refs: [], refImages: {}, screenplay: null, quickplay: {}, logic: null };
+
+function saveRefs()       { dbSet('refs',       state.refs);       }
+function saveRefImages()  { dbSet('refImages',  state.refImages);  }
+function saveScreenplay() { dbSet('screenplay', state.screenplay); }
+function saveQuickplay()  { dbSet('quickplay',  state.quickplay);  }
+function saveLogic()      { dbSet('logic',      state.logic);      }
+
+async function bindPersist(id, key, init) {
+  const ta = document.getElementById(id);
+  if (!ta) return;
+  const stored = await dbGet('txt:' + key);
+  ta.value = stored !== null ? stored : init;
+  ta.addEventListener('input', () => dbSet('txt:' + key, ta.value));
+}
+
+// ─────────────────────────────────────────────────────
+// UNDO
+// ─────────────────────────────────────────────────────
+const _undo = [];
+
+function pushUndo() {
+  _undo.push({
+    refs:       JSON.parse(JSON.stringify(state.refs)),
+    screenplay: JSON.parse(JSON.stringify(state.screenplay)),
+    quickplay:  JSON.parse(JSON.stringify(state.quickplay)),
+    logic:      JSON.parse(JSON.stringify(state.logic)),
+  });
+  if (_undo.length > 5) _undo.shift();
+  _updateUndoBtn();
+}
+
+function _undoLast() {
+  if (!_undo.length) return;
+  const s = _undo.pop();
+  state.refs = s.refs; state.screenplay = s.screenplay; state.quickplay = migrateQuickplay(s.quickplay); state.logic = s.logic;
+  saveRefs(); saveScreenplay(); saveQuickplay(); saveLogic();
+  renderCastingPreview(); renderScreenplayPreview(); renderQuickplay(); renderLibrary(); renderLogicPreview(); statusEl();
+  _updateUndoBtn();
+}
+
+function _updateUndoBtn() {
+  const btn = el('undo-btn');
+  if (!btn) return;
+  btn.disabled = !_undo.length;
+  btn.textContent = `↩ Отмена (${_undo.length})`;
+}
+
+// ─────────────────────────────────────────────────────
+// AUTO-BACKUP
+// ─────────────────────────────────────────────────────
+let _mutCount = 0;
+
+function trackMutation() {
+  if (++_mutCount % 5 === 0) _autoBackup();
+  updateBackupStatus();
+}
+
+async function _autoBackup() {
+  const snap = { refs: state.refs, screenplay: state.screenplay, quickplay: state.quickplay, logic: state.logic, ts: Date.now() };
+  const list = (await dbGet('backups')) || [];
+  list.unshift(snap);
+  if (list.length > 5) list.length = 5;
+  await dbSet('backups', list);
+}
+
+async function updateBackupStatus() {
+  const list = (await dbGet('backups')) || [];
+  const sp = el('backup-status');
+  if (!sp) return;
+  if (list.length) {
+    const d = new Date(list[0].ts);
+    sp.textContent = `бэкап: ${d.toLocaleTimeString('ru', {hour:'2-digit', minute:'2-digit'})}`;
+    sp.className = 'status ok';
+  }
+}
+
+async function restoreBackup() {
+  const list = (await dbGet('backups')) || [];
+  if (!list.length) { alert('Нет сохранённых бэкапов.'); return; }
+  const d = new Date(list[0].ts);
+  if (!confirm(`Восстановить бэкап от ${d.toLocaleString('ru')}?\nТекущее состояние будет заменено.`)) return;
+  pushUndo();
+  const s = list[0];
+  state.refs = s.refs || []; state.screenplay = s.screenplay || null; state.quickplay = migrateQuickplay(s.quickplay); state.logic = s.logic || null;
+  saveRefs(); saveScreenplay(); saveQuickplay(); saveLogic();
+  renderCastingPreview(); renderScreenplayPreview(); renderQuickplay(); renderLibrary(); renderLogicPreview(); statusEl();
+}
+
+// ─────────────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────────────
+function el(id) { return document.getElementById(id); }
+function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function escAttr(s) { return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;'); }
+
+function copyText(text) {
+  navigator.clipboard.writeText(text).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
+  });
+}
+
+function flashBtn(id, label='Скопировано!', ms=1500) {
+  const btn = el(id); if (!btn) return;
+  const orig = btn.textContent;
+  btn.textContent = label; btn.disabled = true;
+  setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, ms);
+}
+
+function extractJSON(raw) {
+  let s = raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
+  const fi = Math.min(
+    s.indexOf('[') === -1 ? Infinity : s.indexOf('['),
+    s.indexOf('{') === -1 ? Infinity : s.indexOf('{')
+  );
+  if (fi === Infinity) return JSON.parse(s);
+  const sc = s[fi], ec = sc === '[' ? ']' : '}';
+  return JSON.parse(s.slice(fi, s.lastIndexOf(ec)+1));
+}
+
+// ─────────────────────────────────────────────────────
+// VALIDATION
+// ─────────────────────────────────────────────────────
+function validateRefsArr(arr) {
+  const errs = [];
+  if (!Array.isArray(arr)) {
+    errs.push('Ожидается JSON-массив (начинается с «[»). Попросите чатбот вернуть только массив объектов рефов.');
+    return errs;
+  }
+  arr.forEach((item, i) => {
+    const miss = ['name','type','visual_desc'].filter(f => !item[f]);
+    if (miss.length) errs.push(`refs[${i}] «${item.name||'?'}»: нет обязательных полей ${miss.map(f=>'"'+f+'"').join(', ')} — попросите чатбот добавить их`);
+  });
+  return errs;
+}
+
+function validateScreenplayObj(obj) {
+  const errs = [];
+  if (!obj.episodes) { errs.push('Нет поля «episodes». Попросите чатбот вернуть JSON с ключом «episodes».'); return errs; }
+  if (!Array.isArray(obj.episodes)) { errs.push('Поле «episodes» должно быть массивом.'); return errs; }
+  obj.episodes.forEach((ep, i) => {
+    const miss = ['episode_id','scenes'].filter(f => !ep[f]);
+    if (miss.length) errs.push(`episodes[${i}]: нет полей ${miss.map(f=>'"'+f+'"').join(', ')}`);
+    (ep.scenes||[]).forEach((s, j) => {
+      const sm = ['scene_local_id','scene_instructions'].filter(f => !s[f]);
+      if (sm.length) errs.push(`ep${i}.scenes[${j}]: нет ${sm.map(f=>'"'+f+'"').join(', ')}`);
+    });
+  });
+  return errs;
+}
+
+function showValidation(id, errs) {
+  const box = el(id); if (!box) return !errs.length;
+  if (!errs.length) { box.innerHTML = ''; return true; }
+  box.innerHTML = `<div style="background:rgba(248,81,73,.1);border:1px solid var(--red);border-radius:6px;padding:10px;font-size:12px;color:var(--red)">
+    <strong>⚠ Проблемы со структурой JSON:</strong>
+    <ul style="margin:4px 0 0 14px">${errs.map(e=>`<li>${escHtml(e)}</li>`).join('')}</ul>
+    <div style="margin-top:6px;opacity:.75">Скопируйте список ошибок и попросите чатбот исправить.</div>
+  </div>`;
+  return false;
+}
+
+// ─────────────────────────────────────────────────────
+// TABS
+// ─────────────────────────────────────────────────────
+document.getElementById('nav').addEventListener('click', e => {
+  const btn = e.target.closest('.nav-btn');
+  if (!btn) return;
+  const name = btn.dataset.tab;
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b === btn));
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.id === 'tab-'+name));
+  if (name === 'quickplay')  renderQuickplay();
+  if (name === 'library')    renderLibrary();
+  if (name === 'cast')       renderCastingPreview();
+  if (name === 'screenplay') renderScreenplayPreview();
+  if (name === 'logic')      renderLogicPreview();
+});
+
+// ─────────────────────────────────────────────────────
+// STATUS
+// ─────────────────────────────────────────────────────
+function statusEl() {
+  const logicEl = el('logic-status');
+  if (logicEl) {
+    const ok = state.logic && state.logic.raw;
+    logicEl.textContent = ok ? 'анализ сохранён' : 'анализ не сохранён';
+    logicEl.className = 'status ' + (ok ? 'ok' : '');
+  }
+  const castEl = el('cast-status');
+  const spEl   = el('screenplay-status');
+  const qpEl   = el('qp-status');
+  if (castEl) {
+    const n = state.refs.length;
+    castEl.textContent = n ? `сохранено рефов: ${n}` : 'рефы не сохранены';
+    castEl.className = 'status ' + (n ? 'ok' : 'warn');
+  }
+  if (spEl) {
+    const ok = state.screenplay && state.screenplay.episodes;
+    spEl.textContent = ok ? `эпизодов: ${state.screenplay.episodes.length}` : 'сценарий не сохранён';
+    spEl.className = 'status ' + (ok ? 'ok' : 'warn');
+  }
+  if (qpEl) {
+    const ok = state.screenplay && state.screenplay.episodes;
+    const scenes = ok ? state.screenplay.episodes.reduce((a,e)=>a+(e.scenes||[]).length, 0) : 0;
+    const saved  = Object.keys(state.quickplay).length;
+    qpEl.textContent = ok ? `сцен: ${scenes}, с клипами: ${saved}` : 'сценарий не загружен';
+    qpEl.className = 'status ' + (ok ? 'ok' : 'warn');
+  }
+}
+
+// ─────────────────────────────────────────────────────
+// PROMPT BUILDERS
+// ─────────────────────────────────────────────────────
+function buildCastingPrompt() {
+  const style   = el('style-text').value;
+  const setting = el('setting-text').value;
+  const story   = el('story-text').value.trim();
+  const roomsContext = state.logic && state.logic.rooms
+    ? ['## LOCATION PREREQUISITES (from Logic Step 0)', state.logic.rooms, '']
+    : [];
+  return [
+    getTmpl('casting'), '', '---',
+    '## VISUAL STYLE', style, '',
+    '## WORLD SETTING', setting, '', '---',
+    ...roomsContext,
+    '## STORY TEXT', story || '(no story text entered)', '', '---',
+    '## OUTPUT',
+    'Return a JSON array of reference objects. Each object must include:',
+    '  name, type (Character|Room|Vehicle|Outdoor|Object),',
+    '  visual_desc, video_visual_desc,',
+    '  behavioral_signature (characters), physical_vocabulary (characters),',
+    '  variations (array of variation slug names, empty for most),',
+    '  character_ref (null unless this is a variation),',
+    '  context (null unless variation), style_reference (null unless room/vehicle view or variation)',
+  ].join('\n');
+}
+
+function buildScreenplayPrompt() {
+  const episodes  = parseInt(el('cfg-episodes').value, 10);
+  const panels    = el('cfg-panels').value.trim();
+  const style     = el('style-text').value;
+  const setting   = el('setting-text').value;
+  const story     = el('story-text').value.trim();
+  const approxMin = Math.round(episodes * 2 * 9 * 3 / 60);
+  const arcDur    = `~${episodes*2*9*3}s (~${approxMin} min for ${episodes} eps × 2 scenes × 9 panels × 3s)`;
+  let epsTemplate = getTmpl('screenplayEps')
+    .replace(/__EPISODES_COUNT__/g, String(episodes))
+    .replace(/__PANEL_COUNT_OPTIONS__/g, panels)
+    .replace(/__ARC_DURATION__/g, arcDur);
+  const chars = state.refs
+    .filter(r => !r.character_ref)
+    .map(r => `  - ${r.name} [${r.type||'Character'}]`).join('\n');
+  return [
+    '## PRODUCTION CONTEXT', getTmpl('screenplaySys'), '', '---',
+    epsTemplate, '', '---',
+    '## VISUAL STYLE', style, '',
+    '## WORLD SETTING', setting, '',
+    '## CAST (from casting step)', chars || '  (run casting step first)', '', '---',
+    '## STORY TEXT', story || '(no story text entered)',
+  ].join('\n');
+}
+
+const REF_LIMIT = 7;
+
+// Migrate old quickplay format (array of strings) to new (array of objects)
+function migrateQuickplay(qp) {
+  if (!qp || typeof qp !== 'object') return qp || {};
+  const out = {};
+  for (const [k, clips] of Object.entries(qp)) {
+    out[k] = Array.isArray(clips)
+      ? clips.map(c => typeof c === 'string' ? { location: {}, prompt: c, references: {} } : c)
+      : clips;
+  }
+  return out;
+}
+
+function buildQuickplayPrompt(ep, scene) {
+  const target = parseInt(el('cfg-clip-duration').value, 10);
+  const t1 = Math.round(target * 0.20);
+  const t2 = Math.round(target * 0.47);
+  const t3 = Math.round(target * 0.73);
+  const system = getTmpl('quickplay')
+    .replace(/__TARGET__/g, String(target))
+    .replace(/__T1__/g, String(t1))
+    .replace(/__T2__/g, String(t2))
+    .replace(/__T3__/g, String(t3));
+
+  const allChars = ep.characters || state.refs.filter(r=>r.type==='Character'&&!r.character_ref).map(r=>r.name);
+  const chars    = allChars.slice(0, REF_LIMIT - 1); // reserve 1 slot for location
+  const location = scene.location || ep.location || 'Location';
+  const locationRef = state.refs.find(r => r.name === location && r.type !== 'Character');
+  const locationDesc = locationRef && locationRef.visual_desc ? locationRef.visual_desc.trim() : '';
+
+  // [name, @ImageN, visual_desc]
+  const refEntries = [
+    ...chars.map((c, i) => {
+      const r = state.refs.find(x => x.name === c);
+      return [c, `@Image${i+1}`, r && r.visual_desc ? r.visual_desc.trim() : ''];
+    }),
+    [location, `@Image${chars.length+1}`, locationDesc],
+  ];
+
+  const refTable = refEntries.map(([n, tag, desc]) =>
+    desc ? `  ${tag} — ${n}:\n${desc.replace(/^/gm, '    ')}` : `  ${tag} — ${n}`
+  ).join('\n\n');
+
+  const bg     = scene.background_activity || {};
+  const bgLine = bg.density && bg.density !== 'none' ? `${bg.density} — ${bg.crowd_type||''}` : 'private, no extras';
+
+  const locEntry  = refEntries[refEntries.length - 1];
+  const charPairs = refEntries.slice(0, -1).map(([n, tag]) => `"${n}": "${tag}"`).join(', ');
+  const outputFmt = [
+    'Return a JSON array of exactly 4 objects (one per clip):',
+    '[',
+    '  {',
+    `    "location": {"${location}": "${locEntry[1]}"},`,
+    `    "prompt": "clip text (${target}s continuous)",`,
+    `    "references": {${charPairs}}`,
+    '  },',
+    '  ...',
+    ']',
+    `Only include in "references" the characters/props that actually appear in that clip. Max ${REF_LIMIT} @Image tags total.`,
+  ].join('\n');
+
+  return [
+    system, '',
+    `SCENE: ${location} | ${ep.daytime||''} | background: ${bgLine}`,
+    `INITIAL DISPOSITION: ${scene.initial_disposition||'—'}`, '',
+    'REFERENCES (inject @ImageN tags inline — full visual description included):',
+    refTable, '',
+    'NARRATIVE (context only):', (ep.rewritten_condensed_narrative||'').trim(), '',
+    `STORYBOARD PANELS (${scene.panel_count||'?'} panels):`, (scene.scene_instructions||'').trim(), '',
+    outputFmt,
+  ].filter(Boolean).join('\n');
+}
+
+function buildLogicPrompt() {
+  const story = el('story-text').value.trim();
+  return [
+    TMPL.logic, '',
+    '---',
+    '## ТЕКСТ ГЛАВЫ',
+    story || '(текст не введён)',
+  ].join('\n');
+}
+
+function parseLogicSections(raw) {
+  const parts = raw.split(/\n---\n/);
+  const get = (i) => (parts[i] || '').trim();
+  return { raw, zanuda: get(0), fixed: get(1), rooms: get(2) };
+}
+
+// ─────────────────────────────────────────────────────
+// LOGIC STEP
+// ─────────────────────────────────────────────────────
+el('gen-logic-btn').addEventListener('click', () => {
+  const prompt = buildLogicPrompt();
+  el('logic-prompt').textContent = prompt;
+  el('logic-prompt')._cached = prompt;
+});
+
+el('copy-logic-btn').addEventListener('click', () => {
+  const text = el('logic-prompt')._cached || el('logic-prompt').textContent;
+  if (!text || text.startsWith('(нажмите')) { alert('Сначала сгенерируйте промпт.'); return; }
+  copyText(text); flashBtn('copy-logic-btn');
+});
+
+el('save-logic-btn').addEventListener('click', () => {
+  const raw = el('logic-response').value.trim();
+  if (!raw) { alert('Сначала вставьте ответ чатбота.'); return; }
+  pushUndo();
+  state.logic = parseLogicSections(raw);
+  saveLogic(); trackMutation();
+  renderLogicPreview(); statusEl();
+  alert('✅ Анализ сохранён.');
+});
+
+el('apply-fixed-btn').addEventListener('click', () => {
+  const logic = state.logic;
+  if (!logic || !logic.fixed) { alert('Сначала сохраните анализ — секция 2 пуста.'); return; }
+  if (!confirm('Заменить текст истории исправленным текстом из Секции 2?')) return;
+  el('story-text').value = logic.fixed;
+  dbSet('txt:story', logic.fixed);
+  alert('✅ Текст истории обновлён.');
+});
+
+el('clear-logic-btn').addEventListener('click', () => {
+  if (!confirm('Очистить сохранённый анализ?')) return;
+  pushUndo();
+  state.logic = null; saveLogic(); trackMutation();
+  el('logic-response').value = '';
+  dbSet('txt:logic-response', '');
+  renderLogicPreview(); statusEl();
+});
+
+function renderLogicPreview() {
+  const container = el('logic-preview');
+  if (!container) return;
+  const logic = state.logic;
+  if (!logic || !logic.raw) { container.innerHTML = ''; return; }
+  const sections = [
+    { title: 'Секция 1 — Зануда-отчёт', content: logic.zanuda, badge: 'badge-orange' },
+    { title: 'Секция 2 — Исправленный текст', content: logic.fixed, badge: 'badge-green' },
+    { title: 'Секция 3 — Мастер сеттинга и декораций', content: logic.rooms, badge: 'badge-blue' },
+  ];
+  let html = '';
+  for (const sec of sections) {
+    const preview = (sec.content || '').slice(0, 400);
+    html += `<div class="card" style="margin-bottom:10px">
+      <div class="tmpl-card-hdr">
+        <div class="card-title" style="margin-bottom:0">${escHtml(sec.title)}</div>
+        <span class="badge ${sec.badge}">${sec.content ? sec.content.split(/\s+/).length + ' слов' : 'пусто'}</span>
+      </div>
+      <div class="prompt-area" style="max-height:180px;margin-top:8px">${escHtml(preview)}${(sec.content||'').length > 400 ? '\n…' : ''}</div>
+      <div style="margin-top:6px">
+        <button class="btn btn-sm btn-ghost" data-copy="${escAttr(sec.content||'')}" onclick="copyText(this.dataset.copy);this.textContent='Скопировано!';setTimeout(()=>this.textContent='Копировать секцию',1500)">Копировать секцию</button>
+      </div>
+    </div>`;
+  }
+  container.innerHTML = html;
+}
+
+// ─────────────────────────────────────────────────────
+// ANIMATION WRAPPER
+// ─────────────────────────────────────────────────────
+function buildAnimWrapper(clipText, speaks) {
+  const lines = [
+    ANIM_PROHIBITIONS, '',
+    'BACKGROUND SOUNDS: SFX ONLY, NO MUSIC.', '',
+    'VIDEO INSTRUCTIONS: Smooth transition, high temporal consistency.', '',
+    'STYLE: Hyper-realistic cinematic, 8k quality, shot on Arri Alexa Mini LF with 50mm lens.',
+  ];
+  if (!speaks) {
+    lines.push('', 'NO VOICES, NO SPEECH, NO DIALOGUES, NO TALKING, SFX ONLY. Silent film aesthetic — purely visual storytelling, no implied dialogue or vocal performance ever.');
+  }
+  lines.push('', 'ANIMATION:', clipText);
+  return lines.join('\n');
+}
+
+let _animSceneId = null, _animClipIdx = 0;
+
+function openAnimModal(sceneId, clipIdx) {
+  _animSceneId = sceneId; _animClipIdx = clipIdx;
+  const clips = state.quickplay[sceneId] || [];
+  const text  = clipText(clips[clipIdx]);
+  const speaks = /["«»]|says:/i.test(text);
+  el('anim-modal-title').textContent = `${sceneId} · Клип ${clipIdx+1}`;
+  el('anim-speaks').checked = speaks;
+  el('anim-modal-text').value = buildAnimWrapper(text, speaks);
+  el('anim-modal').style.display = 'block';
+}
+
+function refreshAnimWrapper() {
+  if (_animSceneId === null) return;
+  const clips = state.quickplay[_animSceneId] || [];
+  el('anim-modal-text').value = buildAnimWrapper(clipText(clips[_animClipIdx]), el('anim-speaks').checked);
+}
+
+// ─────────────────────────────────────────────────────
+// CASTING STEP
+// ─────────────────────────────────────────────────────
+el('gen-casting-btn').addEventListener('click', () => {
+  const prompt = buildCastingPrompt();
+  el('casting-prompt').textContent = prompt;
+  el('casting-prompt')._cached = prompt;
+});
+
+el('copy-casting-btn').addEventListener('click', () => {
+  const text = el('casting-prompt')._cached || el('casting-prompt').textContent;
+  if (!text || text.startsWith('(нажмите')) { alert('Сначала сгенерируйте промпт.'); return; }
+  copyText(text); flashBtn('copy-casting-btn');
+});
+
+el('parse-casting-btn').addEventListener('click', () => {
+  const raw = el('casting-response').value.trim();
+  if (!raw) { alert('Сначала вставьте ответ чатбота.'); return; }
+  let parsed;
+  try { parsed = extractJSON(raw); } catch(e) { alert('Не удалось разобрать JSON: ' + e.message); return; }
+  const arr  = Array.isArray(parsed) ? parsed : (parsed.refs || parsed.characters || parsed.cast || [parsed]);
+  const errs = validateRefsArr(arr);
+  if (!showValidation('cast-validation', errs)) return;
+  pushUndo();
+  let added = 0, updated = 0;
+  for (const incoming of arr) {
+    const idx = state.refs.findIndex(r => r.name === incoming.name);
+    if (idx >= 0) { state.refs[idx] = { ...state.refs[idx], ...incoming }; updated++; }
+    else          { state.refs.push(incoming); added++; }
+  }
+  saveRefs(); trackMutation();
+  renderCastingPreview(); statusEl();
+  alert(`✅ Рефы обновлены: добавлено ${added}, обновлено ${updated}.`);
+});
+
+el('clear-refs-btn').addEventListener('click', () => {
+  if (!confirm('Очистить все рефы и изображения?')) return;
+  pushUndo();
+  state.refs = []; state.refImages = {}; saveRefs(); saveRefImages(); trackMutation();
+  renderCastingPreview(); statusEl();
+});
+
+function renderCastingPreview() {
+  const container = el('casting-preview');
+  if (!state.refs.length) { container.innerHTML = ''; statusEl(); return; }
+  const byType = {};
+  for (const r of state.refs) { const t = r.type||'Other'; (byType[t]=byType[t]||[]).push(r); }
+  let html = '';
+  for (const [type, typeRefs] of Object.entries(byType)) {
+    html += `<div class="card" style="margin-bottom:10px"><div class="card-title">${escHtml(type)} (${typeRefs.length})</div><div class="refs-grid" style="margin-top:8px">`;
+    for (const r of typeRefs) {
+      const img   = state.refImages[r.name];
+      const thumb = img
+        ? `<img src="${img}" style="width:100%;height:100%;object-fit:contain;border-radius:4px">`
+        : `<div class="ref-thumb-placeholder" data-ref="${escAttr(r.name)}" onclick="openRefModal(this.dataset.ref)">+ PNG</div>`;
+      html += `<div class="ref-card">
+        <div style="width:100%;height:90px;overflow:hidden;border-radius:4px;background:var(--bg)">${thumb}</div>
+        <div class="ref-card-name">${escHtml(r.name)}</div>
+        <div class="ref-card-type">${escHtml(r.type||'?')} ${r.character_ref?`<span class="tag">вариация: ${escHtml(r.character_ref)}</span>`:''}</div>
+        <div class="ref-card-desc">${escHtml((r.visual_desc||''))}…</div>
+        <button class="btn btn-ghost btn-sm" data-ref="${escAttr(r.name)}" onclick="openRefModal(this.dataset.ref)">Редактировать / PNG</button>
+      </div>`;
+    }
+    html += '</div></div>';
+  }
+  container.innerHTML = html;
+  statusEl();
+}
+
+// ─────────────────────────────────────────────────────
+// SCREENPLAY STEP
+// ─────────────────────────────────────────────────────
+el('gen-screenplay-btn').addEventListener('click', () => {
+  const prompt = buildScreenplayPrompt();
+  el('screenplay-prompt').textContent = prompt;
+  el('screenplay-prompt')._cached = prompt;
+});
+
+el('copy-screenplay-btn').addEventListener('click', () => {
+  const text = el('screenplay-prompt')._cached || el('screenplay-prompt').textContent;
+  if (!text || text.startsWith('(нажмите')) { alert('Сначала сгенерируйте промпт.'); return; }
+  copyText(text); flashBtn('copy-screenplay-btn');
+});
+
+el('parse-screenplay-btn').addEventListener('click', () => {
+  const raw = el('screenplay-response').value.trim();
+  if (!raw) { alert('Сначала вставьте ответ чатбота.'); return; }
+  let parsed;
+  try { parsed = extractJSON(raw); } catch(e) { alert('Не удалось разобрать JSON: ' + e.message); return; }
+  if (Array.isArray(parsed)) parsed = { episodes: parsed };
+  const errs = validateScreenplayObj(parsed);
+  if (!showValidation('screenplay-validation', errs)) return;
+  pushUndo();
+  state.screenplay = parsed; saveScreenplay(); trackMutation();
+  renderScreenplayPreview(); renderQuickplay(); statusEl();
+  alert(`✅ Сценарий сохранён: эпизодов ${(parsed.episodes||[]).length}.`);
+});
+
+el('clear-screenplay-btn').addEventListener('click', () => {
+  if (!confirm('Очистить сохранённый сценарий?')) return;
+  pushUndo();
+  state.screenplay = null; saveScreenplay(); trackMutation();
+  renderScreenplayPreview(); renderQuickplay(); statusEl();
+});
+
+function renderScreenplayPreview() {
+  const container = el('screenplay-preview');
+  if (!state.screenplay || !state.screenplay.episodes) { container.innerHTML = ''; statusEl(); return; }
+  let html = '';
+  for (const ep of state.screenplay.episodes) {
+    const scenes = ep.scenes || [];
+    html += `<div class="ep-card">
+      <div class="ep-card-header">
+        <span class="ep-title">Эпизод ${escHtml(String(ep.episode_id))}</span>
+        <span class="badge badge-blue">${escHtml(ep.episode_type||'pov')}</span>
+        ${ep.pov_character ? `<span class="tag">POV: ${escHtml(ep.pov_character)}</span>` : ''}
+        <span style="color:var(--muted);font-size:12px">${escHtml(ep.location||'')} · ${escHtml(ep.daytime||'')}</span>
+      </div>
+      ${ep.rewritten_condensed_narrative ? `<div style="font-size:12px;color:var(--muted);margin-bottom:8px">${escHtml(ep.rewritten_condensed_narrative)}…</div>` : ''}
+      ${scenes.map(s=>`<div class="scene-block">
+        <div class="scene-meta">
+          <span>Сцена ${s.scene_local_id}</span>
+          <span>${escHtml(s.location||'')}</span>
+          <span class="badge badge-orange">${s.panel_count||'?'} panels</span>
+          ${s.background_activity ? `<span>bg: ${escHtml(s.background_activity.density||'?')}</span>` : ''}
+        </div>
+        ${s.initial_disposition ? `<div style="font-size:11px;color:var(--muted);margin-bottom:4px;font-family:var(--mono)">${escHtml(s.initial_disposition)}</div>` : ''}
+        <div class="scene-instructions">${escHtml((s.scene_instructions||''))}${(s.scene_instructions||'').length>600?'…':''}</div>
+      </div>`).join('')}
+    </div>`;
+  }
+  container.innerHTML = html;
+  statusEl();
+}
+
+// ─────────────────────────────────────────────────────
+// QUICK-PLAY STEP
+// ─────────────────────────────────────────────────────
+function renderQuickplay() {
+  const container = el('quickplay-scenes');
+  statusEl();
+  if (!state.screenplay || !state.screenplay.episodes) {
+    container.innerHTML = '<div class="empty-state">Сначала загрузите сценарий на шаге 3.</div>';
+    return;
+  }
+  let html = '';
+  for (const ep of state.screenplay.episodes) {
+    for (const scene of (ep.scenes||[])) {
+      const sceneId  = `e${String(ep.episode_id).padStart(3,'0')}s${scene.scene_local_id}`;
+      const clips    = state.quickplay[sceneId];
+      const hasClips = clips && clips.length;
+      html += `<div class="scene-card" id="sc-${sceneId}">
+        <div class="scene-card-header">
+          <div>
+            <span class="scene-card-title">Эп ${ep.episode_id} · Сцена ${scene.scene_local_id}</span>
+            <span class="tag" style="margin-left:8px">${escHtml(scene.location||ep.location||'')}</span>
+            <span class="badge ${hasClips?'badge-green':'badge-orange'}" style="margin-left:6px">${hasClips?`клипов: ${clips.length}`:'клипов нет'}</span>
+          </div>
+          <div class="actions">
+            <button class="btn btn-primary btn-sm" data-ep="${ep.episode_id}" data-sc="${scene.scene_local_id}" onclick="genQPPrompt(this.dataset.ep, this.dataset.sc)">Сгенерировать промпт</button>
+            <button class="btn btn-sm" data-scid="${sceneId}" onclick="copyQPPrompt(this.dataset.scid)">Копировать</button>
+          </div>
+        </div>
+        <div id="qp-prompt-${sceneId}" class="prompt-area" style="max-height:200px;display:none"></div>
+        <div style="margin-top:10px">
+          <label>Вставьте ответ чатбота (JSON-массив из 4 строк)</label>
+          <textarea id="qp-resp-${sceneId}" class="mono" rows="6" placeholder='[{"location":{"Loc":"@Image1"},"prompt":"...","references":{"Name":"@Image2"}}, ...]'>${hasClips ? escHtml(JSON.stringify(clips, null, 2)) : ''}</textarea>
+          <div class="actions" style="margin-top:6px">
+            <button class="btn btn-sm btn-primary" data-scid="${sceneId}" onclick="saveQPClips(this.dataset.scid)">Сохранить клипы</button>
+          </div>
+        </div>
+        ${hasClips ? renderClips(clips, sceneId) : ''}
+      </div>`;
+    }
+  }
+  container.innerHTML = html;
+}
+
+function genQPPrompt(epId, sceneId) {
+  const ep    = state.screenplay.episodes.find(e => e.episode_id == epId);
+  if (!ep) return;
+  const scene = (ep.scenes||[]).find(s => s.scene_local_id == sceneId);
+  if (!scene) return;
+  const scId    = `e${String(epId).padStart(3,'0')}s${sceneId}`;
+  const prompt  = buildQuickplayPrompt(ep, scene);
+  const promptEl = el(`qp-prompt-${scId}`);
+  promptEl.textContent = prompt;
+  promptEl._cached = prompt;
+  promptEl.style.display = 'block';
+}
+
+function copyQPPrompt(sceneId) {
+  const promptEl = el(`qp-prompt-${sceneId}`);
+  const text = promptEl && (promptEl._cached || promptEl.textContent);
+  if (!text) { alert('Сначала сгенерируйте промпт.'); return; }
+  copyText(text);
+}
+
+function saveQPClips(sceneId) {
+  const raw = (el(`qp-resp-${sceneId}`)||{}).value || '';
+  if (!raw.trim()) { alert('Сначала вставьте ответ чатбота.'); return; }
+  let parsed;
+  try { parsed = extractJSON(raw.trim()); } catch(e) { alert('Не удалось разобрать JSON: ' + e.message); return; }
+  const arr = Array.isArray(parsed) ? parsed : [parsed];
+  pushUndo();
+  state.quickplay[sceneId] = arr; saveQuickplay(); trackMutation();
+  renderQuickplay(); statusEl();
+  alert(`✅ Сохранено клипов: ${arr.length} для ${sceneId}.`);
+}
+
+function clipText(c)  { return typeof c === 'object' && c ? (c.prompt || '') : (c || ''); }
+function clipRefs(c)  { return typeof c === 'object' && c && c.references ? c.references : null; }
+function clipLoc(c)   { return typeof c === 'object' && c && c.location  ? c.location  : null; }
+
+function renderClips(clips, sceneId) {
+  let html = '<div class="clips-list">';
+  clips.forEach((c, i) => {
+    const refs = clipRefs(c);
+    const loc  = clipLoc(c);
+    const refsLabel = refs
+      ? Object.entries({...loc||{}, ...refs}).map(([n,tag]) => `${n}=${tag}`).join(', ')
+      : buildRefList(sceneId).join(', ');
+    html += `<div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:4px;display:flex;justify-content:space-between;align-items:center">
+        <span>Клип ${i+1}${refsLabel ? ' — ' + escHtml(refsLabel) : ''}</span>
+        <button class="btn btn-ghost btn-sm" style="font-size:10px;padding:2px 8px" data-scid="${sceneId}" data-ci="${i}" onclick="openAnimModal(this.dataset.scid, +this.dataset.ci)">Полный промпт ↗</button>
+      </div>
+      <div class="clip-item">${escHtml(clipText(c))}</div>
+    </div>`;
+  });
+  html += '</div>';
+  return html;
+}
+
+function buildRefList(sceneId) {
+  const m = sceneId.match(/^e(\d+)s(\d+)$/);
+  if (!m || !state.screenplay) return [];
+  const ep    = state.screenplay.episodes.find(e => e.episode_id == parseInt(m[1]));
+  if (!ep) return [];
+  const scene = (ep.scenes||[]).find(s => s.scene_local_id == parseInt(m[2]));
+  const chars = ep.characters || state.refs.filter(r=>r.type==='Character'&&!r.character_ref).map(r=>r.name);
+  const loc   = (scene&&scene.location) || ep.location || '';
+  return [...chars.map((c,i)=>`${c}=@Image${i+1}`), loc && `${loc}=@Image${chars.length+1}`].filter(Boolean);
+}
+
+// ─────────────────────────────────────────────────────
+// LIBRARY
+// ─────────────────────────────────────────────────────
+function renderLibrary() {
+  const grid = el('library-grid');
+  if (!state.refs.length) {
+    grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1">Выполните шаг кастинга, чтобы заполнить рефы.</div>';
+    return;
+  }
+  let html = '';
+  for (const r of state.refs) {
+    const img = state.refImages[r.name];
+    html += `<div class="ref-card">
+      ${img
+        ? `<div style="height:160px;overflow:hidden;border-radius:4px"><img src="${img}" style="width:100%;height:100%;object-fit:contain"></div>`
+        : `<div class="ref-thumb-placeholder" data-ref="${escAttr(r.name)}" onclick="openRefModal(this.dataset.ref)">+ Загрузить PNG</div>`}
+      <div class="ref-card-name">${escHtml(r.name)}</div>
+      <div class="ref-card-type">${escHtml(r.type||'?')}${r.character_ref ? ` · вариация: ${escHtml(r.character_ref)}` : ''}</div>
+      <div class="ref-card-desc">${escHtml((r.visual_desc||''))}…</div>
+      <button class="btn btn-ghost btn-sm" data-ref="${escAttr(r.name)}" onclick="openRefModal(this.dataset.ref)">Редактировать / Загрузить</button>
+    </div>`;
+  }
+  grid.innerHTML = html;
+}
+
+// ─────────────────────────────────────────────────────
+// REF MODAL
+// ─────────────────────────────────────────────────────
+let _modalRefName = null;
+
+function openRefModal(name) {
+  _modalRefName = name;
+  const ref = state.refs.find(r => r.name === name) || { name };
+  el('modal-title').textContent = name;
+  el('modal-json').value = JSON.stringify(ref, null, 2);
+  const img = state.refImages[name];
+  el('modal-thumb').innerHTML = img
+    ? `<img src="${img}" style="width:100%;height:100%;object-fit:contain;border-radius:4px">`
+    : '<span>кликните для загрузки</span>';
+  el('ref-modal').style.display = 'block';
+}
+
+el('modal-close').addEventListener('click', () => { el('ref-modal').style.display = 'none'; _modalRefName = null; });
+el('ref-modal').addEventListener('click', e => { if (e.target === el('ref-modal')) { el('ref-modal').style.display = 'none'; _modalRefName = null; } });
+el('modal-thumb').addEventListener('click', () => el('modal-img-file').click());
+
+el('modal-img-file').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file || !_modalRefName) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    state.refImages[_modalRefName] = ev.target.result;
+    saveRefImages();
+    el('modal-thumb').innerHTML = `<img src="${ev.target.result}" style="width:100%;height:100%;object-fit:contain;border-radius:4px">`;
+    renderLibrary(); renderCastingPreview();
+  };
+  reader.readAsDataURL(file);
+  e.target.value = '';
+});
+
+el('modal-save').addEventListener('click', () => {
+  let parsed;
+  try { parsed = JSON.parse(el('modal-json').value); } catch(e) { alert('Неверный JSON: ' + e.message); return; }
+  const idx = state.refs.findIndex(r => r.name === _modalRefName);
+  if (idx >= 0) state.refs[idx] = parsed; else state.refs.push(parsed);
+  if (parsed.name && parsed.name !== _modalRefName && state.refImages[_modalRefName]) {
+    state.refImages[parsed.name] = state.refImages[_modalRefName];
+    delete state.refImages[_modalRefName];
+    saveRefImages();
+  }
+  saveRefs();
+  el('ref-modal').style.display = 'none'; _modalRefName = null;
+  renderLibrary(); renderCastingPreview(); statusEl();
+  alert('✅ Реф сохранён.');
+});
+
+el('modal-delete').addEventListener('click', () => {
+  if (!confirm(`Удалить реф "${_modalRefName}"?`)) return;
+  state.refs = state.refs.filter(r => r.name !== _modalRefName);
+  delete state.refImages[_modalRefName];
+  saveRefs(); saveRefImages();
+  el('ref-modal').style.display = 'none'; _modalRefName = null;
+  renderLibrary(); renderCastingPreview(); statusEl();
+});
+
+// ─────────────────────────────────────────────────────
+// EXPORT / IMPORT
+// ─────────────────────────────────────────────────────
+el('export-refs-btn').addEventListener('click', () => {
+  const blob = new Blob([JSON.stringify(state.refs, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'refs.json';
+  a.click();
+});
+
+el('export-project-btn').addEventListener('click', () => {
+  const data = { refs: state.refs, refImages: state.refImages, screenplay: state.screenplay, quickplay: state.quickplay };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `mdf-project-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+});
+
+el('import-refs-btn').addEventListener('click', () => el('import-refs-file').click());
+el('import-refs-file').addEventListener('change', e => {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const arr = JSON.parse(ev.target.result);
+      if (!Array.isArray(arr)) throw new Error('Ожидается JSON-массив');
+      pushUndo(); state.refs = arr; saveRefs(); trackMutation();
+      renderLibrary(); renderCastingPreview(); statusEl();
+      alert(`✅ Импортировано рефов: ${arr.length}.`);
+    } catch(e) { alert('Импорт не удался: ' + e.message); }
+  };
+  reader.readAsText(file); e.target.value = '';
+});
+
+el('import-project-btn').addEventListener('click', () => el('import-project-file').click());
+el('import-project-file').addEventListener('change', e => {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      pushUndo();
+      if (data.refs)       { state.refs       = data.refs;       saveRefs();       }
+      if (data.refImages)  { state.refImages  = data.refImages;  saveRefImages();  }
+      if (data.screenplay) { state.screenplay = data.screenplay; saveScreenplay(); }
+      if (data.quickplay)  { state.quickplay  = migrateQuickplay(data.quickplay);  saveQuickplay();  }
+      trackMutation();
+      renderLibrary(); renderCastingPreview(); renderScreenplayPreview(); renderQuickplay(); statusEl();
+      alert('✅ Проект импортирован.');
+    } catch(e) { alert('Импорт не удался: ' + e.message); }
+  };
+  reader.readAsText(file); e.target.value = '';
+});
+
+el('restore-backup-btn').addEventListener('click', restoreBackup);
+
+// ─────────────────────────────────────────────────────
+// ANIMATION MODAL
+// ─────────────────────────────────────────────────────
+el('anim-modal-close').addEventListener('click', () => { el('anim-modal').style.display = 'none'; _animSceneId = null; });
+el('anim-modal').addEventListener('click', e => { if (e.target === el('anim-modal')) { el('anim-modal').style.display = 'none'; _animSceneId = null; } });
+el('anim-copy-btn').addEventListener('click', () => { copyText(el('anim-modal-text').value); flashBtn('anim-copy-btn'); });
+el('anim-speaks').addEventListener('change', refreshAnimWrapper);
+
+// ─────────────────────────────────────────────────────
+// UNDO BUTTON
+// ─────────────────────────────────────────────────────
+el('undo-btn').addEventListener('click', _undoLast);
+
+// ─────────────────────────────────────────────────────
+// TEMPLATES TAB
+// ─────────────────────────────────────────────────────
+function resetTmpl(key) {
+  const ta = el('tmpl-edit-' + key);
+  if (!ta) return;
+  ta.value = TMPL[key];
+  dbSet('txt:tmpl:' + key, TMPL[key]);
+}
+
+// ─────────────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────────────
+(async () => {
+  _db = await _openDB();
+  await _migrateLS();
+
+  state.refs       = (await dbGet('refs'))       || [];
+  state.refImages  = (await dbGet('refImages'))  || {};
+  state.screenplay = (await dbGet('screenplay')) || null;
+  state.quickplay  = migrateQuickplay(await dbGet('quickplay'));
+  state.logic      = (await dbGet('logic'))      || null;
+
+  await bindPersist('story-text',              'story',              '');
+  await bindPersist('style-text',              'style',              TMPL.style);
+  await bindPersist('setting-text',            'setting',            TMPL.setting);
+  await bindPersist('cfg-episodes',            'cfgEp',              '3');
+  await bindPersist('cfg-panels',              'cfgPan',             '4,6,9,10,12');
+  await bindPersist('tmpl-edit-casting',       'tmpl:casting',       TMPL.casting);
+  await bindPersist('tmpl-edit-screenplaySys', 'tmpl:screenplaySys', TMPL.screenplaySys);
+  await bindPersist('tmpl-edit-screenplayEps', 'tmpl:screenplayEps', TMPL.screenplayEps);
+  await bindPersist('tmpl-edit-quickplay',     'tmpl:quickplay',     TMPL.quickplay);
+  await bindPersist('logic-response',          'logic-response',     '');
+
+  renderCastingPreview();
+  renderScreenplayPreview();
+  renderLibrary();
+  renderQuickplay();
+  renderLogicPreview();
+  statusEl();
+  updateBackupStatus();
+})();
+</script>
+</body>
+</html>

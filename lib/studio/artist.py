@@ -15,7 +15,7 @@ from typing import Optional
 
 from PIL import Image
 
-from lib.core.schemas import ANCHOR_SCHEMA, CHARACTER_SCHEMA, ENRICHMENT_SCHEMA, GRID_QA_SCHEMA
+from lib.core.schemas import ANCHOR_SCHEMA, CHARACTER_SCHEMA, ENRICHMENT_SCHEMA, GRID_QA_SCHEMA, ROOM_DETAIL_SCHEMA, ROOM_VOCABULARY_SCHEMA, ROOM_DETAIL_SCHEMA
 from lib.core.project import Project
 from lib.core.utils import atomic_write, grid_dims, is_portrait, pad_to_ar, panel_boxes, safe_name
 from lib.llm.base import BaseLLM
@@ -562,7 +562,21 @@ _VIEW_HFOV: dict[str, int] = {
 }
 
 
-def _anchor_visibility_block(anchor_points: dict, view_suffix: str) -> str:
+def _extract_camera_anchor_labels(camera_position: str, anchor_points: dict) -> set[str]:
+    """Parse a camera_position string (e.g. 'near master-bed') and return anchor labels that match."""
+    if not camera_position or not anchor_points:
+        return set()
+    cp = camera_position.lower()
+    cp_hyphenated = cp.replace(' ', '-')
+    labels = set()
+    for obj in anchor_points.get('objects', []):
+        label = obj.get('label', '')
+        if label and (label in cp_hyphenated or label.replace('-', ' ') in cp):
+            labels.add(label)
+    return labels
+
+
+def _anchor_visibility_block(anchor_points: dict, view_suffix: str, camera_anchor_labels: frozenset = frozenset()) -> str:
     """Produce camera setup header + per-object projected position data for a render prompt.
 
     Camera header describes position, facing wall, H-FOV, and perspective rules.
@@ -654,9 +668,13 @@ def _anchor_visibility_block(anchor_points: dict, view_suffix: str) -> str:
 
         depth = (ox - cx) * fdx + (oy - cy) * fdy
 
+        is_cam_anchor = obj.get('label') in camera_anchor_labels
+        cam_remark = '  ← CAMERA POSITION: camera lens is placed here' if is_cam_anchor else ''
+
         # depth ≤ 0.02: at or behind the camera plane
         if depth <= 0.02:
-            hidden.append(f"  - {obj['label']}")
+            suffix = ' ← CAMERA POSITION: at/behind camera — MUST NOT appear in this view' if is_cam_anchor else ''
+            hidden.append(f"  - {obj['label']}{suffix}")
             continue
 
         img_x = _project_image_x(ox, oy, view_suffix)
@@ -667,13 +685,15 @@ def _anchor_visibility_block(anchor_points: dict, view_suffix: str) -> str:
 
         dist_str = f', ~{depth * depth_dim_m:.1f}m' if depth_dim_m else ''
         line = (
-            f"  - {obj['label']}\n"
+            f"  - {obj['label']}{cam_remark}\n"
             f"    img_x≈{img_x:.2f} ({_x_label(img_x)})"
             f"  depth≈{depth:.2f} ({_depth_label(depth)}{dist_str})"
             f"  z≈{oz:.2f} ({_z_label(oz)})"
         )
         if footprint > 0.02:
             line += f"  span img_x {span_lo:.2f}–{span_hi:.2f}"
+        if is_cam_anchor:
+            line += '  — do NOT render this object in mid or far background'
         visible.append(line)
 
     if not visible and not hidden:
@@ -1480,6 +1500,177 @@ def run_room_anchors(project: Project, llm: BaseLLM):
     logger.info("  ✅ room-anchors done.")
 
 
+def _build_vocabulary_prompt(base: str, text: str, views: dict) -> str:
+    entrance_desc = views.get('View-From-Entrance', {}).get('visual_desc', '').strip()
+    all_descs = "\n\n".join(
+        f"View-From-Entrance:\n{entrance_desc}" if entrance_desc else "",
+    ).strip() or entrance_desc
+    return (
+        "You are a set decorator and spatial design specialist.\n\n"
+        "Your task: derive the definitive named-position vocabulary for this location. "
+        "This vocabulary will be used to write consistent descriptions for EVERY camera view "
+        "of the room, so it must be view-neutral — no image-left/right references, "
+        "only room-relative terms (entrance side, far side, left wall, right wall).\n\n"
+        "## NOVEL EXCERPT (who uses this space, what roles/jobs they have, "
+        "what actions happen here, which props are mentioned):\n"
+        f"<STORY>{text}</STORY>\n\n"
+        f"## LOCATION: {base}\n\n"
+        "## CURRENT BASE DESCRIPTION (View-From-Entrance):\n"
+        f"{entrance_desc}\n\n"
+        "## PROCESS:\n\n"
+        "### STEP 1 — ENVIRONMENT TYPE REASONING\n"
+        "Identify the space type (office, cafe, kitchen, garage, hospital ward, prison cell, "
+        "living room, etc.). List what items are TYPICALLY present in such a space: "
+        "furniture, equipment, surfaces, fixtures, materials, lighting. "
+        "What would a visitor notice first? What is on every desk/counter/shelf/wall "
+        "in this kind of place?\n\n"
+        "### STEP 2 — STORY-REQUIRED SPECIFICS\n"
+        "Re-read the novel excerpt. For each character who uses this space:\n"
+        "- What is their ROLE/JOB? Role determines what is on their station:\n"
+        "  a bank clerk gets a phone unit and a paper tray; a manager gets a leather chair, "
+        "  a nameplate, a document inbox; a sous chef gets a mise en place rack and sharpening "
+        "  steel; a mechanic apprentice gets basic hand tools, the senior gets the diagnostic "
+        "  scanner and lift remote.\n"
+        "- Which actions happen at their spot? What props must be physically present?\n"
+        "- Which props are explicitly named in the text? Place them exactly.\n"
+        "- Any recurring visits to the same spot? Give it a stable anchor label.\n\n"
+        "### STEP 3 — BUILD NAMED POSITIONS\n"
+        "For every named character position and every shared landmark, produce one entry:\n"
+        "- id: kebab-case, character-prefixed for personal spots (amanda-desk, lena-workstation, "
+        "  igors-office-chair) or object-prefixed for shared items (service-counter, repair-lift).\n"
+        "- description: furniture type + exact room location (entrance-side / far-side / "
+        "  left-wall / right-wall + distance estimate) + orientation + full item list on/near it.\n"
+        "  Example: 'amanda-desk: 3rd glossy white plastic desk from the entrance on the "
+        "  left-wall row. Ergonomic swivel chair behind it facing the right wall. "
+        "  DELL 24\" monitor at center, Logitech keyboard in front, paper tray upper-right "
+        "  corner, Panasonic desk phone lower-left, name holder at front edge.'\n"
+        "- No vague phrases — 'standard equipment', 'various tools', 'usual items' are forbidden."
+    )
+
+
+def _build_view_prompt(base: str, suffix: str, view_desc: str, vocabulary: list[dict]) -> str:
+    vocab_block = "\n".join(
+        f"  [{item['id']}] {item['description']}" for item in vocabulary
+    )
+    return (
+        "You are a set decorator writing a production-ready room description for a single "
+        "camera view of a cinematic location.\n\n"
+        f"## LOCATION: {base}\n"
+        f"## VIEW: {suffix}\n\n"
+        "## SHARED NAMED-POSITION VOCABULARY (use these labels and descriptions verbatim):\n"
+        f"{vocab_block}\n\n"
+        "## CURRENT VIEW DESCRIPTION:\n"
+        f"{view_desc}\n\n"
+        "## YOUR TASK\n"
+        "Rewrite the current view description using the shared vocabulary above. Rules:\n"
+        "1. Every named position from the vocabulary must appear with its label in backticks, "
+        "placed correctly for THIS camera angle.\n"
+        "2. image-left / image-right / depth order must match this specific view's perspective.\n"
+        "3. Add any equipment or props from the vocabulary that the current description omits.\n"
+        "4. Preserve room dimensions, ceiling height, lighting, flooring, and architectural "
+        "features from the current description.\n"
+        "5. End with: 'Empty room, no people, architectural photography.'\n"
+        "6. Do NOT invent items not in the vocabulary or the current description."
+    )
+
+
+def detail_room_refs(text: str, llm: BaseLLM, project: Project, force: bool = False):
+    """Enrich Room ref visual_desc with named furniture, equipment, and per-character anchor labels.
+
+    Two-phase per room:
+      Phase 1 — one LLM call derives a view-neutral named-position vocabulary (roles, equipment,
+                 anchor labels). Short focused output, not view-specific.
+      Phase 2 — one LLM call per view (parallel) writes the enriched visual_desc for that angle,
+                 injecting the Phase 1 vocabulary verbatim.
+
+    Runs AFTER casting, BEFORE refs. Sets needs_regenerate=True on views with existing PNGs.
+    Idempotent: skips rooms where any view already carries details_applied=True unless force=True.
+    """
+    load_character_refs(project)
+
+    all_suffixes = [s for s, _ in _ROOM_VIEWS]
+
+    rooms: dict[str, dict[str, dict]] = {}
+    for name, info in project.character_info.items():
+        if info.get('type') != 'Room':
+            continue
+        for suffix in all_suffixes:
+            if name.endswith(f'-{suffix}'):
+                base = name[:-(len(suffix) + 1)]
+                rooms.setdefault(base, {})[suffix] = info
+                break
+
+    if not rooms:
+        logger.info("  ℹ️  No Room refs found.")
+        return
+
+    targets = [
+        (base, views)
+        for base, views in rooms.items()
+        if force or not any(v.get('details_applied') for v in views.values())
+    ]
+
+    if not targets:
+        logger.info("  ✅ All room refs already have details applied (use --force to redo).")
+        return
+
+    logger.info(f"  🏢 Detailing {len(targets)} room(s)...")
+
+    for base, views in targets:
+        logger.info(f"  📋 {base}: Phase 1 — building named-position vocabulary...")
+
+        vocab_result = llm.make_json(_build_vocabulary_prompt(base, text, views), ROOM_VOCABULARY_SCHEMA)
+        if not vocab_result or not vocab_result.get('named_positions'):
+            logger.warning(f"  ⚠️  {base}: vocabulary pass returned nothing — skipping")
+            continue
+
+        vocabulary = vocab_result['named_positions']
+        logger.info(f"  📐 {base}: {len(vocabulary)} named positions established")
+
+        present_views = [(suffix, views[suffix]) for suffix in all_suffixes if suffix in views]
+
+        logger.info(f"  📋 {base}: Phase 2 — enriching {len(present_views)} views in parallel...")
+
+        def _enrich_view(args: tuple) -> tuple[str, str]:
+            suffix, info = args
+            full_name = f"{base}-{suffix}"
+            view_desc = info.get('visual_desc', '').strip()
+            result = llm.make_json(_build_view_prompt(base, suffix, view_desc, vocabulary), ROOM_DETAIL_SCHEMA)
+            enriched = (result or {}).get('enriched_visual_desc', '').strip()
+            return full_name, enriched
+
+        with ThreadPoolExecutor(max_workers=project.max_workers) as executor:
+            view_results = list(executor.map(_enrich_view, present_views))
+
+        updated = 0
+        for name, enriched in view_results:
+            if not enriched:
+                logger.warning(f"  ⚠️  {name}: empty result — skipping")
+                continue
+            if name not in project.character_info:
+                logger.warning(f"  ⚠️  Unknown ref '{name}' — skipping")
+                continue
+
+            sname = safe_name(name)
+            json_path = project.ref_dir / f"{sname}.json"
+            try:
+                char = json.loads(json_path.read_text(encoding='utf-8'))
+                char['visual_desc'] = enriched
+                char['details_applied'] = True
+                if (project.ref_dir / f"{sname}.png").exists():
+                    char['needs_regenerate'] = True
+                json_path.write_text(json.dumps(char, indent=2), encoding='utf-8')
+                project.character_info[name] = char
+                logger.info(f"  ✏️  {name}: visual_desc enriched ({len(enriched)} chars)")
+                updated += 1
+            except Exception as e:
+                logger.warning(f"  ⚠️  Failed to save {name}: {e}")
+
+        logger.info(f"  ✅ {base}: {updated} views updated")
+
+    logger.info("  ✅ detail-rooms done.")
+
+
 # ---------------------------------------------------------------------------
 # Scene grid rendering
 # ---------------------------------------------------------------------------
@@ -1766,7 +1957,57 @@ def render_scene_grids(
 # Panel-by-panel rendering
 # ---------------------------------------------------------------------------
 
-def _build_panel_prompt(scene: dict, panel: dict, frame_type: str, prompts: dict, aspect_ratio: str = '9:16') -> str:
+def _panel_anchor_context(panel: dict, project: 'Project') -> str:
+    """Return a filtered anchor visibility block for the panel's active location ref.
+
+    Includes objects named in panel.state.anchor_refs plus any anchor referenced by
+    panel.camera_position (annotated as the camera placement anchor).
+    Reprojects to the view used in location_references.
+    Empty string when anchor data is unavailable.
+    """
+    anchor_refs = set(panel.get('state', {}).get('anchor_refs', []))
+
+    all_suffixes = [s for s, _ in _ROOM_VIEWS + _VEHICLE_VIEWS + _OUTDOOR_VIEWS]
+    view_suffix = None
+    loc_ref_name = None
+    for ref_name in panel.get('location_references', []):
+        for suffix in all_suffixes:
+            if ref_name.endswith(f'-{suffix}'):
+                view_suffix = suffix
+                loc_ref_name = ref_name
+                break
+        if view_suffix:
+            break
+
+    if not view_suffix or not loc_ref_name:
+        return ''
+
+    # For View-From-Entrance (and View-Primary) anchor_points live on the ref itself;
+    # for all other views they must be loaded from the canonical entrance sibling.
+    anchor_points = (
+        _load_entrance_anchor_points(loc_ref_name, view_suffix, project)
+        or project.character_info.get(loc_ref_name, {}).get('anchor_points', {})
+    )
+    if not anchor_points:
+        return ''
+
+    camera_anchors = _extract_camera_anchor_labels(panel.get('camera_position', ''), anchor_points)
+    include = anchor_refs | camera_anchors
+    if not include:
+        return ''
+
+    filtered = dict(anchor_points)
+    filtered['objects'] = [
+        obj for obj in anchor_points.get('objects', [])
+        if obj.get('label') in include
+    ]
+    if not filtered['objects']:
+        return ''
+
+    return _anchor_visibility_block(filtered, view_suffix, frozenset(camera_anchors))
+
+
+def _build_panel_prompt(scene: dict, panel: dict, frame_type: str, prompts: dict, aspect_ratio: str = '9:16', anchor_context: str = '') -> str:
     """Build a focused single-panel image generation prompt."""
     style_prompt = prompts.get('style', '')
     single_panel_spec = f"Render a SINGLE {aspect_ratio} portrait image. One panel only — no grid."
@@ -1790,6 +2031,7 @@ def _build_panel_prompt(scene: dict, panel: dict, frame_type: str, prompts: dict
     tag_str = f" [{' | '.join(tags)}]" if tags else ""
 
     disposition_line = f"\nDisposition: {panel['visual_disposition']}" if panel.get('visual_disposition') else ""
+    anchor_block = f"\n{anchor_context}" if anchor_context else ""
 
     actors_info = [
         f"{actor.get('visual_ref') or actor['name']}: {actor['pose']} {actor['position']}, looking at {actor['gaze_target']}, body turned to {actor['chest_direction']}, head turned to {actor.get('head_direction')}."
@@ -1804,7 +2046,7 @@ def _build_panel_prompt(scene: dict, panel: dict, frame_type: str, prompts: dict
 {setting_context}
 
 Location: {scene['location']}
-Scene setup: {scene.get('pre_action_description', '')}
+
 CONSISTENCY RULE: Maintain IDENTICAL face, hair, clothing, and body proportions as shown in the reference images.
 NO CAPTIONS. NO TEXT OVERLAYS. NO WATERMARKS. NO TEARS. NO SPITTING.
 
@@ -1812,7 +2054,7 @@ Generate a SINGLE portrait image ({aspect_ratio}) for:
 Panel {panel['panel_index']} — {frame_type.upper()} frame{tag_str}
 
 Actors: {actors_line}
-Visual: {visual}{disposition_line}
+Visual: {visual}{disposition_line}{anchor_block}
 Camera / Lighting: {" | ".join(filter(None, [scene.get("camera_master", ""), scene.get("lighting_master", ""), panel.get("lights_and_camera", "")]))}
 
 {"**IMPORTANT: THIS IS VERTICAL PORTRAIT IMAGE, IT SHOULD BE VIEWED NORMALLY, WITHOUT ROTATION**" if is_portrait(aspect_ratio) else ""}
@@ -1902,7 +2144,8 @@ def _render_single_panel(
             except Exception as e:
                 logger.warning(f"  ⚠️  Could not load cross-scene anchor: {e}")
 
-    prompt_text = _build_panel_prompt(scene, panel, frame_type, prompts, aspect_ratio)
+    anchor_context = _panel_anchor_context(panel, project)
+    prompt_text = _build_panel_prompt(scene, panel, frame_type, prompts, aspect_ratio, anchor_context)
 
     try:
         img_bytes = llm.make_image(prompt_text, refs=refs, aspect_ratio=aspect_ratio, image_size='1K')
@@ -1981,7 +2224,8 @@ def render_extra_panel(
     logger.info(f"  🎨 Rendering extra panel → {out_path} ...")
 
     refs, opened_imgs = _build_ref_contents(panel, project)
-    prompt_text = _build_panel_prompt(scene, panel, 'static', prompts)
+    anchor_context = _panel_anchor_context(panel, project)
+    prompt_text = _build_panel_prompt(scene, panel, 'static', prompts, anchor_context=anchor_context)
 
     try:
         img_bytes = llm.make_image(prompt_text, refs=refs, aspect_ratio=aspect_ratio, image_size='1K')
@@ -2071,6 +2315,7 @@ def _build_fullframe_prompt(
     panel: dict,
     aspect_ratio: str,
     prompts: dict,
+    anchor_context: str = '',
 ) -> str:
     """Build an image generation prompt for a full-frame (expanded AR) render.
 
@@ -2088,6 +2333,7 @@ def _build_fullframe_prompt(
     visual = _derive_fullframe_visual(panel)
     disposition = panel.get('visual_disposition', '')
     disposition_line = f"\nDisposition: {disposition}" if disposition else ""
+    anchor_block = f"\n{anchor_context}" if anchor_context else ""
 
     tags = []
     if panel.get('hook_type') and panel['hook_type'] != 'none':
@@ -2117,8 +2363,7 @@ Generate a SINGLE {aspect_ratio} image for:
 Panel {panel['panel_index']} — FULL-FRAME EXPANSION{tag_str}
 
 Visual (full scene, all actors):{disposition_line}
-{visual}
-
+{visual}{anchor_block}
 Camera / Lighting: {cam}
 IMPORTANT: Shot scale must be wide enough to show ALL actors listed above — widen to MS or WS as needed.
 
@@ -2201,7 +2446,8 @@ def render_full_frame_panel(
     else:
         refs = [header, source_img, source_label]
 
-    prompt_text = _build_fullframe_prompt(scene, wide_panel, aspect_ratio, prompts)
+    anchor_context = _panel_anchor_context(wide_panel, project)
+    prompt_text = _build_fullframe_prompt(scene, wide_panel, aspect_ratio, prompts, anchor_context)
 
     try:
         img_bytes = llm.make_image(prompt_text, refs=refs, aspect_ratio=aspect_ratio, image_size='2K')

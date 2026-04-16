@@ -33,8 +33,8 @@ NARRATIVE      ?=
 INDEX          ?=
 AR             ?= 16:9
 
-.PHONY: help init workdirs styles casting refs remake-room-refs room-anchors extra-room-refs-qa screenplay scenes reverse-refine disposition spatial-rewrite consistency storyboard rebuild-storyboard animation \
-        autocut imgedit tts voiceover dub duck summary split-book panel-by-panel-with-qa extra-panel suno-prompt logic draft full-frame
+.PHONY: help init workdirs styles casting detail-rooms refs remake-room-refs room-anchors extra-room-refs-qa screenplay scenes reverse-refine disposition spatial-rewrite consistency storyboard rebuild-storyboard animation \
+        autocut imgedit tts voiceover dub duck summary split-book panel-by-panel-with-qa extra-panel suno-prompt logic draft full-frame quick-and-dirty-play
 
 help:  ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-16s %s\n", $$1, $$2}'
@@ -51,6 +51,9 @@ styles:  ## Generate custom_prompts/ for STYLE preset
 casting:  ## Identify characters/locations and save reference JSONs
 	python cli.py --llm $(LLM) --style $(STYLE) casting $(NOVEL)
 
+detail-rooms:  ## Enrich room ref descriptions with named furniture, equipment, per-character anchors
+	python cli.py --llm $(LLM) --style $(STYLE) detail-rooms $(NOVEL) $(if $(FORCE),--force,)
+
 refs:  ## Render missing character reference portraits from existing JSONs
 	python cli.py --llm $(LLM) --style $(STYLE) refs
 
@@ -66,8 +69,8 @@ extra-room-refs-qa:  ## QA and auto-regenerate the 4 derived room views (thresho
 logic:  ## Fix logic/physics/space bugs and generate scene prerequisites appendix (NOVEL=file.txt)
 	python cli.py --llm $(LLM) logic $(NOVEL) $(if $(OUTPUT),--output $(OUTPUT),) $(if $(WORKERS),--workers $(WORKERS),)
 
-screenplay:  ## Run full screenplay + scene keyframe pipeline
-	python cli.py --llm $(LLM) --style $(STYLE) screenplay $(NOVEL)
+screenplay:  ## Run full screenplay + scene keyframe pipeline (EPISODES_ONLY=true → stop after animation_episodes.json)
+	python cli.py --llm $(LLM) --style $(STYLE) screenplay $(NOVEL) $(if $(filter true,$(EPISODES_ONLY)),--episodes-only,)
 
 scenes:  ## Generate keyframes for episode SCENE (or all)
 	python cli.py --llm $(LLM) --style $(STYLE) scenes $(SCENE)
@@ -146,12 +149,20 @@ extra-panel:  ## Generate extra micro-panel not in screenplay (SCENE=N INDEX=4_5
 	@[ -n "$(INDEX)" ] || (echo "❌ INDEX must be set in N_M format, e.g. make extra-panel INDEX=4_5"; exit 1)
 	python cli.py --llm $(LLM) --style $(STYLE) extra-panel $(NARRATIVE) --scene $(SCENE) --index $(INDEX)
 
-draft:  ## Full draft pipeline: casting → refs → room-anchors → screenplay → consistency → disposition → storyboard
+TARGET_SECONDS ?= 10
+
+quick-and-dirty-play:  ## Synthesize quickplay.json for multi-ref clips (Seedance/Kling/Grok); TARGET_SECONDS=6|8|10|15
+	python cli.py --llm $(LLM) quick-play $(if $(JSON),--json $(JSON),) $(if $(OUTPUT),--output $(OUTPUT),) $(if $(WORKERS),--workers $(WORKERS),) --target-seconds $(TARGET_SECONDS)
+
+draft:  ## Full draft pipeline: casting → detail-rooms → refs → room-anchors → remake-room-refs → screenplay → disposition → spatial-rewrite → storyboard
 	$(MAKE) casting
+	$(MAKE) detail-rooms
 	$(MAKE) refs
 	$(MAKE) room-anchors
+	$(MAKE) remake-room-refs
 	$(MAKE) screenplay
 	$(MAKE) disposition
+	$(MAKE) spatial-rewrite
 	$(MAKE) storyboard
 
 panel-by-panel-with-qa:  ## Render panels one-by-one with inline QA+refine (SCENE=N [PANEL=N] [THRESHOLD=5] [MAX_ATTEMPTS=3])

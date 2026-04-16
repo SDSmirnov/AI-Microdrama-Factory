@@ -157,13 +157,13 @@ I2V platforms apply post-generation content moderation. A human body lying compl
 | Emotion | Physical encoding |
 |---------|------------------|
 | Fear/Dread | retreats 10–15cm, spine presses to wall, shoulders rise, eyes sweep to exit |
-| Anger/Rage | slams palm, jabs finger, steps forward 20cm, jaw clamps, chin juts 3–5cm |
-| Shame/Guilt | gaze drops, chin toward chest, shoulders rotate inward, arms self-hug, weight shifts away |
+| Anger/Rage | slams palm, jabs finger toward [Target], steps 20cm toward [Target], jaw clamps, chin juts 3–5cm toward [Target]'s face |
+| Shame/Guilt | gaze drops, chin drops toward chest, shoulders curl inward over sternum, arms self-hug, weight transfers onto rear foot |
 | Grief | shoulders collapse 3–5cm, hands drop, gaze defocuses, jaw releases |
 | Contempt | upper lip tightens unilaterally, head tilts back 5–10°, weight rearward |
 | Shock | brows flash up 0.3s then soften, body stills 0.5s, hands freeze, then reactive motion |
 | Desire | closes distance 10–15cm, rotates from three-quarter toward side profile directed at [Other], chin lifts 3° |
-| Dominance | steps forward 20cm, side profile chest directed squarely at [Other] while [Other]'s gaze breaks away |
+| Dominance | steps 20cm toward [Other], side profile chest directed squarely at [Other] while [Other]'s gaze breaks away |
 | Doubt/Uncertainty | gaze breaks to frame-right then returns, weight shifts to one foot, hand lifts toward chin then drops, blink rate increases |
 | Relief | shoulders drop 2cm, jaw releases visible tension, chest drops on exhale through nose, fist opens |
 
@@ -173,12 +173,12 @@ FORBIDDEN VISUALS in motion_prompt: tears (any form), sweat, breath vapor, oral 
 FORBIDDEN BREATH VISUALS: any description where an exhale or breath is *visible* — "visible breath", "wisp of breath", "vapor from nose/mouth", "steam from mouth", "condensation from lips", "breath dissipates", "breath cloud", "fog of breath", "visible exhale" — ALL FORBIDDEN. Breath is invisible in cinematic I2V; the model renders it as smoke/fog artifact. Encode exhale purely as body mechanics: "chest drops 1cm on exhale", "shoulders settle 2cm", "jaw releases tension".
 FORBIDDEN METAPHORS: figurative/poetic language describing physical state. Write the literal anatomical event.
   WRONG: "his hand remaining a fixed iron shackle on her arm" / "she crumbles like paper" / "his gaze pins her to the wall"
-  RIGHT: "his hand maintains a firm grip on her forearm, fingers not releasing" / "her knees buckle 5cm, weight shifts rearward" / "his gaze holds steady on her face, chin forward 3°"
+  RIGHT: "his hand maintains a firm grip on her forearm, fingers not releasing" / "her knees buckle 5cm, weight transfers onto rear foot" / "his gaze holds steady on [Target]'s face, chin juts 3° toward [Target]"
 FORBIDDEN BARE DIRECTIONS: "forward", "backward", "toward", "away", "inward", "outward" without a named anchor or target.
-  I2V models interpret bare direction words as relative to camera — "steps forward" = steps toward lens.
-  Every direction MUST resolve to a named destination or named person.
-  WRONG: "steps forward" / "leans toward him" / "moves away" / "turns inward"
-  RIGHT: "steps toward the entrance door" / "leans toward Jane across the table" / "retreats to the sofa wall" / "turns to face the window"
+  I2V models interpret bare direction words as relative to camera — "steps forward" = steps toward lens, "arm extends forward" = arm reaches toward lens, "head juts forward" = head moves toward lens.
+  Every direction MUST resolve to a named destination or named person. This applies equally to full-body locomotion, limb extensions, head/torso micro-movements, and weight shifts.
+  WRONG: "steps forward" / "leans toward him" / "moves away" / "turns inward" / "arm extends forward" / "head juts forward" / "weight shifts forward onto lead foot" / "walks away from the camera"
+  RIGHT: "steps toward [entrance-door]" / "leans toward [Jane] across the table" / "retreats to the [sofa-wall]" / "turns to face the [window]" / "arm extends toward [Client]" / "head juts 10cm toward [Amanda]" / "weight transfers onto lead foot" / "walks from [her-desk] toward [Self-Service-Terminal]"
 
 ### SPATIAL LANGUAGE
 
@@ -343,7 +343,7 @@ Set `transition_to_next` per panel:
    Also scan for ANY **visible breath**: "visible breath", "wisp of breath", "vapor from nose/mouth", "steam from mouth", "breath dissipates", "breath cloud", "fog of breath", "visible exhale" → HARD FAILURE. Breath is invisible in cinema. Encode as body mechanics only.
 7. **THREAD CHECK**: does panel N leave a physical action unresolved? Does panel N+1's visual_start open on the outcome? If not → rewrite panel N+1's visual_start.
 8. **GAZE CHECK**: "looks at camera", "stares into lens", "gazes at viewer" without "DIRECT CAMERA ADDRESS" label → HARD FAILURE.
-9. **CAMERA-MOVEMENT CONFLATION CHECK**: "toward camera", "away from camera", "toward the lens" in motion_prompt → HARD FAILURE. This rule applies equally to body parts: "his head turns toward the camera", "her gaze drifts toward the lens", "chin lifts toward viewer" are all HARD FAILURES — replace with the world-space target ("his head turns toward [entrance-door]", "her gaze tracks toward Charlotte"). Also scan for bare direction words without anchor: "steps forward", "moves toward", "leans away", "turns inward" — if no named target follows → HARD FAILURE. Add the destination. PAN SPECIAL CASE: if `drama_requirements.movement_intent.type = "Pan"`, confirm motion_prompt contains the world-space character action the camera follows, and that the pan instruction itself is NOT in motion_prompt (it belongs in lights_and_camera only).
+9. **CAMERA-MOVEMENT CONFLATION CHECK**: "toward camera", "away from camera", "toward the lens", "walks away from the camera" in motion_prompt → HARD FAILURE. This rule applies equally to body parts: "his head turns toward the camera", "her gaze drifts toward the lens", "chin lifts toward viewer" → HARD FAILURE. Replace with world-space target: "his head turns toward [entrance-door]", "her gaze tracks toward [Charlotte]". Also scan every direction word — "forward", "backward", "inward", "outward", "away", "toward" — for a named anchor or person immediately after. Missing target → HARD FAILURE. This covers ALL of: full-body locomotion ("steps forward" → "steps toward [door]"), limb extension ("arm extends forward" → "arm extends toward [Client]"), head/torso micro-motion ("head juts forward" → "head juts toward [Amanda]"), weight transfer ("weight shifts forward" → "weight transfers onto lead foot"), and posture lean ("leans forward" → "leans toward [Igor] across the desk"). PAN SPECIAL CASE: if `drama_requirements.movement_intent.type = "Pan"`, confirm motion_prompt contains the world-space character action the camera follows, and that the pan instruction itself is NOT in motion_prompt (belongs in lights_and_camera only).
 10. **METAPHOR CHECK**: scan motion_prompt for figurative/poetic language ("iron grip", "crumbles", "melts", "pins her", "shackle", "floods") → HARD FAILURE. Replace with literal anatomical description.
 11. **INTER-CHARACTER ORIENTATION CHECK**: every visual_start ACTOR line with 2+ characters has a PROFILE slot with an enumerated token (`FRONTAL`, `3Q-FRONT`, `SIDE`, `3Q-REAR`, `BACK`) AND a GAZE_TARGET pointing to the other character or an anchor? Missing PROFILE token → HARD FAILURE. Also check: `FRONTAL` for a character whose GAZE_TARGET is another person at frame-left or frame-right → CONTRADICTION (FRONTAL means facing the lens, not another character), HARD FAILURE.
 12. **CU/ECU BACKGROUND EXCLUSION CHECK**: scan motion_prompt for timed actions attributed to characters with `in_frame=false` (those beyond ~1m at CU, anyone other than the subject at ECU). Any "In the background, [Character] does X" at CU/ECU scale → HARD FAILURE. Replace with "[Character] is off-frame." at end of prompt or remove entirely.
