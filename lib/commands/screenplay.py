@@ -1,5 +1,6 @@
 """Screenplay commands: screenplay, scenes, consistency, summary, split-book."""
 import argparse
+import hashlib
 import json
 import logging
 import sys
@@ -7,18 +8,30 @@ from pathlib import Path
 
 from lib.commands.common import _make_llm, _make_vision_llm
 from lib.core.project import Project, load_project
-from lib.core.prompts import PROMPTING_DIR
+from lib.core.prompts import resolve_style_file
 from lib.core.state import ProjectState
-from lib.core.utils import atomic_write
+from lib.core.utils import atomic_write, canonical_ref_name
 from lib.studio.artist import export_image_prompt, load_character_refs
 from lib.studio.director import run_continuity_pass
+from lib.studio.room_qa import places_without_anchors
 from lib.studio.screenwriter import (
     analyze_scenes_master, apply_spatial_disposition_pass, apply_spatial_rewrite_pass,
     merge_scenes, process_single_scene, run_scenes_pipeline, _write_episode_checkpoint,
-    _swap_view_ref,
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _require_anchors(project, args) -> None:
+    """Exit 2 when a place has no anchors: its scenes would be written with no blocking, which a passing
+    run hides (the screenplay only logs a warning per scene). --allow-missing-anchors accepts that."""
+    if missing := places_without_anchors(project):
+        if getattr(args, 'allow_missing_anchors', False):
+            logger.warning(f"⚠️  No anchor_points for {missing}; their scenes get no blocking")
+            return
+        logger.error(f"❌ No anchor_points for {missing}. Run room-views (or room-anchors), "
+                     "or pass --allow-missing-anchors to write those scenes without blocking.")
+        sys.exit(2)
 
 
 def cmd_screenplay(args):
@@ -27,10 +40,12 @@ def cmd_screenplay(args):
     load_character_refs(project)
 
     resume = getattr(args, 'resume', False)
-    state = ProjectState.load(project.state_path())
-
-    text = Path(args.novel).read_text(encoding='utf-8')
     episodes_only = getattr(args, 'episodes_only', False)
+    if not episodes_only:
+        _require_anchors(project, args)
+    text = Path(args.novel).read_text(encoding='utf-8')
+    state = ProjectState.load(project.state_path())
+    state.bind_source(hashlib.sha256(text.encode('utf-8')).hexdigest())
     data = analyze_scenes_master(
         text, prompts, config, llm,
         character_info=project.character_info,
@@ -57,6 +72,7 @@ def cmd_scenes(args):
     project, prompts, config = load_project(style=args.style)
     llm = _make_llm(args.llm, project, system_prompt=prompts['screenplay'])
     load_character_refs(project)
+    _require_anchors(project, args)
 
     episodes_path = project.output_dir / "animation_episodes.json"
     if not episodes_path.exists():
@@ -168,8 +184,8 @@ def cmd_summary(args):
                 desc = d.get('visual_description') or d.get('description') or ''
                 state = d.get('state') or d.get('current_state') or ''
                 refs.append(f"- {name}: {desc}" + (f" [{state}]" if state else ""))
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"⚠️  Unreadable ref {rj.name}: {e}")
         refs_block = "\n".join(refs)
 
     prompt = f"""You are a production continuity writer.
@@ -324,6 +340,20 @@ def cmd_reverse_refine(args):
     logger.info(f"✅ animation_metadata.json updated: {len(metadata['scenes'])} total scene(s)")
 
 
+
+def _anchors_by_ref(project) -> dict:
+    """anchor_points by canonical room/outdoor view name (scene['location'] is free text: never match on it)."""
+    return {name: info['anchor_points'] for name, info in project.character_info.items()
+            if info.get('type') in ('Room', 'Outdoor')
+            and name.endswith(('-View-From-Entrance', '-View-Primary'))
+            and info.get('anchor_points')}
+
+
+def _resolve_anchor_ref(panel: dict, anchors_by_ref: dict) -> str | None:
+    """The first location ref whose canonical view carries anchor_points."""
+    return next((c for c in map(canonical_ref_name, panel.get('location_references', []))
+                 if c in anchors_by_ref), None)
+
 def cmd_disposition(args):
     """Spatial disposition pass: assign visual_disposition to panels using room anchor_points."""
     scene_arg = args.scene
@@ -356,17 +386,7 @@ def cmd_disposition(args):
         logger.error(f"❌ No {target} found in animation_metadata.json.")
         sys.exit(1)
 
-    # Index anchor_points by full View-From-Entrance ref name for direct lookup.
-    # scene['location'] is free-style text — never use it for matching.
-    # Instead, scan panel['location_references'] which contains exact ref names.
-    anchors_by_ref: dict = {
-        name: info['anchor_points']
-        for name, info in project.character_info.items()
-        if info.get('type') in ('Room', 'Outdoor')
-        and name.endswith(('-View-From-Entrance', '-View-Primary'))
-        and info.get('anchor_points')
-    }
-
+    anchors_by_ref = _anchors_by_ref(project)
     if not anchors_by_ref:
         logger.error("❌ No room/outdoor refs with anchor_points found. Run 'make room-anchors' first.")
         sys.exit(1)
@@ -385,38 +405,10 @@ def cmd_disposition(args):
 
         # Resolve anchor per panel. Panels in a scene may reference different rooms.
         # Group consecutive panels that share the same canonical primary-view anchor ref.
-        # Reversed-axis refs (View-To-Entrance, View-Opposite) map back to their primary.
-        # All non-canonical view suffixes that map back to their anchor-holding canonical ref.
-        _TO_CANONICAL_SUFFIX = {
-            '-View-To-Entrance':        '-View-From-Entrance',
-            '-View-Center-To-Far':      '-View-From-Entrance',
-            '-View-Center-To-Entrance': '-View-From-Entrance',
-            '-View-From-Left-Wall':     '-View-From-Entrance',
-            '-View-From-Right-Wall':    '-View-From-Entrance',
-            '-View-By-Far-Wall':        '-View-From-Entrance',
-            '-View-By-Entrance':        '-View-From-Entrance',
-            '-View-Opposite':           '-View-Primary',
-            '-Interior-To-Entrance':    '-Interior-From-Entrance',
-        }
-
-        def _resolve_ref(panel):
-            for ref in panel.get('location_references', []):
-                # Direct canonical match
-                if ref.endswith(('-View-From-Entrance', '-View-Primary', '-Interior-From-Entrance', '-Exterior')) \
-                        and ref in anchors_by_ref:
-                    return ref
-                # Derived view → strip suffix and look up canonical
-                for derived_suffix, canonical_suffix in _TO_CANONICAL_SUFFIX.items():
-                    if ref.endswith(derived_suffix):
-                        canonical = ref[: -len(derived_suffix)] + canonical_suffix
-                        if canonical in anchors_by_ref:
-                            return canonical
-            return None
-
         # Build ordered groups of (anchor_ref, [panel, ...]) preserving sequence
         groups: list[tuple[str | None, list[dict]]] = []
         for panel in panels:
-            ref = _resolve_ref(panel)
+            ref = _resolve_anchor_ref(panel, anchors_by_ref)
             if groups and groups[-1][0] == ref:
                 groups[-1][1].append(panel)
             else:
@@ -497,40 +489,11 @@ def cmd_spatial_rewrite(args):
         logger.error(f"❌ No {target} found in animation_metadata.json.")
         sys.exit(1)
 
-    anchors_by_ref: dict = {
-        name: info['anchor_points']
-        for name, info in project.character_info.items()
-        if info.get('type') in ('Room', 'Outdoor')
-        and name.endswith(('-View-From-Entrance', '-View-Primary'))
-        and info.get('anchor_points')
-    }
+    anchors_by_ref = _anchors_by_ref(project)
     if not anchors_by_ref:
         logger.error("❌ No room/outdoor refs with anchor_points found. Run 'make room-anchors' first.")
         sys.exit(1)
 
-    _TO_CANONICAL_SUFFIX = {
-        '-View-To-Entrance':        '-View-From-Entrance',
-        '-View-Center-To-Far':      '-View-From-Entrance',
-        '-View-Center-To-Entrance': '-View-From-Entrance',
-        '-View-From-Left-Wall':     '-View-From-Entrance',
-        '-View-From-Right-Wall':    '-View-From-Entrance',
-        '-View-By-Far-Wall':        '-View-From-Entrance',
-        '-View-By-Entrance':        '-View-From-Entrance',
-        '-View-Opposite':           '-View-Primary',
-        '-Interior-To-Entrance':    '-Interior-From-Entrance',
-    }
-
-    def _resolve_ref(panel):
-        for ref in panel.get('location_references', []):
-            if ref.endswith(('-View-From-Entrance', '-View-Primary', '-Interior-From-Entrance', '-Exterior')) \
-                    and ref in anchors_by_ref:
-                return ref
-            for derived_suffix, canonical_suffix in _TO_CANONICAL_SUFFIX.items():
-                if ref.endswith(derived_suffix):
-                    canonical = ref[: -len(derived_suffix)] + canonical_suffix
-                    if canonical in anchors_by_ref:
-                        return canonical
-        return None
 
     processed = 0
     for scene in scenes:
@@ -542,7 +505,7 @@ def cmd_spatial_rewrite(args):
         # Group consecutive panels by anchor ref (same grouping logic as disposition).
         groups: list[tuple[str | None, list[dict]]] = []
         for panel in panels:
-            ref = _resolve_ref(panel)
+            ref = _resolve_anchor_ref(panel, anchors_by_ref)
             if groups and groups[-1][0] == ref:
                 groups[-1][1].append(panel)
             else:
@@ -584,7 +547,6 @@ def cmd_spatial_rewrite(args):
         logger.warning("  ⚠️  No scenes processed — check that disposition pass has been run.")
         return
 
-    from lib.core.utils import atomic_write
     atomic_write(meta_path, json.dumps(metadata, ensure_ascii=False, indent=2))
     logger.info(f"✅ animation_metadata.json updated: {processed} scene(s) with spatial rewrites")
 
@@ -594,13 +556,10 @@ def cmd_split_book(args):
 
     project, _, _ = load_project(style=args.style)
 
-    prompt_path = PROMPTING_DIR / args.style / "book-shrinker.md"
-    if not prompt_path.exists():
-        logger.error(
-            f"❌ book-shrinker.md not found for style '{args.style}' at {prompt_path}"
-        )
+    shrinker_prompt = resolve_style_file(args.style, "book-shrinker")
+    if shrinker_prompt is None:
+        logger.error(f"❌ book-shrinker.md not found for style '{args.style}'")
         sys.exit(1)
-    shrinker_prompt = prompt_path.read_text(encoding="utf-8")
 
     llm = _make_llm(args.llm, project)
     text = Path(args.novel).read_text(encoding="utf-8")
@@ -614,6 +573,64 @@ def cmd_split_book(args):
     logger.info(f"✅ Split into {len(files)} episode file(s) in {out_dir}/")
 
 
+def cmd_continuity_check(args):
+    from lib.studio.artist.render_utils import _load_scenes
+    from lib.studio.ledger import check, screenplay_issues, vehicle_names
+    from lib.studio.room_blocking import annotate
+
+    project, _, config = load_project(style=args.style)
+    load_character_refs(project)
+    issues = []
+    episodes_path = project.output_dir / 'animation_episodes.json'
+    if episodes_path.exists():
+        issues += screenplay_issues(json.loads(episodes_path.read_text(encoding='utf-8')))
+    scenes = _load_scenes(project)
+    annotate(scenes, project.character_info.get, config['image_generation'].get('aspect_ratio', '9:16'))  # moves in metres
+    issues += check(scenes, vehicle_names(project.character_info))
+    if args.scene != 'all':
+        issues = [i for i in issues if str(i.scene_id) == args.scene]
+    for issue in issues:
+        logger.warning(f"  ⚠️  {issue}")
+    logger.info(f"{'❌' if issues else '✅'} {len(issues)} continuity issue(s)")
+    if issues and args.strict:
+        sys.exit(1)
+
+
+def cmd_positions(args):
+    from lib.studio.artist.render_utils import _load_scenes
+    from lib.studio.room_blocking import annotate
+
+    project, _, config = load_project(style=args.style)
+    load_character_refs(project)
+    scenes = _load_scenes(project)
+    if args.scene != 'all':
+        scenes = [s for s in scenes if str(s.get('scene_id')) == args.scene]
+    stats = annotate(scenes, project.character_info.get, config['image_generation'].get('aspect_ratio', '9:16'))
+    for scene in scenes:
+        for panel in scene.get('panels', []):
+            for a in panel.get('state', {}).get('actors', []):
+                pos = a.get('pos')
+                if a.get('in_frame') and not pos and panel.get('camera_hfov'):
+                    logger.warning(f"  ⚠️  S{scene.get('scene_id')} P{panel.get('panel_index')} {a.get('name')}: unplaced — {a.get('position', '')[:80]}")
+                elif pos:
+                    logger.debug(f"  S{scene.get('scene_id')} P{panel.get('panel_index')} {a.get('name')}: {pos}")
+    for sid, pid, note in stats['camera_fixed']:
+        logger.warning(f"  ⚠️  S{sid} P{pid}: {note}")
+    logger.info(f"📍 {stats['placed']}/{stats['in_frame']} in-frame actors placed on {stats['panels']} anchored panel(s); "
+                f"{len(stats['camera_fixed'])} camera(s) corrected")
+    if args.write:
+        path = project.output_dir / 'animation_metadata.json'
+        if not path.exists():
+            logger.error(f"❌ {path} not found; --write updates only animation_metadata.json")
+            sys.exit(1)
+        data = json.loads(path.read_text(encoding='utf-8'))
+        by_id = {s.get('scene_id'): s for s in scenes}
+        data['scenes'] = [by_id.get(s.get('scene_id'), s) for s in data['scenes']]
+        path.with_name('animation_metadata_before_positions.json').write_text(path.read_text(encoding='utf-8'), encoding='utf-8')
+        atomic_write(path, json.dumps(data, ensure_ascii=False, indent=2))
+        logger.info(f"💾 Positions and cameras written to {path} (backup: animation_metadata_before_positions.json)")
+
+
 def register(sub):
     p = sub.add_parser('screenplay', help='Full screenplay + keyframe pipeline')
     p.add_argument('novel', help='Novel text file')
@@ -621,12 +638,26 @@ def register(sub):
                    help='Skip already-completed phases (episodes/raw/refined) using pipeline_state.json')
     p.add_argument('--episodes-only', action='store_true', default=False,
                    help='Stop after writing animation_episodes.json (skip scene keyframe generation)')
+    p.add_argument('--allow-missing-anchors', action='store_true',
+                   help='Write scenes in places without anchor_points (no blocking) instead of exiting 2')
     p.set_defaults(func=cmd_screenplay)
+
+    p = sub.add_parser('continuity-check', help='Unexplained moves, seat swaps and wardrobe changes across panels and scenes')
+    p.add_argument('scene', nargs='?', default='all', help='Scene number (checks its entry from the previous one) or "all"')
+    p.add_argument('--strict', action='store_true', help='Exit 1 when issues are found')
+    p.set_defaults(func=cmd_continuity_check)
+
+    p = sub.add_parser('positions', help='Resolve actor positions and panel cameras from anchors (rooms and outdoor)')
+    p.add_argument('scene', nargs='?', default='all', help='Scene number or "all"')
+    p.add_argument('--write', action='store_true', help='Save pos / camera fields into animation_metadata.json (backup kept)')
+    p.set_defaults(func=cmd_positions)
 
     p = sub.add_parser('scenes', help='Generate keyframes for episode(s)')
     p.add_argument('scene', nargs='?', default='all', help='Episode number or "all"')
     p.add_argument('--resume', action='store_true', default=False,
                    help='Skip episodes whose refined checkpoint is already done')
+    p.add_argument('--allow-missing-anchors', action='store_true',
+                   help='Write scenes in places without anchor_points (no blocking) instead of exiting 2')
     p.set_defaults(func=cmd_scenes)
 
     p = sub.add_parser('reverse-refine', help='Reversal pass on existing raw episode JSON')

@@ -12,6 +12,11 @@ from lib.core.utils import DEFAULT_OUTPUT_DIR, DEFAULT_REF_DIR
 logger = logging.getLogger(__name__)
 
 
+# Room and panel QA judge: fast and cheap enough to run on every attempt.
+QA_JUDGE_MODEL = 'google/gemini-3.8-flash'
+QA_REASONING_EFFORT = 'low'
+
+
 @dataclass
 class Project:
     # Directories
@@ -20,11 +25,24 @@ class Project:
     panels_dir: Path = field(default_factory=lambda: Path("cinematic_render/panels"))
     refined_dir: Path = field(default_factory=lambda: Path("cinematic_render/refined"))
     image_prompts_dir: Path = field(default_factory=lambda: Path("cinematic_render/image_prompts"))
+    bible_dir: Path = field(default_factory=lambda: Path("story_bible"))  # whole-book facts (make bible)
 
     # Models (resolved from env at runtime)
-    text_model: str = field(default_factory=lambda: os.getenv('AI_TEXT_MODEL', 'gemini-2.5-pro'))
-    image_model: str = field(default_factory=lambda: os.getenv('AI_IMAGE_MODEL', 'google/gemini-3-pro-image-preview'))
-    gemini_model: str = field(default_factory=lambda: os.getenv('AI_GEMINI_MODEL', 'gemini-2.5-flash'))
+    #
+    # Defaults are pinned to models with NO announced shutdown date. The
+    # 2.5-generation ids are on a cliff (Google AI Studio deprecations,
+    # 2026-11-12): from 2026-12-01 gemini-2.5-pro auto-routes to
+    # gemini-3.8-flash and gemini-2.5-flash auto-routes to
+    # gemini-3.5-flash-lite, so a pipeline left on 2.5 ids silently changes
+    # models mid-production (a FLASH model standing in for PRO, and a
+    # flash-LITE standing in for a judge). Override with AI_TEXT_MODEL /
+    # AI_GEMINI_MODEL / AI_QA_MODEL.
+    text_model: str = field(default_factory=lambda: os.getenv('AI_TEXT_MODEL', 'google/gemini-4-hydrogen'))
+    image_model: str = field(default_factory=lambda: os.getenv('AI_IMAGE_MODEL', 'google/gemini-nano-banana-2.1'))
+    gemini_model: str = field(default_factory=lambda: os.getenv('AI_GEMINI_MODEL', 'google/gemini-3.8-flash'))
+    # QA/continuity/refinement judge. Defaults to text_model; set AI_QA_MODEL
+    # to pick a cheaper vision judge without touching every text call.
+    qa_model: str = field(default_factory=lambda: os.getenv('AI_QA_MODEL', '') or os.getenv('AI_TEXT_MODEL', 'google/gemini-4-hydrogen'))
     max_workers: int = field(default_factory=lambda: int(os.getenv('AI_CONCURRENCY', '10')))
     # Separate limit for image generation — defaults to 5 to stay within typical image API quotas.
     # Override per-backend: export AI_IMAGE_CONCURRENCY=3

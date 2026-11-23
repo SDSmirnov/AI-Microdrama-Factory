@@ -1,0 +1,5 @@
+{
+  "name": "Heping-7-Hold-View-To-Entrance",
+  "type": "Room",
+  "visual_desc": "Same converted hold, camera at south console end facing NORTH entrance. NORTH WALL (entrance, far): watertight hatch, extinguisher now screen-right of hatch, life-vest locker screen-left of hatch, cable trunking. SOUTH WALL (behind camera): not shown — monitors at back of shooter. EAST WALL (left when facing entrance — swapped): server rack faces, LED blink patterns, UPS hum grilles. WEST WALL (right when facing entrance — swapped): server racks, crate with logistics printout stacks, fiber spools. CENTER: narrow aisle to hatch, folding chair back visible edge, empty. CEILING/FLOOR: fluorescents, cable trays, steel deck. SHOW EMPTY WITHOUT PEOPLE. Left/right explicitly swapped vs entrance view. style_reference materials match. Same hold materials: server-fan atmosphere, open cabling, rust-bloom bulkheads, fluorescent-plus-monitor light; console end has noodle container, pencil, partially ticked paper checklist; second operator seat/crate with logistics printouts."
+}

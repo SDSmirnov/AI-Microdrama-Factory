@@ -46,7 +46,7 @@ __DRAMATIC_INTENSITY_PANEL_TYPE__
 
 - **shot_impossible**: True if the panel description contains a physically impossible shot combination
   that no amount of image refinement can fix. Check visual_start and visual_end for scale conflicts:
-  - ECU of a face + a distant body part (foot, knee) visible in the same frame — impossible: a face ECU fills the entire 9:16 frame.
+  - ECU of a face + a distant body part (foot, knee) visible in the same frame — impossible: a face ECU fills the entire frame.
   - ECU of a hand/object + character's facial expression in the same frame — impossible: at macro range the face is out of frame.
   - CU of one character + full-body view of a second character in the same frame — incompatible scales.
   When shot_impossible=true: set needs_refinement=false, leave refinement_prompt empty, fill shot_impossible_reason.

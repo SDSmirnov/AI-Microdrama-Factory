@@ -5,7 +5,6 @@ Port of 02_image_animator.py into VeoAnimator(BaseAnimator).
 """
 import json
 import logging
-import time
 from io import BytesIO
 from pathlib import Path
 from typing import Optional
@@ -15,12 +14,19 @@ from google.api_core import exceptions as gapi_exceptions
 from google.genai import types
 from PIL import Image
 
-from lib.animation.base import ANIMATION_PROHIBITIONS, BaseAnimator
+from lib.animation.base import BaseAnimator, clip_path_for_panel
+from lib.animation.prompt_builder import build_video_prompt
+from lib.llm.gemini import wait_for_operation
 
 logger = logging.getLogger(__name__)
 
 DEFAULT_RESOLUTION = '720p'
 DEFAULT_MODEL = "veo-3.1-fast-generate-preview"
+
+
+def _load_image(path) -> Image.Image:
+    with Image.open(path) as im:
+        return im.copy()
 
 
 class VeoAnimator(BaseAnimator):
@@ -32,13 +38,17 @@ class VeoAnimator(BaseAnimator):
         model: str = DEFAULT_MODEL,
         resolution: str = DEFAULT_RESOLUTION,
         ref_dir: Path = Path("ref_thriller"),
-        gemini_text_model: str = "gemini-2.5-pro",
+        gemini_text_model: str = "google/gemini-4-hydrogen",
+        aspect_ratio: str = "9:16",
+        prompts: dict = None,
     ):
         self.client = genai.Client(api_key=api_key)
+        self.prompts = prompts
         self.model = model
         self.resolution = resolution
+        self.aspect_ratio = aspect_ratio
         self.ref_dir = ref_dir
-        self.gemini_text_model = gemini_text_model
+        self.gemini_text_model = gemini_text_model.removeprefix("google/")  # native SDK takes bare ids
 
         # Load character image refs (name → path)
         self.character_images: dict[str, str] = {}
@@ -100,21 +110,13 @@ Response format, JSON:
         index: int,
         out_dir: Path,
     ) -> Optional[Path]:
-        clip_id = start_path.stem.replace('_start', '').replace('_static', '')
-        out_path = out_dir / f"clip_{clip_id}.mp4"
+        out_path = clip_path_for_panel(start_path, out_dir)
 
         if out_path.exists() and out_path.stat().st_size > 0:
             logger.info(f"[{index:02d}] ⏭️  Skipping: {out_path.name} already exists.")
             return out_path
 
         motion_prompt = meta.get('motion_prompt', 'Cinematic movement')
-        prompt = (
-            f"{ANIMATION_PROHIBITIONS}\n"
-            f"Cinematic shot. {meta}. "
-            "Smooth transition, high temporal consistency. "
-            "Style: Hyper-realistic cinematic photography, shot on Arri Alexa Mini LF with 50mm lens."
-        )
-
         logger.info(f"[{index:02d}] 🎥 Animating: {start_path.name}")
         logger.info(f"       Prompt: {motion_prompt[:50]}...")
 
@@ -127,7 +129,7 @@ Response format, JSON:
         if end_path and end_path.exists():
             img_end = self._upload_image(end_path)
 
-        pil_start = Image.open(start_path)
+        pil_start = _load_image(start_path)
         need_chars = self._need_references(meta, pil_start)
 
         ref_images = []
@@ -135,14 +137,14 @@ Response format, JSON:
             name = name.title()
             if name in self.character_images:
                 try:
-                    img = Image.open(self.character_images[name])
+                    img = _load_image(self.character_images[name])
                     ref_images.append({'image': img, 'reference_type': 'asset'})
                 except Exception as e:
                     logger.warning(f"Could not load ref {name}: {e}")
 
         config: dict = {
             'duration_seconds': 4,
-            'aspect_ratio': "9:16",
+            'aspect_ratio': self.aspect_ratio,
             'resolution': self.resolution,
         }
 
@@ -152,6 +154,8 @@ Response format, JSON:
             config['duration_seconds'] = 8
         elif dialogue_len > 10:
             config['duration_seconds'] = 6
+        seconds = 8 if img_end and not ref_images else config['duration_seconds']  # the last-frame path runs 8 s
+        prompt = build_video_prompt(meta, [], [], seconds, prompts=self.prompts)
 
         try:
             if ref_images:
@@ -168,7 +172,7 @@ Response format, JSON:
 
                 gen_config = types.GenerateVideosConfig(
                     duration_seconds=config['duration_seconds'],
-                    aspect_ratio="9:16",
+                    aspect_ratio=self.aspect_ratio,
                     resolution=self.resolution,
                     reference_images=formatted_refs,
                 )
@@ -195,10 +199,8 @@ Response format, JSON:
                     config=config,
                 )
 
-            while not operation.done:
-                logger.info(f"[{index:02d}] ... generating")
-                time.sleep(10)
-                operation = self.client.operations.get(operation)
+            logger.info(f"[{index:02d}] ... generating")
+            operation = wait_for_operation(self.client, operation)
 
             if operation.error:
                 raise RuntimeError(f"API Error: {operation.error}")

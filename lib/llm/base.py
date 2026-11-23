@@ -3,12 +3,14 @@ Shared infrastructure: RateLimiter, retry_on_errors, BaseLLM ABC, parse_json.
 Single definition reused everywhere — no more per-script duplication.
 """
 import functools
+import inspect
 import json
 import logging
 import random
 import re
 import time
 from abc import ABC, abstractmethod
+from pathlib import Path
 from threading import Lock
 
 # Optional backend-specific retryable exception types — imported defensively
@@ -61,7 +63,8 @@ def parse_json(text: str) -> dict:
             return None
 
     def _extract_brackets(s: str):
-        for open_ch, close_ch in [('{', '}'), ('[', ']')]:
+        # the outer bracket opens first: '{' first would cut a one-item array down to its item
+        for open_ch, close_ch in sorted([('{', '}'), ('[', ']')], key=lambda p: s.find(p[0]) if p[0] in s else len(s)):
             start = s.find(open_ch)
             end = s.rfind(close_ch)
             if start != -1 and end > start:
@@ -135,12 +138,15 @@ def retry_on_errors(max_retries=3, backoff_factor=2):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             retries = 0
+            backoff_factor = 5
             while retries < max_retries:
                 try:
                     return func(*args, **kwargs)
                 except Exception as e:
                     error_str = str(e)
-                    retryable = (
+                    status = getattr(getattr(e, 'response', None), 'status_code', None)
+                    # A known status wins: the error body may quote any number.
+                    retryable = status in (429, 500, 502, 503) if status is not None else (
                         # Type-safe check for known SDK exception types
                         (_TYPED_RETRYABLE and isinstance(e, _TYPED_RETRYABLE)) or
                         # Regex fallback for HTTP status codes wrapped in generic exceptions.
@@ -162,10 +168,21 @@ def retry_on_errors(max_retries=3, backoff_factor=2):
                         wait_time = backoff_factor ** retries + random.uniform(0, 1)
                         logger.warning(f"    ⚠️  Retrying in {wait_time:.1f}s... ({retries}/{max_retries})")
                         time.sleep(wait_time)
+                    elif (re.search(r'\b(401|402)\b', error_str) or (
+                            re.search(r'\b403\b', error_str)
+                            and re.search(r'limit|disabled', error_str, re.I))):
+                        # Bad key, no credits, spend limit or disabled key: every later call fails the same way.
+                        raise SystemExit(f"❌ Fatal API error, stopping: {e}") from e
                     else:
                         raise
         return wrapper
     return decorator
+
+
+def accepted(fn, **kwargs) -> dict:
+    """The keyword arguments fn takes: reply and thinking budgets reach only the backends that know them."""
+    params = inspect.signature(fn).parameters
+    return {k: v for k, v in kwargs.items() if k in params}
 
 
 class BaseLLM(ABC):
@@ -201,6 +218,6 @@ class BaseLLM(ABC):
     def analyze_video(self, video, prompt: str, refs=None, schema: dict = None) -> dict:
         raise NotImplementedError(f"{self.__class__.__name__} does not support analyze_video")
 
-    def make_speech(self, text: str, voice: str, output_path: "Path", tone: str = "neutral") -> bool:
+    def make_speech(self, text: str, voice: str, output_path: Path, tone: str = "neutral") -> bool:
         """Generate speech audio to output_path. Returns True on success."""
         raise NotImplementedError(f"{self.__class__.__name__} does not support make_speech")

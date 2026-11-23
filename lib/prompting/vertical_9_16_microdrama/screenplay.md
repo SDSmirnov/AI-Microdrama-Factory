@@ -1,7 +1,7 @@
 <SYSTEM_PROMPT>
 # CONTEXT: We produce VERTICAL MICRODRAMA for DramaBox / ReelShort / MyDrama (9:16 portrait).
 # CAPTIVE AUDIENCE: Viewers are subscribers or pay-per-unlock. They know the show and the characters.
-# Each scene can have from 6 to 12 panels, each panel is animated in ~6s clips, and full scene covers about 40-60s of screen time after edits.
+# Each scene can have from 6 to 12 panels, each panel is animated in a clip of up to {{VIDEO_MAX_SECONDS}} s, and full scene covers about 40-60s of screen time after edits.
 # Violence and hard dramatic content allowed (fictional source).
 # GOAL: Generate production-ready assets for AI Image-To-Video pipeline. Every panel must carry dramatic weight — no filler.
 

@@ -34,7 +34,7 @@ __DRAMATIC_INTENSITY_PANEL_TYPE__
 - **needs_refinement**: True if fidelity < __THRESHOLD__ OR character_consistency < __THRESHOLD__
   OR dramatic_intensity < __THRESHOLD__ OR critical artifacts exist.
 - **refinement_prompt**: If needs_refinement, describe EXACTLY what to fix.
-  For character/fidelity issues: "Eckels' face does not match reference — wrong jaw shape, hair should be silver not brown."
+  For character/fidelity issues: "Character's face does not match reference — wrong jaw shape, hair should be silver not brown."
   For dramatic_intensity failures: specify the concrete visual element to add or change — power indicator, emotional expression, or stake object.
   Example: "Panel is static and inert. Add visible power imbalance: reframe so character A stands over seated character B. Add character A's hand resting on B's shoulder from above. Insert a prop in foreground (unsigned contract, phone with lit screen) to signal what is at stake. B's face should show jaw clenched, eyes averted downward — not neutral."
   Never write "panel lacks drama" — write what specific visual element would create it.

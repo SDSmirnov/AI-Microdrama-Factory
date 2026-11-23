@@ -7,3 +7,5 @@ ref_thriller/
 custom_prompts/
 *.egg-info/
 .DS_Store
+.pytest_cache/
+.coverage

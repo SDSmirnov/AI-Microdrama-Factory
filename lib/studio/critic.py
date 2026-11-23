@@ -5,6 +5,7 @@ Port of 05_grid_quality_gate.py using a vision-capable BaseLLM backend.
 """
 import json
 import logging
+import math
 import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -12,12 +13,33 @@ from typing import Any, Dict, List, Optional
 from PIL import Image
 
 from lib.core.schemas import PANEL_QA_SCHEMA, ROOM_VIEW_QA_SCHEMA
-from lib.core.utils import DEFAULT_OUTPUT_DIR, grid_dims, panel_boxes
+from lib.studio.archivist import match_ref
+from lib.studio.qa_gate import CRITICAL_TAGGING, apply_critical_artifact_gate
+from lib.core.utils import DEFAULT_OUTPUT_DIR, canonical_ref_name, grid_dims, panel_boxes, view_suffix
 from lib.llm.base import BaseLLM
+from lib.studio.room_geometry import WALL_INSET_M, WALL_NAMES, behind_camera_rule, resolve_room_height_m
+from lib.studio.blocking import blocking_mode
+from lib.studio.blocking_sketch import block_text, panel_blocking
+from lib.studio.room_blocking import RoomBlocking
 
 logger = logging.getLogger(__name__)
 
 MAX_REFS_PER_PANEL = 6
+
+# How many PREVIOUS panels the continuity check is given. Only the most
+# recent ones matter for a spatial flip: the earlier ones are already
+# superseded by the newest. Keeps the QA prompt from growing with scene
+# length.
+#
+# MEASURED 2026-11-12 (scene 1 panel 6, gemini-3.8-flash): keeping all 5
+# previous panels costs 15 121 prompt tokens, keeping the last 2 costs
+# 13 452 - an 11 % cut on every judge call.
+#
+# NOTE: the sibling lever - downscaping the reference images - was MEASURED
+# and does NOT work. 896x1200 refs and 384x512 refs cost the SAME 13 452
+# prompt tokens, because Gemini already resizes an image into a single
+# 768x768 tile before billing it. Do not re-add a downscale.
+PREV_PANELS_FOR_QA = 2
 
 # Maps each QA-eligible view suffix → list of truth source view suffixes.
 # View-To-Entrance is checked against From-Entrance only (it's the second primary view).
@@ -33,6 +55,12 @@ _VIEW_TRUTH_SOURCES: dict[str, list[str]] = {
 }
 
 _DERIVED_VIEW_SUFFIXES = tuple(_VIEW_TRUTH_SOURCES)
+
+# Outdoor views turn in place at one station; View-Primary is the only truth image.
+OUTDOOR_TRUTH = 'View-Primary'
+_OUTDOOR_TRUTH_SOURCES: dict[str, list[str]] = {
+    s: [OUTDOOR_TRUTH] for s in ('View-Opposite', 'View-Ortho-Primary', 'View-Ortho-Opposite')
+}
 
 # Spatial re-mapping rules per view — injected into the QA prompt so the LLM
 # knows what "correct geometry" looks like for each camera position.
@@ -77,6 +105,19 @@ _VIEW_SPATIAL_RULES: dict[str, str] = {
         "No mid-room furniture should be visible — it is behind the camera. "
         "Entrance wall/door must NOT be visible."
     ),
+    'View-Opposite': (
+        "Same camera spot as View-Primary, turned 180°: left/right are SWAPPED. What lined View-Primary's "
+        "image-left now lines the image-right and vice versa; what was behind the View-Primary camera is ahead."
+    ),
+    'View-Ortho-Primary': (
+        "Same camera spot as View-Primary, turned 90° RIGHT: what lined View-Primary's image-right side "
+        "(e.g. the near facade) is straight ahead, seen head-on; View-Primary's distance runs off to the image-LEFT."
+    ),
+    'View-Ortho-Opposite': (
+        "Same camera spot as View-Primary, turned 90° LEFT: what lined View-Primary's image-left side "
+        "(e.g. the far side of the street) is straight ahead, seen head-on; View-Primary's distance runs off "
+        "to the image-RIGHT."
+    ),
     'View-By-Entrance': (
         "Camera 1m from the entrance wall, looking toward the entrance door. "
         "Left/right are SWAPPED vs View-From-Entrance — same mirroring as View-To-Entrance. "
@@ -86,13 +127,151 @@ _VIEW_SPATIAL_RULES: dict[str, str] = {
     ),
 }
 
-# Wall names keyed by which boundary the camera→subject ray exits through
-_WALL_LABELS = {
-    'x0': 'image-left wall',
-    'x1': 'image-right wall',
-    'y0': 'entrance wall',
-    'y1': 'far wall',
-}
+# Room-view QA correction bands. Integer scores are compared against these
+# thresholds, so the pass mark must be 9: at 8 the view is still fixable with
+# targeted edits, and 5–7 needs an instructed re-render. A pass mark of 7
+# would make the targeted-edit band unreachable.
+ROOM_QA_PASS_THRESHOLD = 9
+ROOM_QA_FULL_REGEN_BELOW = 5
+ROOM_QA_INSTRUCTION_UNTIL = 7
+# A re-render trades one known local defect for new unknown ones; edit instead.
+ROOM_QA_MAX_LOCAL_EDITS = 3
+
+ROOM_QA_ACTIONS = (
+    'accept',
+    'targeted_edit',
+    'regenerate_with_instructions',
+    'regenerate',
+    'blocked',
+)
+
+
+def decide_room_view_action(
+    score: float,
+    *,
+    pass_threshold: int = ROOM_QA_PASS_THRESHOLD,
+    full_regen_below: int = ROOM_QA_FULL_REGEN_BELOW,
+    instruction_until: int = ROOM_QA_INSTRUCTION_UNTIL,
+) -> str:
+    """Map the worst room-view score onto a deterministic correction action.
+
+    < 5      → regenerate (clear accumulated corrections and start over)
+    5–7      → regenerate_with_instructions (append corrections)
+    8        → targeted_edit (edit the delivered image)
+    >= 9     → accept
+
+    The bands are expressed on the *minimum* of the style, architecture and
+    geometry scores: one badly wrong dimension is enough to fail the view.
+    """
+    if score >= pass_threshold:
+        return 'accept'
+    if score > instruction_until:
+        return 'targeted_edit'
+    if score >= full_regen_below:
+        return 'regenerate_with_instructions'
+    return 'regenerate'
+
+
+def _coerce_score(value: Any, default: int = 0) -> int:
+    try:
+        return max(0, min(10, int(round(float(value)))))
+    except (TypeError, ValueError):
+        return default
+
+
+def _issue_to_text(issue: Any) -> str:
+    if isinstance(issue, str):
+        return issue
+    if not isinstance(issue, dict):
+        return str(issue)
+    category = str(issue.get('category') or '').strip()
+    observed = str(issue.get('observed') or '').strip()
+    expected = str(issue.get('expected') or '').strip()
+    obj = str(issue.get('object') or '').strip()
+    if observed or expected:
+        subject = f"{obj}: " if obj else ''
+        text = f"{subject}{observed or '?'}"
+        if expected:
+            text += f" (expected: {expected})"
+    else:
+        text = str(issue.get('details') or issue.get('target') or '').strip() or 'unspecified issue'
+    return f"[{category}] {text}" if category else text
+
+
+def _is_local_fix(issue_details: list[dict], edit_instructions: list[dict]) -> bool:
+    """True when the judge's edit ops cover a small, object-level defect set."""
+    if not 0 < len(edit_instructions) <= ROOM_QA_MAX_LOCAL_EDITS:
+        return False
+    return not any(
+        issue.get('severity') == 'high' and issue.get('category') in ('style', 'geometry')
+        for issue in issue_details
+    )
+
+
+def normalize_room_view_qa(
+    result: dict,
+    *,
+    pass_threshold: int = ROOM_QA_PASS_THRESHOLD,
+    api_error: bool = False,
+) -> dict:
+    """Normalise a QA response to the current contract, keeping old keys usable.
+
+    The judge is asked for style/architecture/geometry scores and an action, but
+    older backends and test doubles may return only ``consistency_score`` and
+    ``geometry_score``. Both shapes land here, so callers see one structure.
+    """
+    raw = dict(result or {})
+    style = _coerce_score(raw.get('style_score', raw.get('consistency_score', 0)))
+    architecture = _coerce_score(
+        raw.get('architecture_score', raw.get('consistency_score', style))
+    )
+    geometry = _coerce_score(raw.get('geometry_score', style))
+    overall = min(style, architecture, geometry)
+
+    if api_error or raw.get('api_error'):
+        action = 'blocked'
+        status = 'blocked'
+    else:
+        action = decide_room_view_action(overall, pass_threshold=pass_threshold)
+        status = 'passed' if action == 'accept' else 'failed'
+
+    raw_issues = raw.get('issues') or []
+    if not isinstance(raw_issues, list):
+        raw_issues = [raw_issues]
+    issues = [_issue_to_text(issue) for issue in raw_issues]
+    issue_details = [issue for issue in raw_issues if isinstance(issue, dict)]
+
+    edit_instructions = raw.get('edit_instructions') or []
+    if not isinstance(edit_instructions, list):
+        edit_instructions = []
+    edit_instructions = [i for i in edit_instructions if isinstance(i, dict)]
+    if action == 'regenerate_with_instructions' and _is_local_fix(issue_details, edit_instructions):
+        action = 'targeted_edit'
+    if (action not in ('accept', 'blocked') and overall >= ROOM_QA_INSTRUCTION_UNTIL
+            and issue_details and all(i.get('severity') == 'low' for i in issue_details)):
+        action, status = 'accept', 'passed'
+
+    normalized = {
+        'style_score': style,
+        'architecture_score': architecture,
+        'geometry_score': geometry,
+        'overall_score': overall,
+        'action': action,
+        'status': status,
+        # Compatibility aliases used by the legacy QA/refine loop.
+        'consistency_score': min(style, architecture),
+        'needs_regeneration': action not in ('accept', 'blocked'),
+        'issues': issues,
+        'issue_details': issue_details,
+        'regeneration_prompt': str(raw.get('regeneration_prompt') or '').strip(),
+        'edit_instructions': edit_instructions,
+        'edit_prompt': str(raw.get('edit_prompt') or '').strip(),
+        'api_error': bool(api_error or raw.get('api_error')),
+    }
+    if raw.get('error'):
+        normalized['error'] = str(raw['error'])
+    return normalized
+
 
 
 def _compute_background_ground_truth(panel_meta: Dict, ref_catalog: Dict[str, Dict]) -> str:
@@ -107,27 +286,9 @@ def _compute_background_ground_truth(panel_meta: Dict, ref_catalog: Dict[str, Di
     if cx is None or cy is None:
         return ''
 
-    # Resolve anchor_points from the panel's canonical (View-From-Entrance / View-Primary) location ref.
-    # All non-canonical view suffixes are stripped to reach the View-From-Entrance entry that holds anchor_points.
-    _TO_CANONICAL = {
-        '-View-To-Entrance':        '-View-From-Entrance',
-        '-View-From-Left-Wall':     '-View-From-Entrance',
-        '-View-From-Right-Wall':    '-View-From-Entrance',
-        '-View-Center-To-Far':      '-View-From-Entrance',
-        '-View-Center-To-Entrance': '-View-From-Entrance',
-        '-View-By-Far-Wall':        '-View-From-Entrance',
-        '-View-By-Entrance':        '-View-From-Entrance',
-        '-View-Opposite':           '-View-Primary',
-        '-Interior-To-Entrance':    '-Interior-From-Entrance',
-    }
     anchor_points = None
     for ref_name in panel_meta.get('location_references', []):
-        canonical = ref_name
-        for suffix, replacement in _TO_CANONICAL.items():
-            if ref_name.endswith(suffix):
-                canonical = ref_name[:-len(suffix)] + replacement
-                break
-        entry = ref_catalog.get(canonical) or ref_catalog.get(ref_name)
+        entry = ref_catalog.get(canonical_ref_name(ref_name)) or ref_catalog.get(ref_name)
         if entry:
             ap = entry.get('json', {}).get('anchor_points')
             if ap:
@@ -186,7 +347,7 @@ def _compute_background_ground_truth(panel_meta: Dict, ref_catalog: Dict[str, Di
         if not candidates:
             continue
         wall_key = min(candidates, key=candidates.get)
-        wall_label = _WALL_LABELS[wall_key]
+        wall_label = WALL_NAMES[wall_key]
 
         # Cross-check with facing_degrees_y on the subject's anchor (chair etc.)
         facing = sub_obj.get('facing_degrees_y', -1)
@@ -209,7 +370,7 @@ def _compute_background_ground_truth(panel_meta: Dict, ref_catalog: Dict[str, Di
                         back_wall = w
                         break
             if back_wall and back_wall != wall_key:
-                facing_note = f' (chair facing_degrees_y={facing:.0f}° suggests back toward {_WALL_LABELS[back_wall]}; ray projection takes precedence)'
+                facing_note = f' (chair facing_degrees_y={facing:.0f}° suggests back toward {WALL_NAMES[back_wall]}; ray projection takes precedence)'
             elif back_wall:
                 facing_note = f' (confirmed by chair facing_degrees_y={facing:.0f}°)'
 
@@ -245,42 +406,23 @@ def _compute_anchor_visibility(panel_meta: Dict, ref_catalog: Dict[str, Dict]) -
     """
     anchor_refs = set(panel_meta.get('state', {}).get('anchor_refs', []))
 
-    from lib.studio.artist import _anchor_visibility_block, _extract_camera_anchor_labels
+    from lib.studio.artist import (_anchor_id, _anchor_visibility_block, _extract_camera_anchor_labels,
+                                   _panel_camera_xy, panel_anchor_block_enabled)
+    if not panel_anchor_block_enabled():
+        return ''
 
-    # Suffix → canonical view that carries anchor_points
-    _TO_CANONICAL_SUFFIX = {
-        'View-To-Entrance':        'View-From-Entrance',
-        'View-From-Left-Wall':     'View-From-Entrance',
-        'View-From-Right-Wall':    'View-From-Entrance',
-        'View-Center-To-Far':      'View-From-Entrance',
-        'View-Center-To-Entrance': 'View-From-Entrance',
-        'View-By-Far-Wall':        'View-From-Entrance',
-        'View-By-Entrance':        'View-From-Entrance',
-        'View-Opposite':           'View-Primary',
-        'Interior-To-Entrance':    'Interior-From-Entrance',
-    }
-    _CANONICAL_SUFFIXES = {'View-From-Entrance', 'View-Primary', 'Interior-From-Entrance', 'Exterior'}
-    _ALL_SUFFIXES = set(_TO_CANONICAL_SUFFIX) | _CANONICAL_SUFFIXES
-
-    view_suffix = None
+    view = None
     anchor_points = None
     for ref_name in panel_meta.get('location_references', []):
-        matched = next((s for s in _ALL_SUFFIXES if ref_name.endswith(f'-{s}')), None)
-        if not matched:
+        view = view_suffix(ref_name)
+        if not view:
             continue
-        view_suffix = matched
-        canonical_suffix = _TO_CANONICAL_SUFFIX.get(matched, matched)
-        if canonical_suffix != matched:
-            base = ref_name[: -(len(matched) + 1)]
-            canonical_name = f'{base}-{canonical_suffix}'
-        else:
-            canonical_name = ref_name
-        entry = ref_catalog.get(canonical_name) or ref_catalog.get(ref_name)
+        entry = ref_catalog.get(canonical_ref_name(ref_name)) or ref_catalog.get(ref_name)
         if entry:
             anchor_points = entry.get('json', {}).get('anchor_points')
         break
 
-    if not anchor_points or not view_suffix:
+    if not anchor_points or not view:
         return ''
 
     camera_anchors = _extract_camera_anchor_labels(panel_meta.get('camera_position', ''), anchor_points)
@@ -291,12 +433,12 @@ def _compute_anchor_visibility(panel_meta: Dict, ref_catalog: Dict[str, Dict]) -
     filtered = dict(anchor_points)
     filtered['objects'] = [
         obj for obj in anchor_points.get('objects', [])
-        if obj.get('label') in include
+        if _anchor_id(obj) in include
     ]
     if not filtered['objects']:
         return ''
 
-    block = _anchor_visibility_block(filtered, view_suffix, frozenset(camera_anchors))
+    block = _anchor_visibility_block(filtered, view, frozenset(camera_anchors), _panel_camera_xy(panel_meta))
     if not block:
         return ''
     return '\n## ANCHOR POSITIONS IN THIS VIEW (view-space coordinates)\n' + block
@@ -317,7 +459,8 @@ def load_ref_catalog(ref_dir: Path) -> Dict[str, Dict]:
     for json_file in ref_dir.glob("*.json"):
         try:
             data = json.loads(json_file.read_text(encoding="utf-8"))
-        except Exception:
+        except Exception as e:
+            logger.warning(f"⚠️  Unreadable ref {json_file.name}: {e}")
             continue
 
         name = data.get("name", json_file.stem)
@@ -348,7 +491,7 @@ def find_ref(name: str, catalog: Dict[str, Dict]) -> Optional[Dict]:
     title = name.replace("-", " ").replace("_", " ").title().replace(" ", "_")
     if title in catalog:
         return catalog[title]
-    return None
+    return catalog.get(match_ref(name, catalog))
 
 
 # ---------------------------------------------------------------------------
@@ -365,6 +508,26 @@ def slice_grid(grid_path: Path, panels_count: int) -> List[Image.Image]:
 # ---------------------------------------------------------------------------
 # Panel analysis
 # ---------------------------------------------------------------------------
+
+def _blocking_qa_block(panel_meta: Dict, scene_meta: Dict, ref_catalog: Dict[str, Dict],
+                       size: tuple[int, int]) -> tuple[str, bool]:
+    """(people → frame truth, replaces the anchor block) projected with the judged image's own aspect."""
+    if blocking_mode() == 'off':
+        return '', False
+    blocking = panel_blocking(panel_meta, scene_meta,
+                              lambda n: (find_ref(n, ref_catalog) or {}).get('json'), f'{size[0]}:{size[1]}')
+    if blocking is None:
+        return '', False
+    car = not isinstance(blocking, RoomBlocking)
+    return (
+        "\n## BLOCKING GROUND TRUTH\n"
+        f"{block_text(blocking)}\n"
+        "Check every visible person against this list. A mirrored frame side (a person on frame-left who must be "
+        f"on frame-right), a person drawn who must be out of frame, {'a wrong seat or an extra seat row' if car else 'a person at the wrong furniture or a wrong posture'}, "
+        "or a camera position the location cannot hold is a CRITICAL artifact: prefix each with "
+        "'BLOCKING:', cap composition_match at 4 and set needs_refinement.\n"
+    ), car
+
 
 def analyze_panel(
     llm: BaseLLM,
@@ -425,6 +588,8 @@ def analyze_panel(
         'Interior-To-Entrance':    'toward entrance/exit (away from interior)',
         'View-From-Left-Wall':     'toward right wall (camera at x=0 → looking toward x=1)',
         'View-From-Right-Wall':    'toward left wall (camera at x=1 → looking toward x=0)',
+        'View-Ortho-Primary':      'toward the x=1 side (camera at the station, 90° right of primary)',
+        'View-Ortho-Opposite':     'toward the x=0 side (camera at the station, 90° left of primary)',
     }
     camera_direction = ''
     for loc_ref in panel_meta.get('location_references', []):
@@ -445,6 +610,8 @@ def analyze_panel(
         for p in scene_meta.get('panels', [])
         if p['panel_index'] < panel_meta['panel_index']
     ]
+    if len(prev_panels) > PREV_PANELS_FOR_QA:
+        prev_panels = prev_panels[-PREV_PANELS_FOR_QA:]
 
     inter_scene_block = ""
     if panel_id == 1 and prev_scene_terminal:
@@ -460,7 +627,8 @@ Flag in artifacts if there is an unexplained discontinuity.
     dramatic_intensity_panel_type = "  Evaluate: is there a visible power struggle, physical threat, raw emotion on a face, or a visual secret in the frame?"
 
     spatial_ground_truth = _compute_background_ground_truth(panel_meta, ref_catalog)
-    anchor_visibility = _compute_anchor_visibility(panel_meta, ref_catalog)
+    people, replaces_anchors = _blocking_qa_block(panel_meta, scene_meta, ref_catalog, panel_img.size)
+    anchor_visibility = people + ('' if replaces_anchors else _compute_anchor_visibility(panel_meta, ref_catalog))
 
     qa_criteria = (prompts or {}).get('qa', '')
     if qa_criteria:
@@ -491,7 +659,7 @@ Flag in artifacts if there is an unexplained discontinuity.
 - **needs_refinement**: True if fidelity < {threshold} OR character_consistency < {threshold}
   OR dramatic_intensity < {threshold} OR critical artifacts exist.
 - **refinement_prompt**: If needs_refinement, describe EXACTLY what to fix.
-  For character/fidelity issues: "Eckels' face does not match reference — wrong jaw shape, hair should be silver not brown."
+  For character/fidelity issues: "Character's face does not match reference — wrong jaw shape, hair should be silver not brown."
   For dramatic_intensity failures: specify the concrete visual element to add or change — power indicator, emotional expression, or stake object.
   Example: "Panel is static and inert. Add visible power imbalance: reframe so character A stands over seated character B. Add character A's hand resting on B's shoulder from above. Insert a prop in foreground (unsigned contract, phone with lit screen) to signal what is at stake. B's face should show jaw clenched, eyes averted downward — not neutral."
   Never write "panel lacks drama" — write what specific visual element would create it.
@@ -506,7 +674,7 @@ Flag in artifacts if there is an unexplained discontinuity.
 """
 
     prompt = f"""{scoring_section}
-{spatial_ground_truth}{anchor_visibility}
+{CRITICAL_TAGGING}{spatial_ground_truth}{anchor_visibility}
 ## TASK
 Analyze this PANEL IMAGE against its script description and character references.
 Score the visual fidelity and decide if the panel needs regeneration.
@@ -552,6 +720,7 @@ Expected characters/objects: {', '.join(ref_names) if ref_names else 'None speci
             "dramatic_intensity": 0,
             "artifacts": [f"API_ERROR: {str(e)[:200]}"],
             "needs_refinement": True,
+            "api_error": True,
             "refinement_prompt": "API call failed, manual review required.",
             "reasoning": f"Error: {e}",
             "suggest_mirror": False,
@@ -562,6 +731,38 @@ Expected characters/objects: {', '.join(ref_names) if ref_names else 'None speci
     finally:
         for img in opened_ref_imgs:
             img.close()
+
+    # A weaker judge can return a JSON array (or a string) instead of the
+    # object the schema asks for. Unwrapping it here keeps one malformed
+    # response from crashing the whole panel loop.
+    if isinstance(result, list):
+        result = result[0] if result and isinstance(result[0], dict) else {}
+    elif not isinstance(result, dict):
+        result = {}
+    if not result:
+        logger.error(f"  ❌ QA judge returned a non-object result "
+                     f"(scene {scene_id} panel {panel_id})")
+        result = {
+            "fidelity": 0,
+            "character_consistency": 0,
+            "composition_match": 0,
+            "dramatic_intensity": 0,
+            "artifacts": ["API_ERROR: judge returned a non-object result"],
+            "needs_refinement": True,
+            "api_error": True,
+            "refinement_prompt": "API call failed, manual review required.",
+            "reasoning": "Judge returned a non-object result.",
+            "suggest_mirror": False,
+            "mirror_reason": "",
+            "shot_impossible": False,
+            "shot_impossible_reason": "",
+        }
+
+    # Hard-artifact gate: a perspective/scale/duplicate-character defect
+    # leaves the numeric scores HIGH (the face is fine, the lighting is
+    # fine), so the panel used to PASS with broken geometry. Promote the
+    # critical classes to a hard needs_refinement trigger.
+    result = apply_critical_artifact_gate(result)
 
     result["scene_id"] = scene_id
     result["panel_id"] = panel_id
@@ -673,103 +874,405 @@ def process_scene(
 # Room view QA
 # ---------------------------------------------------------------------------
 
+def _room_qa_output_spec(threshold: int) -> str:
+    """Shared output contract for every room-view QA prompt (fields, bands, edits)."""
+    return f"""**overall_score**: the minimum of style_score, architecture_score and geometry_score.
+
+**action**: choose the correction band that matches overall_score:
+- "regenerate" when overall_score < 5 — start over from the description/truth views
+- "regenerate_with_instructions" when 5–7 — re-render with explicit corrections
+- "targeted_edit" when overall_score is 8, or 5–7 when every issue is a local
+  object fix (at most {ROOM_QA_MAX_LOCAL_EDITS} edit operations) — fix the delivered image with edits
+- "accept" when overall_score >= {threshold}
+
+**issues**: One object per distinct problem. Be specific. Room references fix layout and
+  look, not set dressing: do NOT report objects smaller than ~30 cm (cups, cutlery, pens,
+  mice, keyboards, papers, clipboards, stencil text) or fixture counts that do not change
+  the look of the room. A reference id printed as lettering (e.g. "GUO-CRATE SEAT" on a crate)
+  is a "medium" style issue to remove; never require such lettering.
+  category: "style", "architecture" or "geometry"
+  severity: "high" — opening, wall, large furniture or equipment missing, added or on the
+  wrong side; a door hinged, handled or swinging on the wrong side; wrong material, camera
+  or room. "medium" — a large object misplaced or
+  misoriented. "low" — anything else, including the order or count of items on a counter,
+  shelf or rail. A view whose issues are all "low" is accepted.
+  object: the element name (e.g. "floor", "server-rack-row", "entrance door")
+  expected: what the truth views/sketch require
+  observed: what the evaluated image actually shows
+  Examples:
+    {{"category":"style","severity":"high","object":"floor","expected":"dark concrete","observed":"light oak parquet"}}
+    {{"category":"architecture","severity":"high","object":"sofa","expected":"image-right","observed":"image-left"}}
+    {{"category":"geometry","severity":"high","object":"background wall","expected":"far wall","observed":"entrance door"}}
+
+**regeneration_prompt**: Precise fix instructions for a full re-render.
+  State BOTH material corrections AND spatial/position corrections as separate sentences.
+  Name exact objects and their required position (image-left / image-right / background / foreground).
+  Example: "Far wall must be white plaster not brick. Sofa must appear on image-right not image-left."
+  Empty string for accept/targeted_edit.
+
+**edit_instructions**: Targeted image edits. Fill them whenever overall_score >= 5 and
+  the defects are object-level (an extra, missing, misplaced, rotated or wrongly coloured
+  object), even if you chose "regenerate_with_instructions". Leave empty for global
+  defects: wrong materials across surfaces, wrong camera position, wrong room.
+  One object per operation:
+  - op: "remove" | "add" | "move" | "rotate" | "replace" | "recolor" | "resize"
+  - target: the object to change
+  - from: current state or position (empty string when not applicable)
+  - to: required state or position (empty string when not applicable)
+  - details: extra visual detail for the editor (empty string when not applicable)
+  Examples:
+    {{"op":"remove","target":"extra chair","from":"image-left foreground","to":"","details":""}}
+    {{"op":"move","target":"wooden crate","from":"image-left wall","to":"image-right wall, 1 m from entrance","details":"keep size and material"}}
+    {{"op":"rotate","target":"console desk","from":"facing entrance","to":"facing far wall","details":""}}
+  Empty array for accept and "regenerate".
+
+**edit_prompt**: One self-contained instruction for the image editor, built from
+  edit_instructions. It must say to keep everything else pixel-identical: same camera,
+  same framing, same materials and lighting. Empty string when edit_instructions is empty.
+"""
+
+
+def _call_room_qa(llm: BaseLLM, image_content: list, prompt: str, label: str) -> tuple[dict, bool]:
+    """Run the room QA judge; an API failure is reported, never scored."""
+    try:
+        return llm.analyze_image(image=image_content, prompt=prompt, schema=ROOM_VIEW_QA_SCHEMA), False
+    except Exception as e:
+        logger.error(f"  ❌ room QA error ({label}): {e}")
+        return {
+            'api_error': True,
+            'error': str(e)[:200],
+            'issues': [{'category': 'geometry', 'severity': 'high', 'object': 'qa',
+                        'expected': 'a QA response', 'observed': f'API_ERROR: {str(e)[:200]}'}],
+        }, True
+
+
+_ROOM_STYLE_CHECKS = """- Wall surfaces: material, color, texture, finish (tile vs plaster vs brick, etc.)
+- Floor: material, pattern, color
+- Ceiling: height, material, fixtures
+- Lighting: fixture type, position, color temperature
+- Windows and doors: frame style, glazing, proportions"""
+_OUTDOOR_STYLE_CHECKS = """- Facades: material, color, storeys, signage style, awnings, window rhythm
+- Ground: roadway, lane markings, curbs, sidewalk paving, grass/sand/soil
+- Sky, weather, time of day, sun direction and shadow length
+- Street furniture and vegetation: lamps, signs, benches, trees — type and style
+- Era: vehicles, signage and fixtures belong to the same period"""
+
+
 def analyze_room_view(
     llm: BaseLLM,
     view_img: Image.Image,
     source_views: list[tuple[str, Image.Image]],
     view_suffix: str,
     visual_desc: str,
-    threshold: int = 7,
+    threshold: int = ROOM_QA_PASS_THRESHOLD,
     anchor_points: dict | None = None,
+    expected_aspect: str | None = None,
+    sketch_img: Image.Image | None = None,
+    enforce_aspect: bool = True,
 ) -> dict:
     """Score a room view against one or more truth source views using a vision LLM.
 
     source_views — list of (suffix, image) pairs used as ground truth.
-    Returns a ROOM_VIEW_QA_SCHEMA dict.
+    expected_aspect — optional physical framing ratio (e.g. "16:9"). When set,
+    a deterministic pre-check adds an issue and fails the geometry score if the
+    delivered image does not match it.
+    sketch_img — optional bare 3D sketch for this exact view. It is passed as
+    geometry-only truth (camera, occlusion, placement), so the judge does not
+    penalise objects the sketch camera intentionally hides.
+    enforce_aspect — when False, a framing mismatch is reported in ``issues``
+    but does not lower the score (used for the base-truth view, which must not
+    be force-regenerated).
+    Returns a normalized QA dict: style/architecture/geometry/overall scores,
+    action band, compatibility aliases (consistency_score, needs_regeneration),
+    structured edit instructions, and an ``api_error`` flag when the judge
+    failed. On API error the action is ``blocked`` and needs_regeneration is
+    False so callers keep the existing PNG.
     """
     from lib.studio.artist import _anchor_visibility_block
-    spatial_rule = _VIEW_SPATIAL_RULES.get(view_suffix, '')
-    anchor_block = _anchor_visibility_block(anchor_points, view_suffix) if anchor_points else ''
+    outdoor = view_suffix in _OUTDOOR_TRUTH_SOURCES
+    place = 'outdoor location' if outdoor else 'room'
+    spatial_rule = f"{_VIEW_SPATIAL_RULES.get(view_suffix, '')} {behind_camera_rule(view_suffix)}".strip()
+    anchor_block = (
+        _anchor_visibility_block(
+            anchor_points, view_suffix, camera_inset_m=0.0 if outdoor else WALL_INSET_M,
+            room_height_m=resolve_room_height_m(anchor_points, visual_desc)[0],
+        )
+        if anchor_points else ''
+    )
     n_sources = len(source_views)
+    sketch_index = n_sources + 1 if sketch_img is not None else None
+    eval_index = n_sources + (2 if sketch_img is not None else 1)
+
+    expected_ratio = None
+    aspect_issue = None
+    if expected_aspect:
+        try:
+            exp_w, exp_h = (int(part) for part in expected_aspect.split(':'))
+            expected_ratio = exp_w / exp_h
+        except (ValueError, ZeroDivisionError):
+            expected_ratio = None
+    if expected_ratio:
+        actual_ratio = view_img.width / view_img.height
+        if abs(math.log(actual_ratio / expected_ratio)) > math.log(1.12):
+            aspect_issue = (
+                f"Image aspect ratio is {view_img.width}x{view_img.height} "
+                f"({actual_ratio:.2f}:1); this view should be {expected_aspect} "
+                f"({expected_ratio:.2f}:1)."
+            )
+    framing_block = ''
+    if expected_ratio:
+        framing_block = (
+            f"\n## EXPECTED FRAMING\n"
+            f"This {place} view must use aspect ratio {expected_aspect} "
+            f"({expected_ratio:.2f}:1). The supplied image is "
+            f"{view_img.width}x{view_img.height} "
+            f"({view_img.width / view_img.height:.2f}:1).\n"
+        )
     single = n_sources == 1
     sources_list = '\n'.join(
         f'  - Image {i + 1}: "{s}"' for i, (s, _) in enumerate(source_views)
     )
     truth_label = f'Image 1 ("{source_views[0][0]}")' if single else f'Images 1–{n_sources}'
+    sketch_section = ''
+    if sketch_img is not None and outdoor:
+        sketch_section = (
+            f"\n## GEOMETRY SKETCH — authoritative for THIS view, not materials\n"
+            f"Image {sketch_index} is a bare 3D sketch of the view under evaluation, from the same "
+            "camera station as View-Primary. Use it for camera heading, perspective, and the "
+            "left/right/ahead placement of facades, curbs, landmarks and street furniture. Buildings "
+            "are plain full-height slabs and the sky is blank; ignore its lines, fills and missing "
+            "detail as style.\n"
+        )
+    elif sketch_img is not None:
+        sketch_section = (
+            f"\n## GEOMETRY SKETCH — authoritative for THIS view, not materials\n"
+            f"Image {sketch_index} is a bare 3D sketch of the view under evaluation. "
+            "Use it for camera angle, perspective, foreshortening, occlusion, and "
+            "the left/right/background placement of objects. It carries no "
+            "materials, colors or lighting; ignore its lines and fills as style. "
+            f"Wall views are cut {WALL_INSET_M:.1f} m inside the camera wall and the "
+            "sketch camera may stand behind that cut, outside the room (fourth wall "
+            "removed). An object the sketch hides — before the cut, or because the "
+            "camera sits inside it — must NOT be reported as missing from the "
+            "evaluated image.\n"
+        )
     prompt = f"""You are a QA supervisor for an AI film production pipeline.
-Your task: evaluate a ROOM VIEW image for material consistency and spatial correctness.
+Your task: evaluate a {place.upper()} VIEW image for material consistency and spatial correctness.
 
-## TRUTH VIEW(S) — authoritative ground truth for this room
+## TRUTH VIEW(S) — authoritative ground truth for this {place}
 {sources_list}
-
+{sketch_section}
 ## VIEW UNDER EVALUATION
-Image {n_sources + 1} is "{view_suffix}" — a different camera angle inside the same room.
+Image {eval_index} is "{view_suffix}" — a different camera angle {'from the same spot in the same location' if outdoor else 'inside the same room'}.
 
 ## REQUIRED GEOMETRY FOR "{view_suffix}"
 {spatial_rule}
 
-## ROOM DESCRIPTION
+## {place.upper()} DESCRIPTION
 {visual_desc}
-{anchor_block}
+{anchor_block}{framing_block}
 ## SCORING
 
-**consistency_score** (0–10): Does the evaluated image show the SAME room as {truth_label}?
-Check every element that can be verified across views:
-- Wall surfaces: material, color, texture, finish (tile vs plaster vs brick, etc.)
-- Floor: material, pattern, color
-- Ceiling: height, material, fixtures
-- Lighting: fixture type, position, color temperature
-- Windows and doors: frame style, glazing, proportions
-- Furniture and objects: same pieces present, correct materials, correct COUNT
-- Furniture POSITIONS must be re-mapped per the spatial rules above (e.g., a sofa on
-  image-left in View-From-Entrance must appear on image-right in View-To-Entrance).
-Score 10 = perfect match. Score 0 = clearly a different room or furniture missing/wrong.
+Score three independent dimensions. The pipeline takes the MINIMUM of the three,
+so a single badly wrong dimension fails the view.
+
+**style_score** (0–10): Do materials, colors, textures, finishes, lighting fixtures
+and color temperature match {truth_label}?
+{_OUTDOOR_STYLE_CHECKS if outdoor else _ROOM_STYLE_CHECKS}
+10 = identical style. 0 = clearly a different {place} style.
+
+**architecture_score** (0–10): Is it the SAME {place}, the SAME architecture and the SAME set of objects?
+- Same walls, structural features, doors, windows
+- Same furniture and equipment: identity, material, COUNT
+- Positions must be re-mapped per the spatial rules above (e.g., a sofa on
+  image-left in View-From-Entrance must appear on image-right in View-To-Entrance)
+10 = identical architecture. 0 = wrong {place}, missing/extra major structures or furniture.
 
 **geometry_score** (0–10): Is the camera angle geometrically correct for "{view_suffix}"?
-Check: background wall identity, left/right orientation, foreshortening/depth.
-Use REQUIRED GEOMETRY above. Score 0 if the wrong wall is in the background or the
+Check: {'what lies ahead (facade, street, landmark)' if outdoor else 'background wall identity'}, left/right orientation, foreshortening/depth.
+Use REQUIRED GEOMETRY above. Score 0 if the wrong {'side' if outdoor else 'wall'} is in the background or the
 spatial orientation is impossible for this camera position.
 
-**needs_regeneration**: True if consistency_score < {threshold} OR geometry_score < {threshold}.
+When the geometry sketch and a truth view disagree about whether an object is
+visible in THIS view, follow the sketch: it encodes this camera's occlusion.
+Truth views remain authoritative for materials, colors and object identity.
 
-**issues**: One item per distinct problem. Be specific — name the element and the discrepancy.
-  Material example: "Floor shows light oak parquet but truth view shows dark concrete."
-  Position example: "Sofa appears image-left but should be image-right per 180° turn rule."
-  Geometry example: "Entrance door visible in background — camera should face the far wall."
-  Missing example: "Bookcase present in truth view is absent from evaluated image."
+The truth views outrank the {place.upper()} DESCRIPTION. Where the text and a truth view
+disagree about something the truth view shows (which end of a counter an item sits
+at, the order of goods on a shelf or rail, a count), require what the truth view shows,
+re-mapped for this camera, and do not report the text. Use the description only for
+what no truth view shows.
 
-**regeneration_prompt**: Precise fix instructions to append to visual_desc for re-generation.
-  State BOTH material corrections AND spatial/position corrections as separate sentences.
-  Name exact objects and their required position (image-left / image-right / background / foreground).
-  Example: "Far wall must be white plaster not brick. Sofa must appear on image-right not image-left."
-  Empty string when needs_regeneration=false.
-"""
+{_room_qa_output_spec(threshold)}"""
     image_content: list = []
     for i, (suffix, img) in enumerate(source_views):
         image_content.append(f"# SOURCE VIEW {i + 1}: {suffix}\n")
         image_content.append(img)
+    if sketch_img is not None:
+        image_content.append(f"\n# GEOMETRY SKETCH: {view_suffix}\n")
+        image_content.append(sketch_img)
     image_content.append(f"\n# VIEW TO EVALUATE: {view_suffix}\n")
     image_content.append(view_img)
 
-    try:
-        result = llm.analyze_image(image=image_content, prompt=prompt, schema=ROOM_VIEW_QA_SCHEMA)
-    except Exception as e:
-        logger.error(f"  ❌ analyze_room_view error ({view_suffix}): {e}")
-        result = {
-            "consistency_score": 0,
-            "geometry_score": 0,
-            "needs_regeneration": True,
-            "issues": [f"API_ERROR: {str(e)[:200]}"],
-            "regeneration_prompt": "API call failed, manual review required.",
-        }
+    result, api_error = _call_room_qa(llm, image_content, prompt, view_suffix)
+
+    result = normalize_room_view_qa(result, pass_threshold=threshold, api_error=api_error)
+
+    if aspect_issue:
+        issues = [aspect_issue] + [i for i in result.get('issues', []) if i != aspect_issue]
+        result['issues'] = issues
+        result.setdefault('issue_details', []).append({
+            'category': 'geometry',
+            'severity': 'high',
+            'object': 'framing',
+            'expected': f'{expected_aspect} ({expected_ratio:.2f}:1)',
+            'observed': f'{view_img.width}x{view_img.height} '
+                        f'({view_img.width / view_img.height:.2f}:1)',
+        })
+        if enforce_aspect and not result['api_error']:
+            # A wrong frame is a deterministic geometry failure: it cannot be
+            # edited away and the score must drop below the pass mark.
+            result['geometry_score'] = min(
+                result['geometry_score'], max(0, threshold - 1)
+            )
+            result['overall_score'] = min(
+                result['style_score'], result['architecture_score'], result['geometry_score']
+            )
+            result['action'] = decide_room_view_action(
+                result['overall_score'], pass_threshold=threshold
+            )
+            result['consistency_score'] = min(
+                result['style_score'], result['architecture_score']
+            )
+            result['needs_regeneration'] = result['action'] not in ('accept', 'blocked')
+            result['status'] = 'passed' if result['action'] == 'accept' else 'failed'
+        fix = (
+            f"Re-render at {expected_aspect}; the delivered image is "
+            f"{view_img.width}x{view_img.height}."
+        )
+        prior = (result.get('regeneration_prompt') or '').strip()
+        result['regeneration_prompt'] = f"{prior} {fix}".strip()
+        result['aspect_issue'] = aspect_issue
     return result
+
+
+def analyze_room_description(
+    llm: BaseLLM,
+    view_img: Image.Image,
+    visual_desc: str,
+    named_positions: list[dict] | None = None,
+    threshold: int = ROOM_QA_PASS_THRESHOLD,
+    sketch_img: Image.Image | None = None,
+) -> dict:
+    """QA View-From-Entrance against its description (and its floor-plan sketch): whatever it invents propagates."""
+    positions = '\n'.join(
+        f"  [{p.get('id', '?')}] {p.get('description', '')}" for p in named_positions or []
+    )
+    positions_block = (
+        f"\n## NAMED POSITIONS (each visible in the stated place unless behind the camera)"
+        f"\n{positions}\n"
+        if positions else ''
+    )
+    sketch_step = (
+        "5. A FLOOR-PLAN SKETCH of the same camera comes first: it is the geometry truth. Every wall,\n"
+        "   opening and object must stand where the sketch draws it, at its size; ignore the sketch's\n"
+        "   flat colours, lines and simplified shapes. An object on another wall, at another depth or\n"
+        "   with a clearly different footprint is a geometry issue; a camera or lens that differs from\n"
+        "   the sketch caps geometry_score at 6.\n"
+        if sketch_img else ''
+    )
+    prompt = f"""You are a QA supervisor for an AI film production pipeline.
+
+The image is the BASE-TRUTH reference "View-From-Entrance" of an empty room: the camera
+stands at the entrance looking INTO the room. Every other camera view of this room is
+generated from it, so any element the description does not ask for will be copied into
+every view. Judge the image strictly against the description.
+
+## DESCRIPTION
+{visual_desc}
+{positions_block}
+## METHOD
+1. List every architectural opening in the image: doors, hatches, windows, arches,
+   passages, vents large enough to read as openings. Compare their COUNT, wall and
+   position with the description. An opening the description does not mention is a
+   high-severity architecture issue, even if it looks plausible. For every door also
+   compare hinge edge, handle side and swing with the description.
+2. List every piece of furniture and equipment. Each must be described or be a named
+   position; anything else is an unrequested object. Each described or named element
+   that is missing, duplicated, or on the wrong wall/side is an issue.
+3. Check materials, colors, lighting and fixtures against the description.
+4. Check the camera: at the entrance, looking into the room.
+   {behind_camera_rule('View-From-Entrance')}
+   The room is empty: no people, no text, no captions, no panels.
+{sketch_step}
+## SCORING
+
+**style_score** (0–10): materials, colors, textures, finishes and lighting match the
+  description.
+
+**architecture_score** (0–10): the inventory matches — same openings, same objects,
+  same counts, nothing missing, nothing added. One unrequested door or window caps
+  this score at 6.
+
+**geometry_score** (0–10): camera position/direction is View-From-Entrance and every
+  object sits on the described wall/side and at the described depth.
+
+{_room_qa_output_spec(threshold)}"""
+    image_content = (["# FLOOR-PLAN SKETCH (geometry truth for this camera)\n", sketch_img] if sketch_img else []) + [
+        "# VIEW TO EVALUATE: View-From-Entrance\n", view_img]
+    result, api_error = _call_room_qa(llm, image_content, prompt, 'View-From-Entrance')
+    return normalize_room_view_qa(result, pass_threshold=threshold, api_error=api_error)
+
+
+def analyze_outdoor_description(
+    llm: BaseLLM,
+    view_img: Image.Image,
+    visual_desc: str,
+    threshold: int = ROOM_QA_PASS_THRESHOLD,
+) -> dict:
+    """QA View-Primary against its description: the other three station views are built from it."""
+    prompt = f"""You are a QA supervisor for an AI film production pipeline.
+
+The image is the BASE-TRUTH reference "View-Primary" of an empty outdoor location. The camera
+stands at the location's STATION and faces AHEAD (the primary direction). The other views turn in
+place at the same spot: RIGHT, BEHIND, LEFT. Anything the image invents is copied into them.
+
+## DESCRIPTION
+{visual_desc}
+
+## METHOD
+1. Find the AHEAD section of the description (or the primary direction): what must fill the
+   view straight ahead and in the distance.
+2. The RIGHT section must line the image-right edge, the LEFT section the image-left edge —
+   e.g. a street's main facade the description puts on the RIGHT runs along the image-right side,
+   receding. A side swapped left/right is a high-severity geometry issue.
+3. The BEHIND section is behind the camera: never show or require it.
+4. List buildings, openings, landmarks and street furniture in the image; each must be described.
+   An unrequested landmark or a missing named one is an architecture issue.
+5. Check materials, era, weather, time of day and light against the description.
+   The location is empty: no people, no text, no captions, no panels.
+
+## SCORING
+
+**style_score** (0–10): materials, era, weather and light match the description.
+
+**architecture_score** (0–10): the inventory matches — same buildings, landmarks and street
+  furniture, nothing missing, nothing added.
+
+**geometry_score** (0–10): the camera stands at eye height at the station facing AHEAD, and
+  every element sits on its described side and at its described distance.
+
+{_room_qa_output_spec(threshold)}"""
+    image_content = [f"# VIEW TO EVALUATE: {OUTDOOR_TRUTH}\n", view_img]
+    result, api_error = _call_room_qa(llm, image_content, prompt, OUTDOOR_TRUTH)
+    return normalize_room_view_qa(result, pass_threshold=threshold, api_error=api_error)
 
 
 def run_room_view_qa(
     llm: BaseLLM,
     project,  # Project
     max_attempts: int = 3,
-    threshold: int = 7,
+    threshold: int = ROOM_QA_PASS_THRESHOLD,
     view_filter: Optional[List[str]] = None,
 ) -> dict:
     """Discover all derived room view PNGs, QA-score them, and regenerate failing ones.
@@ -778,7 +1281,14 @@ def run_room_view_qa(
     Returns a summary dict: { view_name: { "attempts": [...], "passed": bool } }
     """
     # Import here to avoid circular dependency (artist imports from critic indirectly)
-    from lib.studio.artist import _load_entrance_anchor_points, _render_single_ref, load_character_refs
+    from lib.studio.artist import (
+        _load_entrance_anchor_points,
+        _parse_room_dims,
+        _render_single_ref,
+        _view_aspect_ratio,
+        load_character_refs,
+    )
+    from lib.studio.room_geometry import resolve_room_height_m
     from lib.core.utils import safe_name
 
     load_character_refs(project)
@@ -787,13 +1297,13 @@ def run_room_view_qa(
     ref_dir: Path = project.ref_dir
     summary: dict = {}
 
-    for view_suffix in _DERIVED_VIEW_SUFFIXES:
-        if view_filter and view_suffix not in view_filter:
+    for suffix in _DERIVED_VIEW_SUFFIXES:
+        if view_filter and suffix not in view_filter:
             continue
 
-        truth_suffixes = _VIEW_TRUTH_SOURCES[view_suffix]
+        truth_suffixes = _VIEW_TRUTH_SOURCES[suffix]
 
-        view_jsons = sorted(ref_dir.glob(f"*-{safe_name(view_suffix)}.json"))
+        view_jsons = sorted(ref_dir.glob(f"*-{safe_name(suffix)}.json"))
         for view_json in view_jsons:
             view_png = view_json.with_suffix('.png')
             if not view_png.exists():
@@ -803,8 +1313,8 @@ def run_room_view_qa(
             view_data = json.loads(view_json.read_text(encoding='utf-8'))
             view_ref_name = view_data.get('name', view_json.stem)
             base_name = (
-                view_ref_name[: -(len(view_suffix) + 1)]
-                if view_ref_name.endswith(f'-{view_suffix}')
+                view_ref_name[: -(len(suffix) + 1)]
+                if view_ref_name.endswith(f'-{suffix}')
                 else None
             )
 
@@ -825,12 +1335,31 @@ def run_room_view_qa(
             logger.info(f"  🔍 QA: {view_ref_name}  (truth: {[s for s,_ in truth_pngs]})")
             key = view_ref_name
             summary[key] = {'attempts': [], 'passed': False}
+            sketch_png = ref_dir / f"{safe_name(view_ref_name)}.sketch.png"
 
             # Load anchor_points for geometry-aware QA prompt
             ap = view_data.get('anchor_points') or (
-                _load_entrance_anchor_points(view_ref_name, view_suffix, project)
+                _load_entrance_anchor_points(view_ref_name, suffix, project)
                 if hasattr(project, 'ref_dir') else {}
             )
+
+            # Physical framing target, derived from the same room dimensions
+            # and ceiling height used by the render prompt and the sketch.
+            dims = None
+            room_m = ap.get('room_m') if isinstance(ap, dict) else None
+            if isinstance(room_m, (list, tuple)) and len(room_m) >= 2:
+                dims = (float(room_m[0]), float(room_m[1]))
+            else:
+                dims = _parse_room_dims(view_data.get('visual_desc', ''))
+            expected_aspect = None
+            if dims:
+                room_h, _ = resolve_room_height_m(
+                    ap if isinstance(ap, dict) else {},
+                    view_data.get('visual_desc', ''),
+                )
+                expected_aspect = _view_aspect_ratio(
+                    suffix, dims, config, room_h
+                )
 
             for attempt in range(1, max_attempts + 1):
                 source_views: list[tuple[str, Image.Image]] = []
@@ -842,27 +1371,36 @@ def run_room_view_qa(
                 with Image.open(view_png) as vi:
                     view_img = vi.copy()
 
+                sketch_img = Image.open(sketch_png).copy() if sketch_png.exists() else None
+
                 result = analyze_room_view(
                     llm=llm,
                     view_img=view_img,
                     source_views=source_views,
-                    view_suffix=view_suffix,
+                    view_suffix=suffix,
                     visual_desc=view_data.get('visual_desc', ''),
                     threshold=threshold,
                     anchor_points=ap or None,
+                    expected_aspect=expected_aspect,
+                    sketch_img=sketch_img,
                 )
                 for _, img in source_views:
                     img.close()
                 view_img.close()
+                if sketch_img is not None:
+                    sketch_img.close()
 
                 result['attempt'] = attempt
                 summary[key]['attempts'].append(result)
 
                 con = result['consistency_score']
                 geo = result['geometry_score']
+                overall = result['overall_score']
                 need = result['needs_regeneration']
                 logger.info(
-                    f"    attempt {attempt}: consistency={con}/10  geometry={geo}/10  "
+                    f"    attempt {attempt}: overall={overall}/10  style={result['style_score']}/10  "
+                    f"architecture={result['architecture_score']}/10  geometry={geo}/10  "
+                    f"consistency={con}/10  action={result['action']}  "
                     + ("🔴 regenerate" if need else "🟢 OK")
                 )
                 for issue in result.get('issues', []):
@@ -873,7 +1411,11 @@ def run_room_view_qa(
                     break
 
                 if attempt < max_attempts:
-                    regen_prompt = result.get('regeneration_prompt', '')
+                    regen_prompt = (
+                        result.get('regeneration_prompt')
+                        or result.get('edit_prompt')
+                        or '; '.join(result.get('issues', []))
+                    )
                     if regen_prompt:
                         patched = dict(view_data)
                         patched['visual_desc'] = (

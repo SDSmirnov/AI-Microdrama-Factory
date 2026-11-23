@@ -229,12 +229,10 @@ Gaze, steps, gestures, and locomotion MUST name the target or anchor, not just a
 Rule: every directional verb (walk, step, lean, reach, point, turn, look) must be followed by `toward <named target>` or `to <named location>`.
 
 **H11 — Hand Laterality Rule**
-Never say "his hand" or "her right hand" — camera framing can flip apparent sides. Use two anchors: body-relative anatomical Latin (**dextra** = right, **sinistra** = left) AND screen-space entry direction.
+Never write a bare "his hand". Name the hand with possessive anatomy and anchor it in the frame: "his right hand (frame-left)" — the same form Pass 3 requires. The body side never flips; the frame side depends on the camera.
 - *Bad: "His hand reaches for the cup."* → Which hand? From which side of frame?
-- *Bad: "His right hand grabs the knife."* → "Right" flips on mirrored shots.
-- *Good: "His dextra hand enters frame from frame-left and grabs the cup."*
-- *Good: "Her sinistra hand rises from frame-bottom and adjusts collar."*
-Always pair dextra/sinistra with frame-entry direction. Works for any character regardless of handedness or stance.
+- *Good: "His right hand enters from frame-left and grabs the cup."*
+- *Good: "Her left hand rises from frame-bottom and adjusts her collar."*
 
 ---
 

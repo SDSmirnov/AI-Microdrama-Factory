@@ -17,6 +17,7 @@ import inspect
 import json
 import sys
 import tempfile
+import threading
 from datetime import datetime
 from pathlib import Path
 
@@ -25,6 +26,8 @@ from lib.llm.base import BaseLLM, parse_json
 _OUTPUT_DIR = Path("cinematic_render/manual_llm")
 _SEP = "=" * 72
 _THIN = "-" * 72
+# One prompt/answer exchange at a time: stages run LLM calls in thread pools, but stdin is shared.
+_EXCHANGE = threading.Lock()
 
 
 def _caller_name() -> str:
@@ -113,6 +116,13 @@ def _read_response(prompt_hint: str) -> str:
     return text
 
 
+def _ask(title: str, body: str, read, hint: str):
+    """Show the prompt and read its answer while holding the exchange lock."""
+    with _EXCHANGE:
+        _display(title, body)
+        return read(hint)
+
+
 def _read_image_path(hint: str) -> bytes:
     """Read one line as a file path, return raw bytes."""
     print(f"\n{_THIN}", flush=True)
@@ -143,8 +153,7 @@ class ManualLLM(BaseLLM):
         if schema:
             parts.append(f"## JSON SCHEMA\n```json\n{json.dumps(schema, indent=2, ensure_ascii=False)}\n```\n")
         parts.append("Output strictly in JSON format.")
-        _display("make_json", "\n".join(parts))
-        return parse_json(_read_response("JSON response"))
+        return parse_json(_ask("make_json", "\n".join(parts), _read_response, "JSON response"))
 
     # ------------------------------------------------------------------
     # Text generation
@@ -156,8 +165,7 @@ class ManualLLM(BaseLLM):
         if sys_p:
             parts.append(f"## SYSTEM PROMPT\n{sys_p}\n")
         parts.append(f"## PROMPT\n{prompt}\n")
-        _display("make_text", "\n".join(parts))
-        return _read_response("text response")
+        return _ask("make_text", "\n".join(parts), _read_response, "text response")
 
     # ------------------------------------------------------------------
     # Image generation
@@ -178,8 +186,7 @@ class ManualLLM(BaseLLM):
         ]
         if refs_block:
             parts.append(refs_block)
-        _display("make_image", "\n".join(parts))
-        return _read_image_path("Enter path to generated PNG/JPG:")
+        return _ask("make_image", "\n".join(parts), _read_image_path, "Enter path to generated PNG/JPG:")
 
     # ------------------------------------------------------------------
     # Image editing
@@ -209,8 +216,7 @@ class ManualLLM(BaseLLM):
         ]
         if refs_block:
             parts.append(refs_block)
-        _display("edit_image", "\n".join(parts))
-        return _read_image_path("Enter path to edited PNG/JPG:")
+        return _ask("edit_image", "\n".join(parts), _read_image_path, "Enter path to edited PNG/JPG:")
 
     # ------------------------------------------------------------------
     # Image / video analysis
@@ -226,8 +232,7 @@ class ManualLLM(BaseLLM):
         if schema:
             parts.append(f"## JSON SCHEMA\n```json\n{json.dumps(schema, indent=2, ensure_ascii=False)}\n```\n")
         parts.append("Output strictly in JSON format.")
-        _display("analyze_image", "\n".join(parts))
-        return parse_json(_read_response("JSON analysis response"))
+        return parse_json(_ask("analyze_image", "\n".join(parts), _read_response, "JSON analysis response"))
 
     def analyze_video(self, video, prompt: str, refs=None, schema: dict = None) -> dict:
         vid_label = str(video) if isinstance(video, (str, Path)) else "<binary blob>"
@@ -239,5 +244,4 @@ class ManualLLM(BaseLLM):
         if schema:
             parts.append(f"## JSON SCHEMA\n```json\n{json.dumps(schema, indent=2, ensure_ascii=False)}\n```\n")
         parts.append("Output strictly in JSON format.")
-        _display("analyze_video", "\n".join(parts))
-        return parse_json(_read_response("JSON analysis response"))
+        return parse_json(_ask("analyze_video", "\n".join(parts), _read_response, "JSON analysis response"))

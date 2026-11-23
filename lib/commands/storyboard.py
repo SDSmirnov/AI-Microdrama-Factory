@@ -1,5 +1,6 @@
 """Storyboard commands: storyboard, rebuild-storyboard, imgedit, extra-panel."""
 import datetime
+import hashlib
 import json
 import logging
 import os
@@ -11,11 +12,10 @@ from pathlib import Path
 from PIL import Image
 
 from lib.commands.common import _make_llm, _make_vision_llm
-from lib.core.project import Project, load_project
+from lib.core.project import QA_JUDGE_MODEL, QA_REASONING_EFFORT, Project, load_project
 from lib.core.prompts import TARGET_LANGUAGE
 from lib.core.schemas import SCENE_SCHEMA
-from lib.core.utils import atomic_write, grid_dims, load_metadata
-from lib.llm.base import retry_on_errors
+from lib.core.utils import atomic_write, grid_dims, load_metadata, safe_name
 from lib.studio.artist import (
     _render_single_panel,
     load_character_refs,
@@ -25,6 +25,13 @@ from lib.studio.artist import (
     render_scene_grids,
 )
 from lib.studio.critic import analyze_panel, load_ref_catalog
+from lib.studio.artist.panels import SKETCH_LABEL, _build_panel_prompt, _panel_anchor_context
+from lib.studio.artist.render_utils import _load_scenes, _ref_label, known_refs
+from lib.studio.blocking_sketch import (
+    block_text, label, render_blockings, scene_blockings, sketch_dir, sketch_worthy, write_index,
+)
+from lib.studio.room_blocking import RoomBlocking
+from lib.studio.promotion import BestPanelKeeper
 from lib.studio.editor import refine_panel
 from lib.studio.retoucher import edit_image as retoucher_edit_image
 
@@ -47,7 +54,7 @@ def cmd_storyboard(args):
         render_panels(prompts, config, llm, project, scene_filter=scene_filter, panel_filter=panel_filter)
     else:
         render_scene_grids(prompts, config, llm, project, scene_filter=scene_filter)
-    logger.info(f"\n✅ Done.")
+    logger.info("\n✅ Done.")
 
 
 def cmd_rebuild_storyboard(args):
@@ -62,6 +69,7 @@ def cmd_rebuild_storyboard(args):
 
     metadata = json.loads(meta_path.read_text(encoding='utf-8'))
     config = metadata.get('config', {})
+    panel_ar = config.get('format', {}).get('panel_aspect_ratio', '9:16')
 
     scene_filter = None
     if hasattr(args, 'scene') and args.scene and args.scene != 'all':
@@ -86,7 +94,7 @@ def cmd_rebuild_storyboard(args):
             logger.warning(f"  ⚠️  Scene {sid}: no panels in metadata, skipping")
             skipped += 1
             continue
-        cols, rows, _ = grid_dims(panel_count)
+        cols, rows, _ = grid_dims(panel_count, panel_ar)
 
         panel_imgs = []
         missing = []
@@ -219,11 +227,7 @@ Match camera_master and lighting_master from context above verbatim in lights_an
 All dialogues, voiceovers and captions MUST be in {TARGET_LANGUAGE}.
 """
 
-    @retry_on_errors(max_retries=3, backoff_factor=2)
-    def _call():
-        return llm.make_json(prompt, SCENE_SCHEMA)
-
-    result = _call()
+    result = llm.make_json(prompt, SCENE_SCHEMA)
     if not result or 'scenes' not in result or not result['scenes']:
         logger.error("❌ LLM failed to generate extra panel")
         sys.exit(1)
@@ -251,7 +255,7 @@ All dialogues, voiceovers and captions MUST be in {TARGET_LANGUAGE}.
     extra_panels_dir = project.output_dir / "extra_panels"
     out_png = extra_panels_dir / f"{args.scene:03d}_{args.index}_static.png"
     aspect_ratio = config['image_generation'].get('aspect_ratio', '9:16')
-    render_extra_panel(extra_scene, panel, out_png, aspect_ratio, project, llm, prompts)
+    render_extra_panel(extra_scene, panel, out_png, aspect_ratio, project, llm, prompts, config)
 
 
 def cmd_full_frame(args):
@@ -289,17 +293,68 @@ def cmd_full_frame(args):
     render_full_frame_panel(scene, panel, source_png, out_png, aspect_ratio, project, llm, prompts)
 
 
+def _judge_refined(original_result, refined_path, panel, scene, ref_catalog,
+                   vision_llm, scene_id, panel_id, threshold, prompts) -> tuple[list, dict | None]:
+    """QA a refined panel against the ORIGINAL; return (NEW critical defects, refined verdict).
+
+    A judge failure is not a rejection: ([], None).
+    """
+    try:
+        with Image.open(refined_path) as im:
+            refined_result = analyze_panel(
+                llm=vision_llm,
+                panel_img=im,
+                panel_meta=panel,
+                scene_meta=scene,
+                ref_catalog=ref_catalog,
+                scene_id=scene_id,
+                panel_id=panel_id,
+                threshold=threshold,
+                prompts=prompts,
+            )
+    except Exception as e:
+        logger.warning(f"  ⚠️  Could not QA the refined panel ({e}) — promoting anyway.")
+        return [], None
+    original_result = original_result or {}
+
+    from lib.studio.promotion import introduced_critical_artifacts
+    new = introduced_critical_artifacts(original_result, refined_result)
+    if new:
+        return new, refined_result
+    # The edit may also have LOWERED the score without adding a new defect.
+    from lib.studio.promotion import panel_score
+    if panel_score(refined_result) < panel_score(original_result) - 0.5:
+        return [f"the edit lowered the panel score "
+                f"(fidelity {original_result.get('fidelity')} -> "
+                f"{refined_result.get('fidelity')})"], refined_result
+    return [], refined_result
+
+
+def _panel_qa_path(panel_path: Path) -> Path:
+    return panel_path.with_suffix('.qa.json')
+
+
+def _panel_qa_passed(panel_path: Path) -> bool:
+    try:
+        record = json.loads(_panel_qa_path(panel_path).read_text(encoding='utf-8'))
+    except (OSError, ValueError):
+        return False
+    return record.get('status') == 'passed' and record.get('png_sha256') == _sha256(panel_path)
+
+
+def _sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
 def cmd_panel_by_panel_qa(args):
-    """Render each panel in a scene, run QA, and refine in-place up to max_attempts times."""
+    """Render each panel, run QA, and refine in-place up to max_attempts times."""
     project, prompts, config = load_project(style=args.style)
     img_llm = _make_llm(args.llm, project)
-    vision_llm = _make_vision_llm(args.llm, project)
+    vision_llm = _make_vision_llm(args.llm, project, model=QA_JUDGE_MODEL,
+                                  reasoning_effort=QA_REASONING_EFFORT)
     load_character_refs(project)
 
-    scene_id = int(args.scene)
     panel_filter = int(args.panel) if args.panel not in (None, 'all') else None
-    max_attempts = args.max_attempts
-    threshold = args.threshold
 
     meta_path = project.output_dir / "animation_metadata.json"
     if not meta_path.exists():
@@ -307,17 +362,36 @@ def cmd_panel_by_panel_qa(args):
         sys.exit(1)
 
     metadata = load_metadata(meta_path)
-    scene = next((s for s in metadata.get('scenes', []) if s['scene_id'] == scene_id), None)
-    if scene is None:
-        logger.error(f"❌ Scene {scene_id} not found in animation_metadata.json")
+    scenes = metadata.get('scenes', [])
+    if str(args.scene) != 'all':
+        scenes = [s for s in scenes if s['scene_id'] == int(args.scene)]
+        if not scenes:
+            logger.error(f"❌ Scene {args.scene} not found in animation_metadata.json")
+            sys.exit(1)
+
+    failed = 0
+    for scene in scenes:
+        failed += _panel_by_panel_scene(
+            scene, metadata, panel_filter, args, project, prompts, config, img_llm, vision_llm,
+        )
+    if failed:
+        logger.warning(f"⚠️  {failed} panel(s) did not pass QA.")
         sys.exit(1)
+
+
+def _panel_by_panel_scene(scene, metadata, panel_filter, args, project, prompts, config,
+                          img_llm, vision_llm) -> int:
+    """Run render → QA → refine for one scene; return the number of failed panels."""
+    scene_id = scene['scene_id']
+    max_attempts = args.max_attempts
+    threshold = args.threshold
 
     panels = scene.get('panels', [])
     if panel_filter is not None:
         panels = [p for p in panels if p['panel_index'] == panel_filter]
     if not panels:
         logger.error(f"❌ No panels found for scene {scene_id}" + (f" panel {panel_filter}" if panel_filter else ""))
-        sys.exit(1)
+        return 1
 
     aspect_ratio = config['image_generation'].get('aspect_ratio', '9:16')
     ref_catalog = load_ref_catalog(project.ref_dir)
@@ -329,17 +403,30 @@ def cmd_panel_by_panel_qa(args):
         logger.info(f"🎬 Scene {scene_id} · Panel {pid}/{len(panels)}")
         logger.info(f"{'='*60}")
 
-        _render_single_panel(scene, panel, scene_id, 'static', aspect_ratio, project, img_llm, prompts)
-
         panel_path = project.panels_dir / f"{scene_id:03d}_{pid:02d}_static.png"
+        reuse = getattr(args, 'skip_existing', False) and panel_path.exists()
+        if reuse and _panel_qa_passed(panel_path):
+            logger.info(f"  ⏭  Panel {pid} passed QA earlier, image unchanged")
+            passed += 1
+            continue
+        if not reuse:
+            _render_single_panel(scene, panel, scene_id, 'static', aspect_ratio, project, img_llm, prompts, config)
         if not panel_path.exists():
             logger.error(f"  ❌ Panel {pid} failed to render, skipping")
             continue
 
+        # Keep the best version seen across the attempt loop: a refinement
+        # can make a panel WORSE (measured: seedream 5->4, minimax 6->5,
+        # an edit that added a duplicate rifle). The old loop promoted every
+        # refined panel unconditionally.
+        keeper = BestPanelKeeper(panel_path)
+        panel_passed = False
+        panel_result = None  # verdict for the image now at panel_path
+
         for attempt in range(1, max_attempts + 1):
             logger.info(f"\n  🔍 QA (attempt {attempt}/{max_attempts})...")
             with Image.open(panel_path) as panel_img:
-                panel_result = analyze_panel(
+                panel_result = panel_result or analyze_panel(
                     llm=vision_llm,
                     panel_img=panel_img,
                     panel_meta=panel,
@@ -350,9 +437,14 @@ def cmd_panel_by_panel_qa(args):
                     threshold=threshold,
                     prompts=prompts,
                 )
+            keeper.consider(panel_path, panel_result)
+            if panel_result.get('api_error'):
+                logger.warning(f"  ⛔ QA judge failed for panel {pid}; not refining an unjudged panel")
+                break
             if not panel_result.get('needs_refinement'):
                 logger.info(f"  ✅ Panel {pid} passed QA (fidelity={panel_result.get('fidelity', '?')})")
                 passed += 1
+                panel_passed = True
                 break
 
             if attempt == max_attempts:
@@ -381,28 +473,129 @@ def cmd_panel_by_panel_qa(args):
                 break
 
             if refined_path.exists():
+                # QA the REFINED image before promoting it: an edit that
+                # introduces a new defect must not replace the original.
+                new_defects, refined_result = _judge_refined(panel_result, refined_path, panel,
+                                             scene, ref_catalog, vision_llm,
+                                             scene_id, pid, threshold,
+                                             prompts)
+                if new_defects:
+                    logger.warning(
+                        "  ⚠️  Refinement introduced new defects "
+                        f"({'; '.join(new_defects)}) — keeping the original.")
+                    refined_path.unlink()
+                    sidecar = refined_path.with_suffix('.json')
+                    if sidecar.exists():
+                        sidecar.unlink()
+                    continue
                 shutil.copy2(refined_path, panel_path)
+                panel_result = refined_result
                 refined_path.unlink()
                 sidecar = refined_path.with_suffix('.json')
                 if sidecar.exists():
                     sidecar.unlink()
                 logger.info(f"  ✅ Promoted refined → panels/{panel_path.name}")
 
+        if keeper.restore_if_better():
+            logger.info(
+                f"  ↩️  Restored the best-scoring version of panel {pid} "
+                f"(score {keeper.best_score:.0f}).")
+        if keeper.rejected:
+            logger.info(
+                f"  🛡️  {keeper.rejected} refinement(s) rejected for "
+                "introducing new defects.")
+        atomic_write(_panel_qa_path(panel_path), json.dumps({
+            'status': 'passed' if panel_passed else 'failed',
+            'png_sha256': _sha256(panel_path),
+        }))
+
     total = len(panels)
-    logger.info(f"\n✅ Done: {passed}/{total} panel(s) passed QA.")
-    if passed < total:
-        sys.exit(1)
+    logger.info(f"\n✅ Scene {scene_id}: {passed}/{total} panel(s) passed QA.")
+    return total - passed
 
 
 # ---------------------------------------------------------------------------
 # 3D preview — axonometric puppet layout renderer
 # ---------------------------------------------------------------------------
 
+def _export_panel(out_dir: Path, scene: dict, panel: dict, blocking, sketch: Path | None,
+                  project, prompts: dict, aspect: str) -> Path:
+    """Numbered images in attach order + prompt_sketch.md / prompt_text_only.md (A/B)."""
+    panel_dir = out_dir / f"S{scene['scene_id']:03d}_P{panel['panel_index']:02d}"
+    panel_dir.mkdir(parents=True, exist_ok=True)
+    names = known_refs(panel.get('references', []) + panel.get('location_references', []), project.character_images)
+    refs = []
+    for name in names:
+        info = project.character_info.get(name, {})
+        refs.append((name, Path(project.character_images[name]),
+                     _ref_label(name, info.get('type', 'Character'), info.get('visual_desc') or info.get('video_visual_desc', ''))))
+    for variant, with_sketch in (('sketch', True), ('text_only', False)):
+        images = ([('BLOCKING SKETCH', sketch, SKETCH_LABEL)] if with_sketch and sketch else []) + refs
+        files = []
+        for i, (name, src, _) in enumerate(images, 1):
+            dst = panel_dir / f"{variant}_{i:02d}_{safe_name(name)}.png"
+            shutil.copyfile(src, dst)
+            files.append(dst.name)
+        legend = '\n'.join(f"[Image {i}] {label.strip()}" for i, (_, _, label) in enumerate(images, 1))
+        anchors = _panel_anchor_context(panel, project) if isinstance(blocking, RoomBlocking) else ''
+        context = '\n'.join(filter(None, [block_text(blocking, with_sketch and bool(sketch)), anchors]))
+        body = _build_panel_prompt(scene, panel, 'static', prompts, aspect, context)
+        attach = '\n'.join(f"{i}. `{f}`" for i, f in enumerate(files, 1))
+        (panel_dir / f'prompt_{variant}.md').write_text(
+            f"# S{scene['scene_id']:03d} P{panel['panel_index']:02d} — {label(blocking)} ({variant.replace('_', ' ')})\n\n"
+            f"Aspect {aspect}. Attach in this order:\n{attach}\n\nThen paste:\n\n"
+            f"```text\n# Visual Reference Library\n{legend}\n\n{body.strip()}\n```\n", encoding='utf-8')
+    return panel_dir
+
+
+def cmd_blocking_sketches(args):
+    project, prompts, config = load_project(style=args.style)
+    load_character_refs(project)
+    aspect = config['image_generation'].get('aspect_ratio', '9:16')
+    scene_filter = None if args.scene == 'all' else int(args.scene)
+    scenes = _load_scenes(project)
+    found = scene_blockings(scenes, project.character_info.get, aspect, scene_filter)
+    if not found:
+        logger.info("  No car-interior or anchored room/outdoor panels with placed people.")
+        return
+    for sid, pidx, b in found:
+        logger.info(f"  S{sid:03d} P{pidx:02d}  {label(b)}{f'  ⚠️ {b.note}' if getattr(b, 'note', None) else ''}")
+        if args.dry_run:
+            logger.info('    ' + block_text(b).replace('\n', '\n    '))
+    if args.dry_run:
+        return
+    panels = {(s['scene_id'], p['panel_index']): (s, p) for s in scenes for p in s.get('panels', [])}
+    drawn = [(sid, pidx, b) for sid, pidx, b in found if sketch_worthy(panels[(sid, pidx)][1])]
+    try:
+        paths = render_blockings([b for *_, b in drawn], project.ref_dir, args.blender, force=args.force)
+    except RuntimeError as exc:
+        logger.error(f"  ❌ {exc}")
+        sys.exit(1)
+    index = project.output_dir / 'blocking_sketches.json'
+    write_index(index, drawn, paths, project.output_dir.parent)
+    logger.info(f"\n✅ {len(set(paths.values()))} blocking sketch(es) ({aspect}) in {sketch_dir(project.ref_dir)}; index {index}")
+    if args.export:
+        for sid, pidx, b in found:
+            scene, panel = panels[(sid, pidx)]
+            _export_panel(Path(args.export), scene, panel, b, paths.get(b), project, prompts, aspect)
+        logger.info(f"📝 Manual-test prompts for {len(found)} panel(s) in {args.export}/")
+
+
 def register(sub):
     p = sub.add_parser('storyboard', help='Render scene grids or panels')
     p.add_argument('scene', nargs='?', default='all', help='Scene number or "all"')
     p.add_argument('panel', nargs='?', default='all', help='Panel number or "all"')
     p.set_defaults(func=cmd_storyboard)
+
+    p = sub.add_parser('blocking-sketches', aliases=['car-sketches'],
+                       help='Blocking per panel (car seats, room/outdoor positions) + Blender sketches (cached)')
+    p.add_argument('scene', nargs='?', default='all', help='Scene number or "all"')
+    p.add_argument('--dry-run', action='store_true', help='Print the blocking blocks, render nothing')
+    p.add_argument('--force', action='store_true', help='Re-render sketches that are already cached')
+    p.add_argument('--blender', default='blender', help='Blender executable (default: blender)')
+    p.add_argument('--export', default=None, metavar='DIR',
+                   help='Also write manual-test packs (numbered images + prompt_sketch.md / prompt_text_only.md)')
+    p.set_defaults(func=cmd_blocking_sketches)
 
     p = sub.add_parser('rebuild-storyboard', help='Rebuild scene grid images from current panels/, backup originals')
     p.add_argument('scene', nargs='?', default='all', help='Scene number or "all"')
@@ -428,11 +621,13 @@ def register(sub):
         'panel-by-panel-with-qa',
         help='Render each panel, run QA, and refine in-place (up to --max-attempts times)',
     )
-    p.add_argument('scene', type=int, help='Scene number')
+    p.add_argument('scene', help='Scene number or "all"')
     p.add_argument('panel', nargs='?', default='all', help='Panel number or "all" (default: all)')
     p.add_argument('--threshold', type=int, default=5, help='QA fidelity threshold (default: 5)')
-    p.add_argument('--max-attempts', type=int, default=0, dest='max_attempts',
+    p.add_argument('--max-attempts', type=int, default=3, dest='max_attempts',
                    help='Max refinement attempts per panel (default: 3)')
+    p.add_argument('--skip-existing', action='store_true',
+                   help='Resume: skip panels that passed QA and are unchanged; QA rendered-but-unpassed panels without re-rendering')
     p.set_defaults(func=cmd_panel_by_panel_qa)
 
     p = sub.add_parser(

@@ -94,6 +94,18 @@ class ProjectState:
                 parent.pop(str(keys[-1]), None)
             self._save()
 
+    def bind_source(self, sha256: str) -> None:
+        """Drop all progress made from another source; a state without one is adopted."""
+        with self._lock:
+            known = self._data.get("source_sha256")
+            if known == sha256:
+                return
+            if known is not None:
+                logger.warning("⚠️  %s was written for another novel — starting fresh", self._path)
+                self._data["stages"] = {}
+            self._data["source_sha256"] = sha256
+            self._save()
+
     # ── Screenplay-specific helpers ───────────────────────────────────────────
 
     def episodes_done(self) -> bool:

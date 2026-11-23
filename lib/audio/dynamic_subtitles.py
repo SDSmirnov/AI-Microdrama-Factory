@@ -15,18 +15,16 @@ import re
 import subprocess
 from pathlib import Path
 
-logger = logging.getLogger(__name__)
+from lib.audio.whisper import load_whisper
 
-try:
-    from faster_whisper import WhisperModel
-except ImportError:
-    WhisperModel = None
+logger = logging.getLogger(__name__)
 
 _SRT_TIME_RE = re.compile(r"(\d+):(\d+):(\d+)[,.](\d+)")
 _SENT_END_RE = re.compile(r"[.!?]$")
 _SENT_BOUNDARY_RE = re.compile(r'(?<=[.!?…])\s+')
 _MAX_PHRASE_SEC = 4.5   # split any phrase longer than this (for language models w/o word punctuation)
 _MIN_WORD_GAP_SEC = 0.33  # split at inter-word pauses longer than this
+DEFAULT_MARGIN_V = 340   # px from bottom, above the Shorts/Reels player UI
 
 
 # ---------------------------------------------------------------------------
@@ -82,9 +80,6 @@ def _whisper_word_timestamps(
     Caches by video file size+mtime. Language mismatch between audio and SRT is fine:
     only the timing rhythm is used, not the Whisper text.
     """
-    if WhisperModel is None:
-        raise RuntimeError("faster-whisper not installed; run: pip install faster-whisper")
-
     import hashlib
     import os
     import time
@@ -102,12 +97,12 @@ def _whisper_word_timestamps(
         except (json.JSONDecodeError, KeyError):
             pass
 
+    model = load_whisper()
     wav_path = str(cache.with_suffix(".tmp.wav"))
     logger.info("Extracting audio for Whisper alignment...")
     _extract_audio_wav(video_path, wav_path)
 
     logger.info("Running Whisper word alignment...")
-    model = WhisperModel("medium", device="cpu", compute_type="int8")
     segments_raw, _ = model.transcribe(
         wav_path,
         beam_size=10,
@@ -202,7 +197,7 @@ def build_ass(
     video_width: int = 1080,
     video_height: int = 1920,
     font_size: int = 68,
-    margin_v: int = 340,
+    margin_v: int = DEFAULT_MARGIN_V,
 ) -> str:
     """Build ASS subtitle content with \\kf karaoke fill tags.
 
@@ -454,11 +449,11 @@ def run_transcribe_srt(
     transcription_cache: str = "transcription_cache.json",
     language: str | None = None,
 ) -> None:
-    """Transcribe video with Whisper and write phrase-level SRT for manual editing."""
+    """Transcribe video (or audio file) with Whisper and write phrase-level SRT."""
     from lib.audio.dubbing import transcribe_video
 
     logger.info("Transcribing %s...", video_path)
-    segments, duration = transcribe_video(video_path, transcription_cache)
+    segments, duration = transcribe_video(video_path, transcription_cache, language=language)
     logger.info("  %d segments, %.1fs total", len(segments), duration)
 
     segments = _split_on_sentences(segments)
@@ -489,7 +484,7 @@ def run_dynamic_subtitles(
     use_whisper: bool = True,
     whisper_language: str | None = None,
     font_size: int = 68,
-    margin_v: int = 120,
+    margin_v: int = DEFAULT_MARGIN_V,
     overlay_only: bool = False,
     overlay_fps: int = 30,
 ) -> None:

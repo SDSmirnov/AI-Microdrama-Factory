@@ -1,9 +1,33 @@
 """
 All JSON schemas used across the pipeline, consolidated in one place.
 """
-import os
+from lib.core.prompts import TARGET_LANGUAGE as _LANG
 
-_LANG = os.getenv("TARGET_LANGUAGE", "Russian")
+# Seat ids shared with lib.studio.vehicle_geometry.SEATS (asserted in tests/test_vehicle_geometry.py).
+VEHICLE_POSITIONS = ["driver", "front-passenger", "rear-left", "rear-center", "rear-right",
+                     "third-left", "third-center", "third-right", "cargo", "trunk", "outside", "none"]
+_SCENE_STATE = {
+    "type": "array",
+    "description": "Every character on screen at this moment of the scene: where they are, seat if in a vehicle, wardrobe ref.",
+    "items": {
+        "type": "object",
+        "properties": {
+            "character": {"type": "string", "description": "Base character name, as in the cast."},
+            "place": {"type": "string", "description": "Named landmark id from LOCATION ANCHOR POINTS when one fits, else a short landmark phrase."},
+            "vehicle_position": {"type": "string", "enum": VEHICLE_POSITIONS},
+            "visual_ref": {"type": "string", "description": "Wardrobe ref slug in effect."},
+        },
+        "required": ["character", "place", "vehicle_position", "visual_ref"],
+        "additionalProperties": False,
+    },
+}
+VEHICLE_SHOT_DESCRIPTION = (
+    "Vehicle interiors only, empty elsewhere. Camera mount id: windshield-front | windshield-driver | "
+    "windshield-passenger | front-center-back | rear-center-forward | mirror-back | rear-window | side-<seat> | "
+    "dash-driver | dash-front-passenger | lap-<seat> | pov:<seat>><seat> | ots:<seat>><seat> "
+    "(seat ids as in vehicle_position, e.g. 'ots:rear-left>rear-right'). The render derives lens and "
+    "every occupant's frame side from it."
+)
 
 SCREENPLAY_SCHEMA = {
     "type": "object",
@@ -59,8 +83,15 @@ SCREENPLAY_SCHEMA = {
                                 },
                                 "initial_disposition": {
                                     "type": "string",
-                                    "description": "Spatial baseline for this scene's opening frame. Written in natural language — no anchor IDs required. Lists every character present at scene open: position relative to room landmarks (walls, doors, windows, furniture), facing direction, spatial relation to other characters. Example: 'Jack is on the sofa at the East wall facing the TV on the West wall. Jane is seated beside him on his right (North side). Joe stands near the kitchen doorway, hand on the door handle, about to enter.' The disposition pass resolves this to anchor zone IDs for P1. Leave empty string for transition episodes."
+                                    "description": "Spatial baseline for this scene's opening frame. Written in natural language — no anchor IDs required. Lists every character present at scene open: position relative to room landmarks (walls, doors, windows, furniture), facing direction, spatial relation to other characters. Example: 'Jack is on the sofa against the left wall facing the TV on the right wall. Jane is seated beside him on his right (entrance side). Joe stands near the kitchen doorway, hand on the door handle, about to enter.' The disposition pass resolves this to anchor zone IDs for P1. Leave empty string for transition episodes."
                                 },
+                                "transition_in": {
+                                    "type": "string",
+                                    "enum": ["continuous", "time_skip", "new_location"],
+                                    "description": "How this scene follows the previous one (across episodes too). continuous = the next moment: everyone keeps their seat, place and wardrobe from the previous exit_state. time_skip / new_location = a declared cut; positions may reset."
+                                },
+                                "entry_state": _SCENE_STATE,
+                                "exit_state": _SCENE_STATE,
                                 "background_activity": {
                                     "type": "object",
                                     "description": (
@@ -92,7 +123,7 @@ SCREENPLAY_SCHEMA = {
                                     "additionalProperties": False
                                 },
                             },
-                            "required": ["scene_local_id", "location", "panel_count", "scene_instructions", "background_activity"],
+                            "required": ["scene_local_id", "location", "panel_count", "scene_instructions", "background_activity", "transition_in", "entry_state", "exit_state"],
                             "additionalProperties": False
                         }
                     },
@@ -131,17 +162,13 @@ PANEL_STATE_SCHEMA = {
           },
           "in_frame": { "type": "boolean" },
           "vehicle_position": {
-            "type": ["string", "null"],
+            "type": "string",
+            "enum": VEHICLE_POSITIONS,
             "description": (
-                "Exact seat or position inside/outside a vehicle. "
-                "Required when the scene is set inside or immediately adjacent to a vehicle; null otherwise. "
-                "Use unambiguous seat labels: 'driver seat', 'front passenger seat', "
-                "'rear left seat (behind driver)', 'rear right seat (behind front passenger)', "
-                "'rear center seat', 'cargo area', "
-                "'at the driver door (outside)', 'at the front passenger door (outside)', "
-                "'at the rear left door (outside)', 'at the rear right door (outside)', "
-                "'on the hood', 'on the roof', 'in the trunk'. "
-                "Do NOT use compass directions or vague terms like 'back seat'."
+                "Seat inside a vehicle; left/right are the vehicle's own sides facing the hood "
+                "(the driver sits left in LHD cars). Required for every actor when the scene is inside or "
+                "immediately adjacent to a vehicle; 'none' otherwise. One person per seat. "
+                "Render prompts derive frame-left/right from this seat."
             )
           },
           "visual_ref": {
@@ -154,7 +181,7 @@ PANEL_STATE_SCHEMA = {
             )
           }
         },
-        "required": ["name", "position", "pose", "chest_direction", "motion_action", "in_frame", "gaze_target", "visual_ref"],
+        "required": ["name", "position", "pose", "chest_direction", "motion_action", "in_frame", "gaze_target", "visual_ref", "vehicle_position"],
         "additionalProperties": False
       }
     },
@@ -286,7 +313,7 @@ SCENE_SCHEMA = {
                                     )
                                 },
                                 "emotional_beat": {"type": "string", "description": "Dominant emotion of this panel (single word): tension, revelation, grief, desire, defiance, dread, relief, rage, longing, shock, shame, triumph"},
-                                "hook_type": {"type": "string", "description": "Role of this panel in episode dramaturgy: cold_open | verbal_hook | escalation | emotional_capture | crystallization | confrontation | pivot | twist | tension_peak | cliffhanger | arc_bridge | arc_pickup | backlink | none. cold_open subtypes via slash: cold_open/status_reversal | cold_open/impossible_situation | cold_open/hidden_identity | cold_open/ticking_clock | cold_open/revelation. cliffhanger subtypes: cliffhanger/response_freeze | cliffhanger/revelation | cliffhanger/emotional_rupture | cliffhanger/interrupted_action. Key assignments: verbal_hook = P2 (conflict statement in ≤8 words); emotional_capture = P4 (point of no return); crystallization = P5 (strongest thumbnail candidate, stakes visceral); pivot = P⌈N×0.78⌉ (ECU reaction, no dialogue, voiceover mandatory 4–5 words); tension_peak = last panel of intermediate episodes; cliffhanger = last panel of final episode."},
+                                "hook_type": {"type": "string", "description": "Panel role, one value from the HOOK TYPES of the prompt (subtypes after a slash, e.g. cold_open/revelation); none when the panel has no role."},
                                 "text_safe_composition": {"type": "boolean", "description": "True when key subjects (faces, hands, action) are composed in the middle 65% of frame height, leaving top 15% and bottom 20% clear for subtitle overlays."},
                                 "panel_type": {"type": "string", "description": "Always 'narrative'. Every panel shows characters in action — no faceless atmosphere-only shots."},
                                 "transition_to_next": {"type": "string", "description": "Edit cut technique to the next panel: match_cut (cut on matching shape/motion — visual_end of this panel mirrors visual_start of next), jump_cut (jarring deliberate cut for pace — allows duration 2–3s), smash_cut (sudden silence-to-action or reverse), j_cut (next panel audio begins audibly in the final 1–2s of this panel — note in sound_design), hard_cut (standard clean cut, default)."},
@@ -299,6 +326,7 @@ SCENE_SCHEMA = {
                                 "state": PANEL_STATE_SCHEMA,
                                 "drama_requirements": DRAMA_REQUIREMENTS_SCHEMA,
                                 "camera_position": {"type": "string", "description": "Spatial anchor binding for camera position, based on state and drama_requirements"},
+                                "vehicle_shot": {"type": "string", "description": VEHICLE_SHOT_DESCRIPTION},
                             },
                             "required": ["panel_index", "motion_intent", "visual_start", "visual_end", "motion_prompt", "is_reversed", "motion_prompt_reversed", "lights_and_camera", "dialogue", "voiceover", "voiceover_settings", "emotional_beat", "hook_type", "text_safe_composition", "panel_type", "transition_to_next", "sound_design", "caption", "duration", "references", "location_references", "motion_action"]
                         }
@@ -351,7 +379,7 @@ PASS1_SCHEMA = {
                             "type": "object",
                             "properties": {
                                 "panel_index": {"type": "integer"},
-                                "hook_type": {"type": "string", "description": "Panel role: cold_open/status_reversal|cold_open/impossible_situation|cold_open/hidden_identity|cold_open/ticking_clock|cold_open/revelation|verbal_hook|escalation|emotional_capture|crystallization|confrontation|pivot|twist|tension_peak|cliffhanger/response_freeze|cliffhanger/revelation|cliffhanger/emotional_rupture|cliffhanger/interrupted_action"},
+                                "hook_type": {"type": "string", "description": "Panel role, one value from the HOOK TYPES of the prompt (subtypes after a slash, e.g. cold_open/revelation); none when the panel has no role."},
                                 "duration": {"type": "integer", "description": "Expected seconds. cold_open ≤4, pivot 3–4, default 6."},
                                 "scale": {"type": "string", "enum": ["WS", "MS", "MCU", "CU", "ECU", "Macro"], "description": "Shot scale that best serves this panel's dramatic intent."},
                                 "motion_intent": {"type": "string", "description": "WHY the primary character is acting — their goal, not the action. E.g. 'Pavel deflects blame to avoid accountability'."},
@@ -412,8 +440,25 @@ PASS1B_SCHEMA = {
                         "type": "string",
                         "description": "Camera-agnostic, anchor-grounded disposition prose. Pins every actor to named room landmarks. FORBIDDEN: screen-left/right, frame-left/right, compass directions, invented anchor names."
                     },
+                    "placements": {
+                        "type": "array",
+                        "description": "One per actor in state.actors; code resolves these to coordinates.",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "character": {"type": "string"},
+                                "anchor": {"type": "string", "description": "Object or zone id verbatim from ROOM ANCHOR POINTS; empty when target is set."},
+                                "relation": {"type": "string", "enum": ["at", "on", "in-front-of", "behind", "left-of", "right-of", "beside"]},
+                                "target": {"type": "string", "description": "Another actor's name when placed relative to a person, else empty."},
+                                "distance_m": {"type": "number", "description": "Metres from the anchor/target edge; 0 = default spacing."},
+                                "posture": {"type": "string", "enum": ["standing", "seated", "lying", "kneeling", "crouching"]},
+                            },
+                            "required": ["character", "anchor", "relation", "target", "distance_m", "posture"],
+                            "additionalProperties": False,
+                        },
+                    },
                 },
-                "required": ["panel_index", "camera_position", "camera_x", "camera_y", "camera_z", "location_references", "visual_disposition"],
+                "required": ["panel_index", "camera_position", "camera_x", "camera_y", "camera_z", "location_references", "visual_disposition", "placements"],
                 "additionalProperties": False
             }
         }
@@ -424,7 +469,7 @@ PASS1B_SCHEMA = {
 PASS2_SCHEMA = {
     "type": "object",
     "properties": {
-        "camera_master": {"type": "string", "description": "Dominant lens (mm), angle bias, primary lighting condition shared by ALL panels as baseline. One sentence. Example: '85mm CU bias, eye-level, harsh midday daylight from panoramic windows, deep East-wall shadows.'"},
+        "camera_master": {"type": "string", "description": "Dominant lens (mm), angle bias, primary lighting condition shared by ALL panels as baseline. One sentence. Example: '85mm CU bias, eye-level, harsh midday daylight from panoramic windows, deep shadows on the image-right wall.'"},
         "lighting_master": {"type": "string", "description": "Key light direction/color/quality, fill ratio, visible practicals. All panels inherit this. Inventing a new time-of-day or light source not in visual_continuity_rules is a HARD FAILURE. One sentence."},
         "panels": {
             "type": "array",
@@ -438,10 +483,35 @@ PASS2_SCHEMA = {
                     "references": {"type": "array", "items": {"type": "string"}, "description": "Character/prop reference slugs physically visible in this panel only."},
                     "location_references": {"type": "array", "items": {"type": "string"}, "description": "Location view ref slug(s) matching camera angle. Rooms have 8 views — select by camera_x/camera_y: y≤0.20→View-From-Entrance, y≥0.80→View-To-Entrance, x≤0.20→View-From-Left-Wall, x≥0.80→View-From-Right-Wall, center→View-Center-To-Far or View-Center-To-Entrance; special: View-By-Far-Wall (1m from far wall, silhouette shots), View-By-Entrance (1m from entrance, door fills frame). Use only slugs that appear in ROOM ANCHOR POINTS."},
                     "camera_position": {"type": "string", "description": "Where camera is placed relative to room anchors (textual landmark name)."},
+                    "vehicle_shot": {"type": "string", "description": VEHICLE_SHOT_DESCRIPTION},
                     "camera_x": {"type": "number", "description": "Camera X in room anchor space [0,1]: 0=image-left wall, 1=image-right wall."},
                     "camera_y": {"type": "number", "description": "Camera Y in room anchor space [0,1]: 0=entrance wall, 1=far wall."},
                     "camera_z": {"type": "number", "description": "Camera height Z [0,1]: 0=floor, 1=ceiling. Typical: 0.18=ground, 0.30=waist, 0.55=eye-level standing, 0.80=overhead crane."},
                     "text_safe_composition": {"type": "boolean", "description": "True when key subjects are in middle 65% of frame height."},
+                    "shots": {
+                        "type": "array",
+                        "description": (
+                            "OPTIONAL. Only when this panel contains MORE THAN ONE "
+                            "shot. Today's video models can hold several shots in "
+                            "one generation (Seedance 2.0 multi-shot; Grok reference "
+                            "mode up to 10 s), so a panel may describe a short "
+                            "sequence instead of one shot. Each entry: {scale, "
+                            "duration, description, camera}. The listed durations "
+                            "must sum to the panel duration. Leave EMPTY for a "
+                            "normal single-shot panel - that is the default and "
+                            "the safe choice."
+                        ),
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "scale": {"type": "string", "description": "ECU | CU | MS | MCU | WS"},
+                                "duration": {"type": "number", "description": "Seconds for this shot."},
+                                "description": {"type": "string", "description": "What happens in this shot, in one or two sentences. Must be independently filmable - the model will cut between shots."},
+                                "camera": {"type": "string", "description": "Camera behaviour for this shot only. Empty string for a locked-off shot."},
+                            },
+                            "required": ["scale", "duration", "description"],
+                        },
+                    },
                     "panel_type": {"type": "string", "description": "Always 'narrative'."},
                 },
                 "required": ["panel_index", "visual_start", "visual_end", "lights_and_camera", "references", "location_references", "text_safe_composition", "panel_type", "camera_x", "camera_y", "camera_z"],
@@ -493,8 +563,8 @@ CHARACTER_SCHEMA = {
             "visual_desc": {"type": "string", "description": "verbose detailed description for the reference image generation"},
             "type": {"type": "string", "description": "Character, location, object, interface, room, vehicle, outdoor"},
             "video_visual_desc": {"type": "string", "description": "Concise visual description for scene context injection. Must preserve: physical build, clothing, face, and — for characters — ALL carry items (bag type and placement, holster location, wallet pocket, keys, badge). Omitting carry items causes actors to pull weapons/phones from thin air in generated scenes."},
-            "behavioral_signature": {"type": "string", "description": "How this character behaves under pressure: their default power move, deflection strategy, and involuntary tell. Used by the scene generator for motion_intent and dialogue subtext. Leave empty for location/room/vehicle/object refs. E.g. 'Under pressure: retreats to bureaucratic procedure — cites rules, demands paperwork, buys time through process. Power move: silence and stillness while the other person fills the void. Tell: touches left cuff link when lying.'"},
-            "physical_vocabulary": {"type": "string", "description": "How this character habitually occupies space and moves — their physical signature used by the scene generator for blocking. Leave empty for location/room/vehicle/object refs. E.g. 'Never sits during confrontation — paces or leans against a surface. Invades space deliberately when he wants something, closing distance by 20cm. Hands always visible and deliberately still. Retreating is not in his vocabulary — turns his back instead of stepping away.'"},
+            "behavioral_signature": {"type": "string", "description": "How this character behaves under pressure: their default power move, deflection strategy, and involuntary tells WITH their triggers (a tic is usable acting data only when the trigger is named). End with the mask/crack clause: 'However, when <X> — the visible change' — the crack that shows through the held mask. Observable body behavior only (no inner monologue). Together with physical_vocabulary keep it within 60 words. Used by the scene generator for motion_intent and dialogue subtext, and by the video prompt's ACTING block. Leave empty for location/room/vehicle/object refs. E.g. 'Under pressure: retreats to bureaucratic procedure — cites rules, demands paperwork. Power move: silence and stillness while the other person fills the void. Tell: touches left cuff link whenever numbers are questioned. However, when cornered by rank — the bureaucratic patience cracks into a clipped, faster cadence and he grips the desk edge.'"},
+            "physical_vocabulary": {"type": "string", "description": "How this character habitually occupies space and moves — their physical signature used by the scene generator for blocking and by the video prompt's ACTING block. Include a NAMED GAIT (one recognizable walk with its rhythm/speed — e.g. 'priest-quick shuffle', 'officer's unhurried parade step') and the SOFTENING TARGET (what the sharpness of movement gives way to when they relax — e.g. 'the parade step melts into a flat heel-first walk at home'). Observable body behavior only. Together with behavioral_signature keep it within 60 words. Leave empty for location/room/vehicle/object refs. E.g. 'Never sits during confrontation — paces or leans against a surface, closing distance deliberately by 20cm. Named gait: unhurried parade step, heel strikes audible. Softening target: at home the parade step melts into a flat heel-first walk. Hands always visible and deliberately still.'"},
             "style_reference": {"type": "string", "description": "Name of the existing or new reference, for details consistency. E.g. for view to entrance, use view from entrance."},
             "variations": {
                 "type": "array",
@@ -538,6 +608,15 @@ ROOM_VOCABULARY_SCHEMA = {
                 "type": "object",
                 "properties": {
                     "id": {"type": "string", "description": "kebab-case anchor label, e.g. 'amanda-desk'"},
+                    "kind": {
+                        "type": "string",
+                        "enum": ["object", "zone", "room-wide"],
+                        "description": (
+                            "object: furniture, fixture, opening or prop with a footprint; zone: a standing spot "
+                            "or open floor; room-wide: the room as a whole, its size, light or atmosphere — "
+                            "nothing to place."
+                        ),
+                    },
                     "description": {
                         "type": "string",
                         "description": (
@@ -546,7 +625,7 @@ ROOM_VOCABULARY_SCHEMA = {
                         ),
                     },
                 },
-                "required": ["id", "description"],
+                "required": ["id", "kind", "description"],
             },
         },
     },
@@ -567,6 +646,237 @@ ROOM_DETAIL_SCHEMA = {
     "required": ["enriched_visual_desc"],
 }
 
+_CRITIQUE_ISSUES = {
+    "type": "array",
+    "items": {"type": "string"},
+    "description": (
+        "Every defect found, one per entry, naming the element and the fix. "
+        "Empty when nothing is wrong."
+    ),
+}
+
+ROOM_VOCABULARY_CRITIQUE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "issues": _CRITIQUE_ISSUES,
+        "named_positions": {
+            **ROOM_VOCABULARY_SCHEMA["properties"]["named_positions"],
+            "description": "The corrected vocabulary (unchanged entries copied verbatim).",
+        },
+    },
+    "required": ["issues", "named_positions"],
+}
+
+ROOM_DETAIL_CRITIQUE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "issues": _CRITIQUE_ISSUES,
+        "revised_visual_desc": {
+            "type": "string",
+            "description": "The corrected view description; the draft verbatim when issues is empty.",
+        },
+    },
+    "required": ["issues", "revised_visual_desc"],
+}
+
+BIBLE_FACT_KINDS = ["appearance", "wardrobe", "carried", "fixture", "furniture", "prop",
+                    "layout", "condition", "light"]
+BIBLE_ENTITY_TYPES = ["Character", "Room", "Vehicle", "Outdoor", "Object"]
+
+_BIBLE_ENTITIES = {
+    "type": "array",
+    "items": {
+        "type": "object",
+        "properties": {
+            "ref_name": {"type": "string", "description": "Title-Case-Kebab name; proper names in the text's own script, nominative, the rest English, e.g. 'Detective-Office', 'Иван-Петров', 'Петров-House-Kitchen'."},
+            "names": {"type": "array", "items": {"type": "string"}, "description": "Every name the fragment uses for it, verbatim."},
+            "type": {"type": "string", "enum": BIBLE_ENTITY_TYPES},
+            "role": {"type": "string", "description": "One sentence: who/what it is in the story."},
+            "facts": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "kind": {"type": "string", "enum": BIBLE_FACT_KINDS},
+                        "fact": {"type": "string", "description": "The visual fact in English, with where it is."},
+                        "quote": {"type": "string", "description": "Shortest verbatim span of the fragment the fact rests on."},
+                        "explicit": {"type": "boolean", "description": "true when the quote states it; false when deduced."},
+                    },
+                    "required": ["kind", "fact", "quote", "explicit"],
+                },
+            },
+        },
+        "required": ["ref_name", "names", "type", "role", "facts"],
+    },
+}
+
+BIBLE_CHUNK_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "time": {
+            "type": "object",
+            "properties": {
+                "cues": {"type": "array", "items": {"type": "string"}, "description": "Verbatim time phrases."},
+                "label": {"type": "string", "description": "When this is relative to the story so far."},
+                **{k: {"type": "string"} for k in ("season", "month", "time_of_day", "weather")},
+                "flashback": {"type": "boolean"},
+            },
+            "required": ["cues", "label", "season", "month", "time_of_day", "weather", "flashback"],
+        },
+        "entities": _BIBLE_ENTITIES,
+    },
+    "required": ["time", "entities"],
+}
+
+BIBLE_GLEAN_SCHEMA = {
+    "type": "object",
+    "properties": {"entities": _BIBLE_ENTITIES},
+    "required": ["entities"],
+}
+
+BIBLE_TIMELINE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "periods": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "id": {"type": "string", "description": "T01, T02, ..."},
+                    "order": {"type": "number", "description": "Story-time position; fractional inserts between known ones."},
+                    "label": {"type": "string", "description": "e.g. 'Day 3, evening', 'Week 2, Tuesday', 'Flashback: summer 1975'."},
+                    **{k: {"type": "string"} for k in ("season", "month", "weather")},
+                    "flashback": {"type": "boolean"},
+                },
+                "required": ["id", "order", "label", "season", "month", "weather", "flashback"],
+            },
+        },
+        "chunks": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {"chunk": {"type": "string"}, "period": {"type": "string"}},
+                "required": ["chunk", "period"],
+            },
+        },
+    },
+    "required": ["periods", "chunks"],
+}
+
+BIBLE_RESOLVE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "merges": {
+            "type": "array",
+            "description": "Only groups of two or more keys that denote the same entity.",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "ref_name": {"type": "string", "description": "Canonical Title-Case-Kebab name; proper names in the text's own script, nominative, the rest English."},
+                    "keys": {"type": "array", "items": {"type": "string"}},
+                },
+                "required": ["ref_name", "keys"],
+            },
+        },
+        "names": {
+            "type": "array",
+            "description": "Keys whose name is not a production name yet, with the production name.",
+            "items": {
+                "type": "object",
+                "properties": {"key": {"type": "string"},
+                               "ref_name": {"type": "string", "description": "Title-Case-Kebab; common words in English, proper names as the text writes them."}},
+                "required": ["key", "ref_name"],
+            },
+        },
+    },
+    "required": ["merges", "names"],
+}
+
+_REFS = {"type": "array", "items": {"type": "string"}, "description": "Reference ids (s01e002#003/7) this rests on."}
+
+BIBLE_ENRICH_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "visual_desc": {"type": "string", "description": "Full English base description at first appearance with every permanent feature."},
+        "features": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "id": {"type": "string", "description": "kebab-case, e.g. 'wall-safe'."},
+                    "description": {"type": "string", "description": "What it is, material/colour, and where (wall, side, next to what)."},
+                    "applies_from": {"type": "string", "description": "Period id from which it must be drawn."},
+                    "until": {"type": "string", "description": "Period id from which it is gone; empty when never."},
+                    "source": {"type": "string", "enum": ["stated", "inferred"]},
+                    "reason": {"type": "string", "description": "For inferred: the references it rests on. Else empty."},
+                    "refs": _REFS,
+                },
+                "required": ["id", "description", "applies_from", "until", "source", "reason", "refs"],
+            },
+        },
+        "variants": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "label": {"type": "string", "description": "kebab-case, e.g. 'brown-coat', 'after-fire'."},
+                    "variance": {"type": "string", "description": "What differs from the base description."},
+                    "time_context": {
+                        "type": "object",
+                        "properties": {"from": {"type": "string"}, "to": {"type": "string"}},
+                        "required": ["from", "to"],
+                    },
+                    "context": {"type": "string", "description": "When/where it applies (outdoors, at the ball, after the fight)."},
+                    "description": {"type": "string", "description": "Full standalone English description for an image model."},
+                    "refs": _REFS,
+                },
+                "required": ["label", "variance", "time_context", "context", "description", "refs"],
+            },
+        },
+        "conflicts": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {"description": {"type": "string"}, "refs": _REFS},
+                "required": ["description", "refs"],
+            },
+        },
+    },
+    "required": ["visual_desc", "features", "variants", "conflicts"],
+}
+
+BIBLE_SETUP_BATCH_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "notes": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {"id": {"type": "string", "description": "The note's FRAGMENT id."},
+                               "entities": BIBLE_CHUNK_SCHEMA["properties"]["entities"]},
+                "required": ["id", "entities"],
+            },
+        },
+    },
+    "required": ["notes"],
+}
+
+BIBLE_ENRICH_BATCH_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "entities": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {"key": {"type": "string", "description": "The entity's key from its ENTITY line."},
+                               **BIBLE_ENRICH_SCHEMA["properties"]},
+                "required": ["key", *BIBLE_ENRICH_SCHEMA["required"]],
+            },
+        },
+    },
+    "required": ["entities"],
+}
+
 ENRICHMENT_SCHEMA = {
     "type": "array",
     "items": {
@@ -574,8 +884,8 @@ ENRICHMENT_SCHEMA = {
         "properties": {
             "name": {"type": "string", "description": "Exact name matching an existing reference (letters, digits, hyphens only)."},
             "visual_desc_additions": {"type": "string", "description": "Specific visual details found in the text that are NOT yet in the existing description. Props, materials, colors, spatial arrangement, textures, inscriptions, etc. Empty string if nothing new found."},
-            "behavioral_signature_additions": {"type": "string", "description": "New behavioral evidence found in the scenes — power moves, deflection strategies, tells — that refines or extends the existing behavioral_signature. Characters only; empty string for locations/rooms/vehicles/objects. Empty string if nothing new found."},
-            "physical_vocabulary_additions": {"type": "string", "description": "New evidence of how the character habitually occupies space — posture, movement patterns, signature gestures — not yet captured in physical_vocabulary. Characters only; empty string for locations/rooms/vehicles/objects. Empty string if nothing new found."},
+            "behavioral_signature_additions": {"type": "string", "description": "New behavioral evidence found in the scenes — power moves, deflection strategies, tells WITH their triggers, and any new mask/crack clause ('However, when X — the visible change') — that refines or extends the existing behavioral_signature. Observable body behavior only; keep behavioral_signature + physical_vocabulary within 60 words combined. Characters only; empty string for locations/rooms/vehicles/objects. Empty string if nothing new found."},
+            "physical_vocabulary_additions": {"type": "string", "description": "New evidence of how the character habitually occupies space — posture, movement patterns, signature gestures, a named gait, and the softening target the gait relaxes into — not yet captured in physical_vocabulary. Observable body behavior only; keep behavioral_signature + physical_vocabulary within 60 words combined. Characters only; empty string for locations/rooms/vehicles/objects. Empty string if nothing new found."},
         },
         "required": ["name", "visual_desc_additions", "behavioral_signature_additions", "physical_vocabulary_additions"]
     }
@@ -748,8 +1058,8 @@ UPDATED_REF_SCHEMA = {
     "properties": {
         "visual_desc": {"type": "string", "description": "Highly detailed, comprehensive visual description incorporating all new scene details."},
         "video_visual_desc": {"type": "string", "description": "Concise updated description for scene context injection. Must preserve all carry items (bag, holster, pockets, badge) — these are referenced when characters retrieve objects in panels."},
-        "behavioral_signature": {"type": "string", "description": "Updated behavioral DNA: power move, deflection strategy, involuntary tell. Merge existing with new evidence. Characters only — empty string for locations/rooms/vehicles/objects."},
-        "physical_vocabulary": {"type": "string", "description": "Updated movement and space-occupation signature: posture, movement patterns, signature gestures. Merge existing with new evidence. Characters only — empty string for locations/rooms/vehicles/objects."},
+        "behavioral_signature": {"type": "string", "description": "Updated behavioral DNA: power move, deflection strategy, involuntary tells WITH their triggers, ending with the mask/crack clause ('However, when X — the visible change'). Merge existing with new evidence. Observable body behavior only; keep behavioral_signature + physical_vocabulary within 60 words combined. Characters only — empty string for locations/rooms/vehicles/objects."},
+        "physical_vocabulary": {"type": "string", "description": "Updated movement and space-occupation signature: posture, movement patterns, signature gestures, a NAMED GAIT, and the SOFTENING TARGET the gait relaxes into. Merge existing with new evidence. Observable body behavior only; keep behavioral_signature + physical_vocabulary within 60 words combined. Characters only — empty string for locations/rooms/vehicles/objects."},
     },
     "required": ["visual_desc", "video_visual_desc", "behavioral_signature", "physical_vocabulary"]
 }
@@ -839,8 +1149,8 @@ ANCHOR_SCHEMA = {
                 "8-point view projections: "
                 "View-From-Entrance (y≈0): lateral=X, depth=Y. "
                 "View-To-Entrance (y≈1): x_mirrored=1-x, depth reversed. "
-                "View-From-Left-Wall (x≈0, looking toward x=1 wall): lateral=Y, depth=X. "
-                "View-From-Right-Wall (x≈1, looking toward x=0 wall): lateral=1-Y, depth=1-X. "
+                "View-From-Left-Wall (x≈0, looking toward x=1 wall): lateral=1-Y (entrance side appears image-right), depth=X. "
+                "View-From-Right-Wall (x≈1, looking toward x=0 wall): lateral=Y (entrance side appears image-left), depth=1-X. "
                 "View-Center-To-Far (center, looking toward y=1): same as From-Entrance. "
                 "View-Center-To-Entrance (center, looking toward y=0): same as To-Entrance. "
                 "View-By-Far-Wall (y≈0.85, looking toward y=1): same as From-Entrance; far wall fills frame. "
@@ -852,6 +1162,15 @@ ANCHOR_SCHEMA = {
             "items": {"type": "number"},
             "description": "[width_m, depth_m] in meters — used for physical distance calculations only, not for coordinates",
         },
+        "station": {
+            "type": "array",
+            "items": {"type": "number"},
+            "description": "Outdoor only: [x, y] of the camera station all four outdoor views turn around (normalized).",
+        },
+        "room_height_m": {
+            "type": "number",
+            "description": "Floor-to-ceiling height in meters. Optional; sketch rendering falls back to a height phrase in the visual description, then 3.0 m.",
+        },
         "objects": {
             "type": "array",
             "items": {
@@ -862,10 +1181,14 @@ ANCHOR_SCHEMA = {
                     "x": {"type": "number", "description": "normalized [0,1] center: 0 = image-left wall, 1 = image-right wall"},
                     "y": {"type": "number", "description": "normalized [0,1] center: 0 = entrance wall, 1 = far wall"},
                     "z": {"type": "number", "description": "normalized [0,1] center: 0 = floor, 1 = ceiling"},
+                    "height_m": {"type": "number", "description": "Physical object height in meters. Optional; used by the bare 3D sketch renderer. Omit for flat wall features whose height is already implied by width_x/depth_y."},
                     "width_x": {"type": "number", "description": "Footprint width along X axis as fraction of room width. E.g. table spanning x=0.3–0.7 → width_x=0.4. Use 0 for point features (lamps, photos, door handles)."},
                     "depth_y": {"type": "number", "description": "Footprint depth along Y axis as fraction of room depth. Use 0 for point features."},
                     "facing_degrees_y": {"type": "number", "description": "Horizontal facing yaw 0–360°. 0=toward entrance (y=0), 90=toward image-right (x=1), 180=toward far wall (y=1), 270=toward image-left (x=0). For objects with a natural front face (chairs, sofas, screens, desks). Use -1 for omnidirectional objects (lamps, pillars, rugs)."},
                     "notes": {"type": "string", "description": "Position description using image-left/image-right/entrance-side/far-side terms. No compass directions."},
+                    "hinge_side": {"type": "string", "enum": ["x0", "x1", "y0", "y1", ""], "description": "Doors, hatches, gates only: the end of the door along its wall where the hinges are — for sliding and pocket doors the end the leaf moves to (x0 = toward image-left wall, x1 = toward image-right wall, y0 = toward entrance wall, y1 = toward far wall). Empty for everything else."},
+                    "opens": {"type": "string", "enum": ["inward", "outward", "double-inward", "double-outward", "bifold", "sliding", "pocket", "roll-up", "up-and-over", "revolving", "none", ""], "description": "Doors only, the mechanism: a hinged leaf swinging into the room (inward) or away from it (outward), double leaves, bi-fold, sliding along the wall, sliding into a wall pocket, roll-up or up-and-over (garage), revolving, or none (open doorway, arch, curtain). Empty for everything else."},
+                    "leaf_state": {"type": "string", "enum": ["closed", "ajar", "open", "folded", ""], "description": "Doors only: how the leaf stands in the room's establishing look — closed, ajar, open (hinged: at 90°), or folded back flat against the wall. Empty for no leaf and for everything else."},
                 },
                 "required": ["id", "label", "x", "y", "z", "width_x", "depth_y", "facing_degrees_y"],
             },
@@ -937,45 +1260,118 @@ ANCHOR_SCHEMA = {
 ROOM_VIEW_QA_SCHEMA = {
     "type": "object",
     "properties": {
-        "consistency_score": {
+        "style_score": {
             "type": "integer",
             "description": (
-                "0–10: how well floor material, wall surfaces, furniture pieces, and lighting "
-                "in the derived view match the source view. "
-                "10 = identical materials throughout. 0 = completely different room."
+                "0–10: style consistency — wall/floor/ceiling materials, colors, textures, "
+                "lighting fixtures, color temperature, wear and finish. 10 = identical style. "
+                "0 = different room style."
+            ),
+        },
+        "architecture_score": {
+            "type": "integer",
+            "description": (
+                "0–10: architectural consistency — same walls, doors, windows, structural "
+                "features, furniture identity, count and placement after the required spatial "
+                "re-mapping. 10 = identical architecture. 0 = wrong room or missing/extra "
+                "major structures."
             ),
         },
         "geometry_score": {
             "type": "integer",
             "description": (
-                "0–10: how correctly the perspective and spatial re-mapping match the declared "
-                "camera position. 10 = correct far wall, correct depth, correct lateral mapping. "
-                "0 = wrong wall shown, impossible perspective, or entrance visible when it should be hidden."
+                "0–10: camera geometry — correct background wall, left/right orientation, "
+                "depth, foreshortening and occlusion for this declared camera position. "
+                "0 = wrong wall shown or impossible perspective."
             ),
+        },
+        "overall_score": {
+            "type": "number",
+            "description": (
+                "0–10: the minimum of style_score, architecture_score and geometry_score. "
+                "The pipeline uses this single score to choose the correction action."
+            ),
+        },
+        "action": {
+            "type": "string",
+            "enum": ["accept", "targeted_edit", "regenerate_with_instructions", "regenerate"],
+            "description": (
+                "Correction action. accept when overall_score >= 9; targeted_edit when "
+                "overall_score is 8; regenerate_with_instructions when 5–7; regenerate "
+                "when below 5. The pipeline recomputes this deterministically."
+            ),
+        },
+        "consistency_score": {
+            "type": "integer",
+            "description": "Deprecated alias: min(style_score, architecture_score).",
         },
         "needs_regeneration": {
             "type": "boolean",
-            "description": "True when consistency_score < threshold OR geometry_score < threshold.",
+            "description": "True when action is not 'accept'.",
         },
         "issues": {
             "type": "array",
-            "items": {"type": "string"},
-            "description": (
-                "Specific discrepancies found: one item per issue. "
-                "Examples: 'floor appears light wood instead of dark concrete', "
-                "'entrance door visible in background but camera should face away from it', "
-                "'bookcase missing from far wall'."
-            ),
+            "items": {
+                "type": "object",
+                "properties": {
+                    "category": {
+                        "type": "string",
+                        "enum": ["style", "architecture", "geometry"],
+                    },
+                    "severity": {
+                        "type": "string",
+                        "enum": ["low", "medium", "high"],
+                    },
+                    "object": {"type": "string"},
+                    "expected": {"type": "string"},
+                    "observed": {"type": "string"},
+                },
+                "required": ["category", "severity", "object", "expected", "observed"],
+            },
+            "description": "One entry per distinct discrepancy, categorized for the correction action.",
         },
         "regeneration_prompt": {
             "type": "string",
             "description": (
-                "Concrete fix instructions to append to visual_desc for re-generation. "
-                "Name exact elements to correct. Empty string when needs_regeneration=false."
+                "Concrete text corrections to append to the room description when the action "
+                "is regenerate or regenerate_with_instructions. Name exact elements and "
+                "required positions. Empty for accept/targeted_edit."
+            ),
+        },
+        "edit_instructions": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "op": {
+                        "type": "string",
+                        "enum": ["remove", "add", "move", "rotate", "replace", "recolor", "resize"],
+                    },
+                    "target": {"type": "string"},
+                    "from": {"type": "string"},
+                    "to": {"type": "string"},
+                    "details": {"type": "string"},
+                },
+                "required": ["op", "target", "from", "to", "details"],
+            },
+            "description": (
+                "Targeted image-edit operations for object-level defects (score >= 5): "
+                "remove/add/move/rotate/replace/recolor/resize. Empty for global defects "
+                "and for accept. Use empty strings for unused from/to/details."
+            ),
+        },
+        "edit_prompt": {
+            "type": "string",
+            "description": (
+                "One self-contained instruction for the image editor, built from "
+                "edit_instructions. Empty when edit_instructions is empty."
             ),
         },
     },
-    "required": ["consistency_score", "geometry_score", "needs_regeneration", "issues", "regeneration_prompt"],
+    "required": [
+        "style_score", "architecture_score", "geometry_score", "overall_score",
+        "action", "issues", "regeneration_prompt", "edit_instructions", "edit_prompt",
+    ],
 }
 
 SCENE_REWRITE_SCHEMA = {

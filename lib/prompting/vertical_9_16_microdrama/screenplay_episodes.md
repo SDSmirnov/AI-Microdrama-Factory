@@ -224,7 +224,7 @@ EPISODE ENTRY STATE:  ← episodes 2+; omit for episode 1
 INITIAL SPATIAL DISPOSITION:
   [One line per character present at scene open: Name + position relative to room landmark + facing direction.]
   Use landmark language only (walls, doors, windows, furniture) — NOT screen directions.
-  Example: "Jack is on the sofa at the East wall facing the TV on the West wall. Jane is seated beside him on his right (North side). Joe stands at the kitchen doorway, hand on the door handle, about to enter."
+  Example: "Jack is on the sofa against the left wall facing the TV on the right wall. Jane is seated beside him on his right (entrance side). Joe stands at the kitchen doorway, hand on the door handle, about to enter."
   Episode 1 scene 1: describe cold-open starting positions. All other scenes: carry forward the previous scene's terminal positions unless the location has changed. Omit for transition episodes.
 
 SONIC ARC: [exact map — where silence lives, where sonic hit lands, crescendo moment; tension_peak ends on sharp hit or crescendo; cliffhanger ends on silence + sting; e.g. "P1–P3: low ambient hum. P4: sudden silence. P5: sharp crack on cut. P6–P7: string crescendo. P8: drop to silence. P9: single heartbeat, hard cut."]

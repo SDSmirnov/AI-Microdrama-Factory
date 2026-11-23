@@ -141,6 +141,8 @@ def build_quickplay(episodes_path: Path, output_path: Path,
                 'ref_pairs': ref_pairs,
             })
 
+    if not tasks:
+        raise ValueError(f"No episode scenes in {episodes_path}: quick-play needs animation_episodes.json")
     logger.info("Synthesizing %d scenes → 4 × %ds clips…", len(tasks), target_seconds)
 
     results: dict[tuple[int, int], list[str]] = {}

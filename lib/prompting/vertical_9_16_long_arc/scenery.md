@@ -1,7 +1,7 @@
 ## Reverse Reveal (`is_reversed`)
 
 Some panels need to be animated in reversed order — the audience starts seeing an obscured or empty state and gradually the true subject is revealed.
-Panels will be animated as 6 to 8 second clips by the AI video model, which does NOT support image references.
+Panels will be animated as clips of up to {{VIDEO_MAX_SECONDS}} s by an image-to-video model; only what the first frame shows is guaranteed to stay on-model.
 The only way to show a character or object ENTERING the frame is reverse playback:
 - render the character LEAVING, then play the clip reversed.
 
@@ -48,4 +48,4 @@ Set is_reversed=true for any panel where:
   - lights_and_camera: Camera position, shot scale, lens approximation, lighting setup
   - dialogue: Exact spoken line if this panel carries dialogue (empty string if none)
   - voiceover: Inner monologue — reveals subtext the image cannot show; NEVER narrates the visible
-  - duration: 6 (always — hard cap)
+  - duration: Expected seconds (up to {{VIDEO_MAX_SECONDS}})

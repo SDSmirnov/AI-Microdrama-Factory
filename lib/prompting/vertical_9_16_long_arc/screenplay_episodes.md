@@ -274,7 +274,7 @@ EPISODE ENTRY STATE:  ← arc_mid and arc_close episodes only; omit for arc_open
 INITIAL SPATIAL DISPOSITION:
   [One line per character present at scene open: Name + position relative to room landmark + facing direction.]
   Use landmark language only (walls, doors, windows, furniture) — NOT screen directions.
-  Example: "Anna is seated at the West end of the desk facing East. Viktor stands near the window on the South wall looking toward her. Guard is positioned at the entrance door behind Viktor."
+  Example: "Anna is seated at the left end of the desk facing the right wall. Viktor stands near the window on the far wall looking toward her. Guard is positioned at the entrance door."
   arc_open: describe cold-open starting positions. arc_mid/arc_close: carry forward from arc_bridge exit unless location changed. Omit for transition episodes.
 
 SONIC ARC: [exact map across the full arc unit — where silence lives, where sonic hit lands, crescendo moment; arc_bridge=silence always; e.g. "P1–P3: low ambient hum. P4: sudden silence. P5: sharp crack on cut. P6–P7: string crescendo. P8: drop to silence. P9 (arc_bridge): silence — sonic reset."]

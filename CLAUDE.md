@@ -4,271 +4,254 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-This project converts a Russian novel (serialized as `s01e01.txt`, etc.) into AI-generated cinematic keyframe images suitable for video animation. It supports multiple LLM backends — OpenRouter (default), Google Gemini, Grok, and a local Debug backend — for text generation, and Google Gemini / Grok for image generation and animation.
+The project turns a Russian novel (episode files `s01e01.txt`, …) into cinematic keyframe images and video clips.
 
-## Environment Setup
-
-Required API keys (depending on backend):
-
-```bash
-export OPENROUTER_API_KEY="your_key"   # required for default --llm openrouter
-export IMG_AI_API_KEY="your_key"       # required for --llm gemini, Veo animation, TTS, dubbing
-                                       # (also accepted as GOOGLE_API_KEY)
-export XAI_API_KEY="your_key"          # required for --llm grok / animation grok
-export ELEVEN_API_KEY="your_key"       # required for tts sfx
+```
+book ─split-book─► episodes ─logic─► fixed prose ─bible─► story bible
+     ─casting─► reference cards (characters, rooms, vehicles, places) ─refs / room-views─► reference PNGs
+     ─screenplay─► scenes + panels (animation_metadata.json) ─storyboard / panel-by-panel-with-qa─► panel PNGs
+     ─animation─► clips ─autocut / tts / dub / subtitles─► finished video
 ```
 
-Optional overrides:
+Three model backends:
+
+| Job | Backend | Selected by |
+|-----|---------|-------------|
+| Text | OpenRouter (default), Gemini, `debug` (logs prompts, no API), `manual` (you type the reply) | `--llm` |
+| Images | OpenRouter or Gemini | `--llm` |
+| Video | Veo, Grok (xAI SDK), Grok via OpenRouter | `animation <provider>` |
+
+## Everyday commands
+
 ```bash
-export AI_TEXT_MODEL="gemini-2.5-pro"                  # default
-export AI_IMAGE_MODEL="google/gemini-3-pro-image-preview"  # default
-export AI_GEMINI_MODEL="gemini-2.5-flash"              # default (Gemini-specific tasks)
-export AI_CONCURRENCY="10"                             # text/LLM thread pool workers
-export AI_IMAGE_CONCURRENCY="5"                        # image generation thread pool workers
-export AI_SEED="42"                                    # image generation seed (openrouter)
-export AI_LOG_LEVEL="DEBUG"                            # logging verbosity
-export AI_ASPECT_RATIO="9:16"                          # image aspect ratio override (default: per config/preset)
-export AI_IMAGE_SIZE="2K"                              # image resolution override (default: per config/preset)
-export AI_REF_ASPECT_RATIO="9:16"                      # reference portrait aspect ratio override
-export AI_VIDEO_TIMEOUT="600"                          # Veo polling hard limit in seconds (default: 600)
-export TARGET_LANGUAGE="English"                       # dialogue/voiceover/caption language (default: English)
+make help                                    # every target with a one-line description
+make production NOVEL=s01e01.txt             # recommended end-to-end chain (see "Make chains")
+make symlink-lib DIR=../my-series            # link cli.py, lib, web, Makefile.base into a series dir (its Makefile: `include Makefile.base`)
+python cli.py --llm gemini --style vertical_9_16_long_arc <command> ...   # --llm and --style go BEFORE the command
+python -m pytest                               # test suite (~650 tests, a few minutes)
+make test                                      # same, via the Makefile
+make test-fast                                 # skip the slow Blender render tests (~20 s)
+make lint                                      # ruff check
 ```
+
+Makefile defaults: `LLM=gemini`, `STYLE=vertical_9_16_long_arc`, `PROVIDER=grok`, `NOVEL=s01e23.txt`, `SCENE=all`, `PANEL=all`. The CLI's own `--style` default is `vertical_9_16_microdrama`. Make variables map to CLI flags (`FORCE=1` → `--force`, `ROOMS=a,b` → `--rooms a,b`, `DRY_RUN=1` → `--dry-run`); read the target in the `Makefile` for the exact mapping. `AI_*` make variables are exported to the CLI as environment variables.
+
+## Environment
+
+API keys (only the ones your backends need):
+
+| Variable | Needed for |
+|----------|-----------|
+| `OPENROUTER_API_KEY` | `--llm openrouter` (CLI default) |
+| `IMG_AI_API_KEY` (or `GOOGLE_API_KEY`) | `--llm gemini` (Makefile default), Veo, TTS, dubbing |
+| `XAI_API_KEY` | `animation grok` |
+| `ELEVEN_API_KEY` | `tts sfx` |
+
+Optional overrides, grouped. Defaults in parentheses.
+
+- **Models:** `AI_TEXT_MODEL` (`google/gemini-4-hydrogen`), `AI_IMAGE_MODEL` (`google/gemini-nano-banana-2.1`), `AI_GEMINI_MODEL` (`google/gemini-3.8-flash`), `AI_QA_MODEL` (= text model; judge for `consistency`, `autocut`, `stress-refs`). `room-views` and `panel-by-panel-with-qa` ignore `AI_QA_MODEL`: they always judge with `QA_JUDGE_MODEL` = `google/gemini-3.8-flash` at low reasoning effort (`lib/core/project.py`).
+- **Language:** `TARGET_LANGUAGE` (`Russian`) — language of dialogue, voiceover and captions.
+- **Throughput:** `AI_CONCURRENCY` (10 text workers), `AI_IMAGE_CONCURRENCY` (5 image workers), `AI_LOG_LEVEL` (`INFO`).
+- **Image format:** `AI_ASPECT_RATIO`, `AI_IMAGE_SIZE`, `AI_PANEL_IMAGE_SIZE`, `AI_REF_ASPECT_RATIO` (default to the style's `config.json`; when set they override it); `AI_REF_DIR` (`ref_thriller`).
+- **Seeds:** `AI_SEED` (21), `AI_SEED_STRICT=1` (same seed on every call instead of per-call variation).
+- **OpenRouter:** `AI_IMAGE_BACKEND` (`auto` | `chat` | `image`), `AI_ROUTING_SORT` (`price` | `throughput` | `latency`), `AI_ROUTING_ORDER` (provider list), `AI_ROUTING_MODEL_SUFFIX` (`:floor` | `:nitro`).
+- **Gemini:** `AI_SAFETY_LEVEL=default` restores SDK safety defaults (otherwise permissive).
+- **Story:** `AI_EPISODES_COUNT` (`long_arc` arc length, 2 or 3).
+- **Blocking and 3D sketches:** `AI_BLOCKING` (`sketch` = text block + 3D sketch, `text`, `off`; old name `AI_CAR_BLOCKING` still read), `AI_RENDER3D` (`blender` | `pyvista` | `auto` = pyvista when installed), `AI_DRIVE_SIDE` (`lhd` | `rhd`; a vehicle JSON's `drive_side` wins), `AI_PANEL_ANCHOR_BLOCK=0` (drop the anchor block from panel render and QA prompts).
+- **Audio:** `AI_WHISPER_MODEL` (`medium`), `AI_WHISPER_DEVICE` (`cpu`), `AI_WHISPER_COMPUTE` (`int8`) for `dub` and `dynamic-subtitles`; `dub` uses `AI_TEXT_MODEL`.
+- **Video:** `AI_VIDEO_TIMEOUT` (600 s Veo polling), `AI_VIDEO_MODEL` (`x-ai/grok-imagine-video-1.5`), `AI_VIDEO_ASPECT` (style aspect), `AI_VIDEO_RESOLUTION` (`720p`), `AI_VIDEO_MAX_REFS` (8 refs per clip), `AI_ERA_LOCK` (e.g. `1990s`; adds an era-drift guard line, off by default).
 
 ## Docker
 
-The image bakes in code (`/app`); per-series data is mounted at `/project` at runtime.
+The image contains the code (`/app`); a series directory (`docker-compose.yml`, `.env`, `custom_prompts/`, `ref_thriller/`, `cinematic_render/`, novel `.txt` files) is mounted at `/project`.
 
 ```bash
-# Build once (from repo root)
-docker build -t ai-microdrama-factory:latest .
-
-# Run any CLI command from a series directory
+docker build -t ai-microdrama-factory:latest .                                              # once, from repo root
 docker run --rm -v $(pwd):/project --env-file .env ai-microdrama-factory:latest <command> [args]
-
-# Or via per-series docker-compose.yml
-docker compose run --rm factory <command> [args]
-docker compose up webserver   # static viewer → http://localhost:5005/web/index.html
+docker compose run --rm factory <command> [args]                                            # same, via compose
+docker compose up webserver                                                                 # viewer: http://localhost:5005/web/index.html
 ```
 
-Per-series directory layout: `docker-compose.yml` + `.env` + `custom_prompts/` + `ref_thriller/` + `cinematic_render/` + novel `.txt` files — all mounted as `/project`.
+The image has no Blender; it sets `AI_RENDER3D=auto`, so 3D sketches render through pyvista (headless EGL).
 
-## Manual Workflow (Claude Code Skills)
+## Key concepts
 
-The full pipeline is available as Claude Code slash commands in `.claude/commands/`. Run these in sequence instead of (or alongside) the Python scripts:
+Read these first; the stage descriptions below rely on them.
 
-```bash
-# Step 0 (optional): Split a full novel into filmable episode chunks
-# → writes book-split/s01eNNN.txt
-make split-book BOOK=fullbook.txt STYLE=vertical_9_16_microdrama SEASON=1
+- **Ref (reference card).** A `ref_thriller/<name>.json` description plus its `<name>.png` image. Every character, room, vehicle, outdoor place and recurring object has refs; panels name the refs they show so faces and places stay consistent.
+- **Character variation.** A separate ref `<Name>-<Variant-Label>` (a costume, an injury, a later look) linked to the base by `character_ref`; the base lists them in `variations`. Each panel actor picks one through `visual_ref`.
+- **Views.** A place is several refs, one per camera position, all rendered empty (no people):
+  - Room — 8 views: `View-From-Entrance` (**VFE**), `View-To-Entrance` (**VTE**), `View-From-Left-Wall`, `View-From-Right-Wall`, `View-Center-To-Far`, `View-Center-To-Entrance`, `View-By-Far-Wall`, `View-By-Entrance` (`artist/view_catalog.py`).
+  - Vehicle — `Exterior`, `Interior-From-Entrance`, `Interior-To-Entrance`.
+  - Outdoor place — 4 headings from one camera *station*: `View-Primary` (ahead), `View-Ortho-Primary` (right), `View-Opposite` (behind), `View-Ortho-Opposite` (left).
+- **Room coordinates.** x runs image-left → image-right as seen from the entrance; y runs entrance → far wall. "Left wall" always means the wall on the left in VFE.
+- **Anchors.** `anchor_points` on the VFE (or outdoor `View-Primary`) JSON: positioned, sized doors, windows, furniture and standing zones. They are the room's geometry; sketches, actor positions and panel cameras are computed from them. Their ids come from the room's `room_vocabulary` (kebab-case named positions such as `bar-counter`, written by `detail-rooms`).
+- **Truth chain.** VFE is the base truth for a room, VTE is rendered from VFE, and every other view is derived from VFE + VTE + a 3D sketch. A view may only be used as truth after it passed QA. A new VFE image invalidates VTE and the derived views, and drops VFE anchors that did not come from the floor plan; a new VTE invalidates the derived views. A sketch change never marks VTE stale; a changed plan sketch marks VFE stale. A passed view is skipped only while its PNG hash matches `qa.png_sha256`, so a hand-edited PNG is QA'd again. Outdoor places work the same way with `View-Primary` as the only truth.
+- **3D sketch.** A flat-colour render of the anchors (Blender, or pyvista in Docker) from the view's camera. It fixes camera, perspective and object placement; materials come from the truth images. Where a sketch exists (VFE from the floor plan, derived views, panels) it is image 1 in the render prompt and geometry-only truth in QA; VTE renders from VFE alone.
+- **QA bands.** Room views are scored on style, architecture and geometry; the *minimum* decides: `< 5` full re-render, `5–7` re-render with corrections, `8` targeted image edit, `≥ 9` accept (`critic.decide_room_view_action`). A candidate replaces the live PNG only when it scores better; an API error marks the view `blocked`.
+- **`needs_regenerate`.** A flag on a ref JSON whose PNG is stale; `refs` and `room-views` re-render flagged refs.
+- **Story bible.** `story_bible/story_bible.json`: every entity of the whole book with facts, visual features and look variants tied to story time (periods), plus continuity conflicts between chapters. Refs created from it carry `bible_hash`; a changed bible makes `casting` rewrite those refs. Entity names: the model copies proper names in the text's own script (nominative), never transliterating; code romanizes them (`archivist.latin_name`, same table as `ref_key`), so one name gives one key in every chunk.
+- **Panel.** One shot of a scene. The screenplay picks each scene's panel count from the style's `panel_count_options` (e.g. 4, 6, 9, 10, 12); each panel has a static frame and optional start/end frames for image-to-video.
+- **Blocking.** Who stands where in a panel, computed in code rather than left to prose: car seats (`vehicle_position`) or room positions (anchor + relation, resolved to coordinates). Code projects them through the panel camera into a text block (frame side, depth, facing) and a mannequin sketch. Car blocking applies to panels whose location ref ends in `-Interior-From-Entrance` / `-Interior-To-Entrance`; it reads `body` (`sedan` | `suv` | `suv3` | `minivan`) and `drive_side` from the vehicle JSON, its VEHICLE BLOCKING block replaces the anchor block in render, refinement and QA and overrides the panel text's lens and frame sides, and its sketch goes only to full renders, not image edits.
+- **Shared prompt rules.** A rule that the render, critique and QA prompts must all agree on is one constant used everywhere: `room_geometry.BEHIND_CAMERA` (what each view cannot see), `prompts.DOOR_HANDEDNESS` (door mechanism, hinge side, state; a wrong-handed door is a high-severity QA issue), `prompts.NO_LABEL_TEXT` (anchor ids must never appear as lettering in images), `qa_gate.CRITICAL_TAGGING` (which panel defects the judge tags `[CRITICAL]`; appended to every style's panel-QA prompt). Change the constant, not one prompt.
+- **Ledger.** `ledger.py` tracks each character's place, seat and wardrobe from panel to panel and scene to scene, and flags changes the story does not explain.
 
-# Step 1: Analyze the novel — extracts metadata, recommends a visual style
-/analyze-novel s01e01.txt
+## Pipeline stages
 
-# Step 1b (optional): Generate custom_prompts/ overrides for a chosen style
-# Available styles: vertical_9_16_microdrama | vertical_9_16_long_arc | vertical_9_16_generic
-/customize-style s01e01.txt vertical_9_16_microdrama
-# → writes override files to custom_prompts/ (style, casting, scenery, imagery, setting, config)
-# → these overlay on top of lib/prompting/<style>/ at runtime
+Most stages are a `cli.py` subcommand and a `make` target of the same name. Exceptions: `quick-play` is `make quick-and-dirty-play`; book-mode `logic` is `make logic-book` (`make logic` is single-file only); `master-shot` and `stress-refs` have no make target. The tables give the purpose; the detailed rules (thresholds, retries, cache keys) are in each module's docstring and code, so read the module before changing a stage.
 
-# Step 2: Generate character/location reference descriptions + image gen prompts
-/cast-characters s01e01.txt
+### 1. Book preparation (once per book)
 
-# Step 2b: Enrich room ref descriptions with named furniture, equipment, per-character anchors
-# → updates visual_desc in ref_thriller/<room>-View-*.json; marks needs_regenerate on existing PNGs
-make detail-rooms NOVEL=s01e01.txt
+| Command | Module | What it does | Writes |
+|---------|--------|--------------|--------|
+| `split-book` | `bookbinder` | Cuts a full novel into filmable episodes (sliding window of whole chapters, ~6000 words; the model returns verbatim split anchors). Drops back matter (`Примечания`, `Notes`, …) first. | `book-split/s<SS>eNNN.txt` |
+| `logic` (book mode: `make logic-book`) | `fixer` | Makes the prose filmable: fixes physical, spatial, temporal and causal errors, scales superhero action down to what actors can do, and writes a setup appendix (room sizes, required objects, distances, state before the scene). | file mode: `<novel>_fixed.txt`; book mode: `book-split/<ep>.txt` + `book-split/appendix/<ep>.md` (setup) + `<ep>.claims.md` (review) |
+| `logic --bible` (`make logic-book LOGIC_BIBLE=1`) | `fixer` | Rewrites only the sentences the bible flagged as contradicting earlier chapters. Applied once per conflict set. | same episode files |
+| `bible` | `archivist` | Whole-book story bible (see Key concepts). Multi-pass: extract entities per chunk and re-read for missed ones → build a timeline → merge names → write each entity's look per period. Setup appendices fill gaps the story leaves open but never override the story. | `story_bible/story_bible.{json,md}` |
 
-# Step 2c: Render missing reference portraits (runs Python — requires API key)
-/render-references
+`make book BOOK=fullbook.txt` runs the whole chain: `split-book` into `BOOK_RAW` = `book-split/raw/` (skipped when it already has episodes) → `logic-book` → `bible` → `logic-book LOGIC_BIBLE=1` → `bible`. `logic` and `bible` cache every LLM call by content hash (`book-split/.logic/`, `story_bible/.cache/`), so re-runs only redo what changed; `split-book` has no cache. Failed episodes or entities exit 2.
 
-# Step 2d (optional): Split Room/Vehicle refs into per-view variants (runs Python)
-# → writes ref_thriller/<location>-View-From-Entrance.{json,png} etc.
-make remake-room-refs
+### 2. References
 
-# Step 3: Break the novel into ~30 episodes with screenplay instructions
-/write-screenplay s01e01.txt
-# → writes cinematic_render/animation_episodes.json
+| Command | Module | What it does |
+|---------|--------|--------------|
+| `styles` | `stylist` | Analyzes the novel and writes `custom_prompts/` overrides for the style. Overwrites existing overrides. |
+| `casting` | `bible_casting` / `artist.catalog` | Writes ref JSONs. When the bible has a chapter whose id is the novel's file stem (`s01e001.txt` → `s01e001`), or with `--all`: code decides which refs exist (base look + one variation per variant in the chapter's story time, every view of every place), the model writes each entity's content. Up-to-date refs are skipped; stale ones are rewritten and their derived data dropped (`--no-update` keeps them). Otherwise (no bible, stem not in it, or a bible from an older `archivist.VERSION`) it only logs a warning and falls back to text casting, which names refs differently. |
+| `detail-rooms` | `artist.room_detail` | Names the furniture and positions of each room (`room_vocabulary`; each entry an `object`, a `zone` or `room-wide` — the room itself, its size or light, never placed) and rewrites every view description to use them; one self-critique round per step. Marks PNGs `needs_regenerate`. `--force` redoes rooms already done. |
+| `room-plan` | `room_plan` | Floor plan before any image: the model writes VFE `anchor_points`; code checks them (overlaps, objects through walls, missing named positions, zones standing on furniture, an entrance door, a walkable path to every zone and door, door swings) and sends failures back once. Writes `*.plan.png` (top-down, for humans only). |
+| `room-views` | `room_qa` | The truth chain for rooms and outdoor places: VFE (QA'd against its description) → VTE → anchors and sketches → derived views, each with the QA loop. A passed VFE is locked unless `--force`. A failed truth view (VFE, VTE, outdoor `View-Primary`) leaves the rest of its place unrendered; `--allow-unverified-vfe` / `--allow-unverified-vte` override. Exits 2, stopping make chains, when a truth view fails or fails to render (a failed VTE QA is excused by `--allow-unverified-vte`, a failed VFE / View-Primary by `--allow-unverified-vfe`). A derived view that fails QA or render (`render_failed`) is only reported. |
+| `refs` | `artist.ref_render` | Renders missing or stale ref PNGs. `--no-rooms` leaves rooms and outdoor places to `room-views`; `--types Outdoor,Vehicle` filters. |
 
-# Step 4: Generate panel keyframes for a specific episode
-/generate-keyframes 1
-# → writes cinematic_render/animation_episode_scenes_001.json
+Older or manual tools: `remake-room-refs` (split a single-image place ref into views; adds missing outdoor views), `room-anchors` (anchors for VFE/View-Primary refs without them; `room-views` runs it itself), `room-sketches` (sketches for derived views), `extra-room-refs-qa` (QA loop for derived views only).
 
-# Step 4b (required for multi-scene episodes with recurring characters):
-make consistency --no-dry-run
-# → re-aligns character refs, prevents visual drift between scenes
+### 3. Screenplay
 
-# Step 5 (optional, ad-hoc): Manually refine visual descriptions post-generation
-/refine-scene cinematic_render/animation_episode_scenes_001.json
-# → writes cinematic_render/animation_episode_scenes_001_refined.json
-# NOTE: refinement is no longer a required pipeline step — the 4-pass system in
-# generate-keyframes handles this. Use only for targeted post-hoc corrections.
+| Command | Module | What it does |
+|---------|--------|--------------|
+| `screenplay` | `screenwriter` | Episodes → scenes → panels, written into `cinematic_render/animation_metadata.json` (the single source of truth for later stages). `--resume` skips finished phases. Exits 2 before any call when a room VFE or outdoor View-Primary has no `anchor_points` (`--allow-missing-anchors` / `ALLOW_MISSING_ANCHORS=1` writes those scenes without blocking); `scenes` does the same. |
+| `scenes` | `screenwriter` | The scene part of `screenplay` for chosen episodes; upserts into the metadata. |
+| `reverse-refine` | `screenwriter` | Re-runs only the reversal pass on an episode's raw JSON. |
+| `continuity-check` | `ledger` | Reports unexplained moves, seat swaps, wardrobe changes and unseen entrances. `--strict` exits 1. |
+| `positions` | `positions`, `room_blocking` | Resolves actor positions and panel cameras from anchors; replaces model cameras that contradict their view. `--write` saves them. |
+| `blocking-sketches` (`car-sketches`) | `blocking_sketch` | Blocking text block + cached mannequin sketch per panel (cars and anchored places). `--dry-run` prints blocks; `--export DIR` writes A/B test packs. |
+| `disposition` | `screenwriter` | Writes `visual_disposition` per panel from room anchors; consecutive panels sharing an anchor ref are grouped. |
+| `spatial-rewrite` | `screenwriter` | Fixes `visual_start` / `motion_prompt` that contradict `visual_disposition`. Backs up the metadata first. |
+| `consistency` | `director` | Enriches ref JSONs from how scenes use them (rooms excluded) and aligns panel visuals to the refs. CLI default `--dry-run` writes JSON only (follow with `refs`); **`make consistency` without `DRY_RUN=1` passes `--no-dry-run` and re-renders PNGs.** |
 
-# Step 6 (optional, ad-hoc): Re-run reversal pass on an existing episode JSON
-/reversal-pass cinematic_render/animation_episode_scenes_001_refined.json
-# → updates the file in-place
-# NOTE: reversal pass is now baked into generate-keyframes. Use only for corrections.
+How a scene is written:
 
-# Step 7 (optional): Generate chapter summary for continuity into next episode
-/make-summary s01e01.txt
-# → writes chapter_summary.txt
-```
+1. **Pass 1 — architecture:** panels and their shot requirements (`drama_requirements`).
+2. **Pass 1A — state:** who is in frame, where, wearing which `visual_ref`.
+3. **Pass 1B — placement:** each actor gets an anchor + relation + posture (never coordinates); code resolves them to positions.
+4. **Pass 2 — visual:** the frame description, given the computed blocking so text and render agree on frame sides.
+5. **Pass 3 — motion and audio.**
+6. **Reversal pass:** for panels marked `is_reversed` (a reveal that is filmed backwards: fog clearing, a reflection forming) writes `motion_prompt_reversed` and an explicit start frame `visual_start_explicit`.
 
-Each skill reads `lib/prompting/<style>/` as the primary source, then applies `custom_prompts/` overrides if present. Steps 4–7 repeat per episode. The Python script automates 4-pass generation in parallel; running manually gives full control over individual episodes.
+Continuity is enforced in code between passes: every scene declares `transition_in` (`continuous` | `time_skip` | `new_location`) and its entry and exit state, and Pass 1A sees the previous scene's last panel (except after a `new_location` cut). When the ledger finds an unexplained change, `panel_lint` finds a hard-rule violation, or a placement matches no anchor, the pass is retried once and the better answer kept.
 
-**Note**: Actual image/grid rendering still requires the Python script — Claude cannot generate images directly.
+### 4. Images
 
-**Note**: Steps 5 and 6 (`/refine-scene`, `/reversal-pass`) are optional manual tools — the reversal pass is now baked into `/generate-keyframes` (and the Python `scenes` command). Use them only for ad-hoc post-hoc corrections.
+| Command | What it does |
+|---------|--------------|
+| `storyboard [scene] [panel]` | Renders scene grids or single panels. |
+| `panel-by-panel-with-qa <scene\|all> [panel]` | Renders each panel, QA's it, refines up to `--max-attempts` (3). A refinement never replaces a better earlier attempt. Results in `panels/NNN_PP_static.qa.json`; `--skip-existing` skips passed, unchanged panels and only QA's (no re-render) existing panels that never passed. A judge failure is not refined. Exits non-zero if any panel failed. |
+| `rebuild-storyboard` | Rebuilds grids from `panels/`. |
+| `full-frame --scene N --panel N [--aspect-ratio 16:9]` | Re-renders a panel at a wider aspect ratio. |
+| `extra-panel` | Renders an extra shot not in the screenplay (e.g. a reaction shot). |
 
-## Architecture
+### 5. Video and post-production
 
-### Entry Point
+`animation <veo|grok|grok-openrouter>` (image-to-video per panel), `quick-play` (multi-ref clip plan), `master-shot` (experimental), `stress-refs` (identity stress test), `autocut`, `voiceover`, `tts`, `dub`, `duck`, `srt` (Whisper, split at sentence ends), `dynamic-subtitles` (karaoke subtitles, burned in or as an overlay), `suno-prompt`, `summary`, `imgedit`.
 
-**`cli.py`** — Single CLI with 20+ subcommands covering the full pipeline from text to video.
-Uses `--llm {openrouter|gemini|grok|debug}` to select the backend. The `debug` backend (LogDebugLLM) logs all prompts/responses to disk without calling any API, useful for offline testing.
+## Make chains
 
-### Library Structure (`lib/`)
+Each chain stops at the first failing step (for example `room-views` exiting 2). `bible` runs only when `CHAPTERS` (default `book-split/*.txt`) is non-empty.
 
-```
-lib/
-  core/        # Project config, path constants, prompts loader, JSON schemas, grid utils, puppet engine (camera rig + 3D layout)
-  llm/         # BaseLLM ABC + backends: GeminiLLM, OpenRouterLLM, GrokLLM, LogDebugLLM
-  prompting/   # Style preset directories (each: *.md prompts + config.json + book-shrinker.md)
-    vertical_9_16_microdrama/
-    vertical_9_16_long_arc/
-    vertical_9_16_generic/
-  studio/      # Production pipeline modules:
-    stylist.py      — novel analysis + custom_prompts/ overlay generation
-    screenwriter.py — episode/scene AI passes; 4-pass scene generation (architecture → state → visual → motion_audio); character variation selection via `visual_ref` per panel actor; reversal pass produces `visual_start_explicit`; disposition groups panels by shared anchor ref; puppet engine for 180-rule validation
-    artist.py       — casting, reference rendering, room-view splitting, grid/panel image generation, slicing
-    critic.py       — QA gate: fidelity/consistency scoring per panel
-    director.py     — continuity enforcer: enriches refs, aligns scene prompts
-    editor.py       — panel refinement using original + reference images
-    cutter.py       — autocut: AI-trim animation clips
-    retoucher.py    — image editing via LLM
-    bookbinder.py   — split full novel into filmable episode chunks (sliding-window, anchor-based)
-  commands/    # argparse command registration modules (setup, screenplay, storyboard, animation, audio)
-  animation/   # Veo (Google) and Grok animators
-  audio/       # TTS (Gemini/OpenRouter), SFX (ElevenLabs), dubbing (Whisper→TTS), ducking, dynamic subtitles
-```
+| Target | Steps |
+|--------|-------|
+| `production` (recommended) | `init` → `styles` (only if `custom_prompts/style.md` is missing) → `bible` (if `book-split/*.txt` exist) → `casting` → `detail-rooms` → `room-plan` → `room-views` → `screenplay RESUME=1` → `consistency DRY_RUN=1` → `refs NO_ROOMS=1` → `disposition` → `spatial-rewrite` → `panel-by-panel-with-qa SKIP_EXISTING=1` |
+| `draft-with-sketches` | `bible` → `casting` → `detail-rooms` → `room-plan` → `room-views` → `refs NO_ROOMS=1` → `screenplay` → `disposition` → `spatial-rewrite` → `storyboard` |
+| `draft` (no truth chain) | `bible` → `casting` → `detail-rooms` → `refs` → `room-anchors` → `remake-room-refs` → `screenplay` → `disposition` → `spatial-rewrite` → `storyboard` |
+| `book` | see Book preparation |
 
-### Pipeline Stages (via `cli.py` subcommands)
+Rooms run before `screenplay` because the screenplay reads their anchors.
 
-All commands that load prompts accept the global `--style <preset>` flag (default: `vertical_9_16_microdrama`).
+`cinematic_render/pipeline_state.json` stores the novel's `source_sha256`; `screenplay` with another novel drops all resume progress.
 
-0. **`split-book`** (`bookbinder.split_book`): Splits a full novel into filmable episode chunks using a sliding-window, verbatim-anchor strategy. Reads `lib/prompting/<style>/book-shrinker.md`. Writes `book-split/s<SS>eNNN.txt`.
-0b. **`logic`** (`fixer.fix_novel`): Fixes logic/physics/space continuity bugs in novel text and appends a scene prerequisites table. Accepts `--workers N` for parallel chapter processing. Writes `<novel>_fixed.txt` (or `--output` path).
-1. **`styles`** (`stylist.analyze_novel` + `generate_custom_prompts`): Extracts genre/tone/characters; writes `custom_prompts/` overlay files on top of `lib/prompting/<style>/`
-2. **`casting`** (`artist.auto_cast_characters`): Identifies characters/locations/objects from text; saves reference JSONs to `ref_thriller/`
-2b. **`detail-rooms`** (`artist.detail_room_refs`): Enriches room ref `visual_desc` with named furniture, equipment, and per-character position anchors. Builds a shared `ROOM_VOCABULARY_SCHEMA` (kebab-case anchor labels) then rewrites each view's `visual_desc` via `ROOM_DETAIL_SCHEMA`. Marks `needs_regenerate` on existing PNGs so `refs` re-renders them. Accepts `--force` to re-process rooms already marked `details_applied`. Run after `casting`, before `refs`.
-3. **`refs`** (`artist.render_character_refs`): Generates missing reference portrait PNGs
-3b. **`remake-room-refs`** (`artist.remake_room_refs`): Splits monolithic Room/Vehicle/Outdoor refs into per-view variants — rooms get 6 views: `View-From-Entrance` / `View-To-Entrance` / `View-From-Left-Wall` / `View-From-Right-Wall` / `View-Center-To-Far` / `View-Center-To-Entrance`; vehicles get `Exterior` / `Interior-From-Entrance` / `Interior-To-Entrance`; outdoor locations get `View-Primary` / `View-Opposite`. All room views use `View-From-Entrance` as the style reference for material/lighting consistency. Renders each view as a separate PNG (empty, no people). Run after `refs` when location consistency matters across all camera angles.
-3c. **`room-anchors`** (`artist.run_room_anchors`): Generates `anchor_points` for View-From-Entrance room refs — spatial landmarks (doors, windows, furniture positions) used by the disposition pass.
-4. **`screenplay`** (`screenwriter.analyze_scenes_master`): Episodes → 4-pass scene generation → reversal pass; writes `animation_metadata.json`
-5. **`scenes`** (`screenwriter.run_scenes_pipeline`): Per-episode keyframe generation via **4-pass pipeline** (Pass 1: architecture, Pass 1A: character state/`visual_ref` selection, Pass 2: visual with To-Entrance mirroring, Pass 3: motion+audio) + reversal pass; upserts into `animation_metadata.json`
-5b. **`reverse-refine`** (`screenwriter.process_single_scene`): Reversal pass only on an already-generated raw episode JSON (`animation_episode_scenes_NNN.json`) without re-querying keyframes. Requires `SCENE=N`.
-5c. **`disposition`** (`screenwriter.apply_spatial_disposition_pass`): Spatial disposition pass — uses room `anchor_points` to write `visual_disposition` per panel. Groups consecutive panels by shared anchor ref so mixed-ref scenes (e.g., hallway → kitchen) are processed independently per anchor group. Run after `room-anchors`. Requires `SCENE=N` or `all`.
-5d. **`spatial-rewrite`** (`screenwriter.apply_spatial_rewrite_pass`): Fixes `visual_start`/`motion_prompt` spatial contradictions using `visual_disposition` written by the disposition pass. Rewrites affected panel fields to be consistent with the resolved anchor layout. Run after `disposition`. Accepts `SCENE=N` or `all` (default). Backs up `animation_metadata.json` before writing.
-6. **`consistency`** (`director.run_continuity_pass`): Enriches ref JSONs from scene/location usage; re-aligns `visual_start`/`visual_end`/`lights_and_camera` to approved references. Default `--dry-run` enriches JSONs only — run `make refs` after to regenerate PNGs. Pass `--no-dry-run` to regenerate PNGs in one step.
-7. **`storyboard`** (`artist.render_scene_grids` / `render_panels`): Generates grid images or individual panel PNGs
-7b. **`panel-by-panel-with-qa`** (`artist.render_panel` + `critic.analyze_panel` inline): Renders each panel one at a time, runs QA, and refines in-place up to `--max-attempts` times. Requires `SCENE=N`; optional `PANEL=N` to target one panel.
-7c. **`full-frame`** (`artist.render_full_frame_panel`): Re-renders an existing panel at a wider aspect ratio using the source PNG as reference. Requires `SCENE=N PANEL=N`; optional `AR=16:9` override. Writes `cinematic_render/full_frames/NNN_PP_fullframe_<ar>.png`.
-8. **`rebuild-storyboard`**: Rebuilds grid images from current `panels/`
-9. **`animation`** (`animation.VeoAnimator` / `GrokAnimator`): Image-to-video per panel
-13. **Post-production**: `autocut`, `voiceover`, `tts`, `dub`, `duck`, `srt`, `dynamic-subtitles`
-14. **`extra-panel`** (`artist.render_extra_panel`): Generates a micro-panel not in the original screenplay (e.g., for reaction shots between existing panels); writes to `cinematic_render/extra_panels/`
-15. **`summary`**: AI-generated context summary of current episode data for use in the next chapter prompt; writes to `chapter_summary.txt`
-16. **`suno-prompt`**: Generates a Suno-compatible instrumental music prompt from `animation_episodes.json` metadata; writes `suno_prompt.txt`.
-17. **`srt`**: Transcribes a video with Whisper → SRT subtitle file. Accepts `--transcription-cache` to skip re-transcription. Whisper segments are automatically split at sentence boundaries (`.`, `!`, `?`) using word-level timestamps via `_split_on_sentences()`, preventing overly long multi-sentence entries.
-18. **`dynamic-subtitles`**: Burns karaoke-style dynamic subtitles onto video (phrase-level or word-level). Supports `--no-whisper` (even word split), `--overlay-only` (transparent .mov/.webm instead of burned video), `--word-srt-output`, `--ass-output`, and `--overlay-fps`.
-
-### Prompt System
-
-| Directory | Purpose |
-|-----------|---------|
-| `lib/prompting/<style>/` | Primary style-specific prompts + `config.json` (shipped with codebase) |
-| `custom_prompts/` | User override files; deep-merged on top of `lib/prompting/<style>/` at runtime |
-| `prompts/` | Legacy fallback only (used if `lib/prompting/<style>/` dir is missing) |
-
-`lib/prompting/<style>/` contains: `style.md`, `casting.md`, `scenery.md`, `imagery.md`, `setting.md`, `screenplay.md`, `screenplay_episodes.md`, `qa.md`, `refinement_arc_rule.md`, `config.json`, `book-shrinker.md`, `motion_dynamics.md`, plus the 4-pass scene generation prompts (`pass1_architecture.md`, `pass1a_state.md`, `pass2_visual.md`, `pass3_motion_audio.md`), and episode-type-specific files that vary by style:
-- `microdrama`: `episode_type_pov.md`, `episode_type_transition.md`
-- `generic`: `episode_type_pov.md`, `episode_type_confrontation.md`, `episode_type_transition.md`
-- `long_arc`: `episode_type_arc_open.md`, `episode_type_arc_mid.md`, `episode_type_arc_close.md`, `episode_type_duel.md`, `episode_type_transition.md`
-
-Available built-in styles: `vertical_9_16_microdrama`, `vertical_9_16_long_arc`, `vertical_9_16_generic`
-
-`config.json` controls format type (`single_grid_animation` or `single_grid`), panels per scene, aspect ratio, resolution, animation mode, slicing, dialogue, captions, transitions, and `episodes_count` (series size: 1/2/3/5 for `generic`; arc length for `long_arc`: 2 or 3 episodes per unit).
-
-### Output Structure
+## Code layout
 
 ```
+cli.py           # entry point; commands registered from lib/commands/
+lib/core/        # project.py (config, model defaults), prompts.py (style loader, shared prompt rules), schemas.py,
+                 # state.py (pipeline_state.json), utils.py, puppet.py (camera rig, 180° rule)
+lib/llm/         # backends (OpenRouter, Gemini, debug, manual), routing.py, seeds.py
+lib/prompting/   # style presets (see Prompt system)
+lib/studio/      # pipeline stages (module per stage, named in the tables above), plus:
+  artist/        #   ref and panel rendering (catalog, ref_render, room_views, room_detail, panels, grids, fullframe, …)
+  screenwriter/  #   episodes, passes (1–3), enforce (ledger/lint/positions), scenes, reversal, spatial, pipeline
+  critic.py      #   QA judges for panels, room views and descriptions; qa_gate.py (hard geometry defects), promotion.py (best attempt wins)
+  render3d/      #   3D sketch scenes, furniture/mannequin meshes, Blender and pyvista engines
+  room_geometry.py, room_models.py, blocking.py, vehicle_geometry.py   # shared geometry
+  editor.py, retoucher.py, cutter.py, quickplay.py
+lib/commands/    # argparse registration per area
+lib/animation/   # Veo, Grok, Grok-via-OpenRouter animators; video prompt builder; per-clip ref selection
+lib/audio/       # TTS, SFX, dubbing, ducking, subtitles
+tests/           # unittest suite
+```
+
+## Prompt system
+
+| Location | Role |
+|----------|------|
+| `lib/prompting/<style>/` | The style's prompts (`*.md`) and `config.json`, shipped with the code |
+| `custom_prompts/` | Per-project overrides (written by `styles`), applied last: a `*.md` replaces the whole file, `config.json` is deep-merged per key |
+Styles: `vertical_9_16_microdrama`, `vertical_9_16_long_arc`, `vertical_9_16_generic`, `action_movie_9_16`, `action_movie_16_9_wide`. `config.json` sets format (`single_grid_animation` | `single_grid`), panels per scene, aspect ratio, resolution, dialogue, captions, transitions and `episodes_count`.
+
+A style dir holds the stage prompts (`casting.md`, `screenplay.md`, `pass1_architecture.md`, `pass1a_state.md`, `pass2_visual.md`, `pass3_motion_audio.md`, `qa.md`, `book-shrinker.md`, …) and `episode_type_<type>.md` files: an episode whose `episode_type` has a matching file gets it as its type block.
+
+**Inheritance.** `config.json` may set `"extends": "<parent>"`; configs deep-merge and prompts resolve from the root ancestor down (`prompts.resolve_style_file`). In a child style:
+- `name.md` replaces the inherited file;
+- `name.patch.md` edits it: `<!-- replace: ## Exact Heading -->` replaces that section (empty body deletes it), `<!-- append -->` appends.
+
+A patch heading that matches no section or several, a missing or cyclic parent, or both `name.md` and `name.patch.md` in one dir raise at load time. **Renaming a heading in a parent style breaks its children's patches** — run `tests/test_style_extends.py`.
+
+Action styles also use `format.framing_note` (grid prompt framing) and `animation_prohibitions.md` (replaces the default prohibitions in grok-openrouter video prompts).
+
+## Outputs
+
+```
+book-split/                   # episodes (s01eNNN.txt), raw/ split, appendix/ setup notes, .logic/ cache
+story_bible/                  # story_bible.json, story_bible.md, .cache/
+ref_thriller/                 # <name>.json + <name>.png per ref (views as <place>-View-*.{json,png});
+                              # .room_qa/ staged candidates, .blocking_sketches/ cached sketches, *.plan.png, *.sketch.png
 cinematic_render/
-  animation_episodes.json           # Master screenplay breakdown
-  animation_episode_scenes_NNN.json # Per-episode raw keyframes
-  animation_episode_scenes_NNN_refined.json  # Refined keyframes
-  animation_metadata.json           # Final merged scenes (single source of truth)
-  quality_report.json               # QA results per panel
-  scene_NNN_grid_combined.png       # Full grid image per scene
-  panels/
-    NNN_PP_static.png               # Sliced panel images (static frame)
-    NNN_PP_start.png                # Start frame (for I2V animation)
-    NNN_PP_end.png                  # End frame (for I2V animation)
-  refined/
-    NNN_PP_static_refined.png       # Refined panels (before acceptance)
-  clips/
-    clip_NNN_PPP.mp4                # Generated animation clips
-  cut/
-    clip_NNN_PPP_trimmed.mp4        # Auto-trimmed clips (after autocut)
-  voiceover/
-    scene_NNN_PP_slug.wav           # Generated voiceover audio
-  extra_panels/
-    NNN_INDEX_static.png            # Extra micro-panels
-  full_frames/
-    NNN_PP_fullframe_<ar>.png       # Wide-AR re-renders (after full-frame)
-chapter_summary.txt                 # AI context summary for next chapter
-suno_prompt.txt                     # Suno AI music prompt (after suno-prompt)
-voiceover.sh                        # Executable voiceover generation script
-ref_thriller/
-  character-name.png   # Reference portrait
-  character-name.json  # Character visual metadata (includes anchor_points after room-anchors)
-  location-View-From-Entrance.png   # 6-point room views (after remake-room-refs)
-  location-View-From-Entrance.json
-  location-View-To-Entrance.png
-  location-View-To-Entrance.json
-  location-View-From-Left-Wall.png        # Camera on image-left wall (x=0), looking toward image-right wall
-  location-View-From-Left-Wall.json
-  location-View-From-Right-Wall.png       # Camera on image-right wall (x=1), looking toward image-left wall
-  location-View-From-Right-Wall.json
-  location-View-Center-To-Far.png    # Center camera, looking toward far wall
-  location-View-Center-To-Far.json
-  location-View-Center-To-Entrance.png  # Center camera, looking toward entrance
-  location-View-Center-To-Entrance.json
-  vehicle-Exterior.png              # Vehicle ref variants
-  vehicle-Interior-From-Entrance.png
-  vehicle-Interior-To-Entrance.png
-  outdoor-location-View-Primary.png   # Outdoor ref variants (facing primary direction)
-  outdoor-location-View-Primary.json
-  outdoor-location-View-Opposite.png  # Outdoor ref variants (180° turn, left/right swapped)
-  outdoor-location-View-Opposite.json
+  animation_episodes.json             # episode breakdown
+  animation_episode_scenes_NNN.json   # raw keyframes per episode (+ _refined.json)
+  animation_metadata.json             # merged scenes — single source of truth
+  blocking_sketches.json
+  scene_NNN_grid_combined.png
+  panels/NNN_PP_{static,start,end}.png, NNN_PP_static.qa.json
+  refined/, clips/, cut/, voiceover/, extra_panels/, full_frames/
+chapter_summary.txt, suno_prompt.txt, voiceover.sh
 ```
 
-### Rate Limiting
+## Schemas
 
-Built-in token-bucket rate limiters: 25 RPM for refinement calls, 20 RPM for image generation. Automatic retry with exponential backoff on 500/503 errors (max 3 retries).
+Structured-output schemas live in `lib/core/schemas.py`. The ones you meet most:
 
-### JSON Schemas
+- `SCREENPLAY_SCHEMA` — episodes and their scenes, including the scene contract (`transition_in`, `entry_state`, `exit_state`) and required `background_activity` (`density` must be `none` for private places, non-`none` for public ones).
+- `SCENE_SCHEMA` — scene keyframes: camera and lighting masters, per-character trajectories, panel fields (motion, audio, voiceover, transitions, `state`, `drama_requirements`).
+- `PANEL_STATE_SCHEMA` — who is where in a panel: actors (pose, gaze, `in_frame`, `visual_ref`, `vehicle_position` — `none` outside vehicles), props, anchors (Pass 1A → Pass 2).
+- `DRAMA_REQUIREMENTS_SCHEMA` — shot scale, angle, composition, focus (Pass 1 → later passes).
+- `CHARACTER_SCHEMA` — ref descriptions, including `variations`, `character_ref`, `context`.
+- `ROOM_VOCABULARY_SCHEMA`, `ROOM_DETAIL_SCHEMA` — `detail-rooms` outputs.
+- `REVERSAL_SCHEMA`, `SCENE_REWRITE_SCHEMA` — reversal pass and continuity enforcer.
 
-Structured output schemas in `lib/core/schemas.py` enforce the AI response format:
-- `SCREENPLAY_SCHEMA` — episode-level breakdown (`episode_type`, `chapter_id`, `pov_character` for pov episodes, `visual_continuity_rules`); each episode contains `scenes[]` with per-scene fields: `scene_local_id`, `location`, `panel_count`, `scene_instructions`, `initial_disposition`, and **required** `background_activity` (`crowd_type`, `density` enum: none/sparse/moderate/busy/crowded, `movement`, `focal_plane`) — LLM must always set `density='none'` for private/empty locations (apartment, interrogation room, abandoned warehouse) and a non-none density for public/semi-public (café, bank, street); Pass 2 renders background figures in MS/WS panels when density≠none; Pass 3 adds ambient motion layer
-- `SCENE_SCHEMA` — scene-level keyframes: `camera_master`/`lighting_master` per scene, `scene_trajectories` (per-character goal/obstacle/tactic/arc), full panel fields (`motion_intent`, `motion_action`, motion, reversal, sound, `voiceover_settings`, `voiceover_timing`, transitions, `state`, `drama_requirements`)
-- `PANEL_STATE_SCHEMA` — per-panel spatial snapshot: actors (position, pose, `chest_direction`, `gaze_target`, `motion_action`, `in_frame`, `visual_ref`), props, `complete_disposition`, `anchor_refs`, environment. Produced by Pass 1A; consumed by Pass 2.
-- `DRAMA_REQUIREMENTS_SCHEMA` — cinematic shot instructions per panel: `shot_scale`, `camera_angle`, `composition_style`, `focus_priority`, `movement_intent`, `narrative_vibe`. Produced by **Pass 1**; consumed by Pass 1A (`in_frame` derivation), Pass 1B (camera axis / view selection via `focus_priority.primary_target`), and Pass 2 (projection).
-- `CHARACTER_SCHEMA` — reference descriptions; characters support `variations` (list of variation ref slugs, e.g. `['Alisa-Gown']`), `character_ref` (parent ref name for variation entries), `context` (scene trigger for when variation applies)
-- `REVERSAL_SCHEMA` — produced by the reversal pass: `panel_index`, `motion_prompt_reversed`, and `visual_start_explicit` (explicit frame description for the reversed start pose)
-- `SCENE_REWRITE_SCHEMA` — used by the continuity enforcer to align `visual_start`, `visual_end`, and `lights_and_camera` to approved refs
-- `ROOM_VOCABULARY_SCHEMA` — produced by `detail-rooms` pass 1: `named_positions[]` with kebab-case `id` and view-neutral `description` (furniture type, exact room location, orientation, items); shared across all views of a room
-- `ROOM_DETAIL_SCHEMA` — produced by `detail-rooms` pass 2: `enriched_visual_desc` string rewriting a single camera view's `visual_desc` to incorporate all named positions from `ROOM_VOCABULARY_SCHEMA`
-- `bookbinder._WINDOW_SCHEMA` — split-point anchors returned by `split-book` LLM call
+## API errors
 
-### Code Style Guidelines
+Token-bucket rate limits: OpenRouter 20 RPM text, 10 RPM images, 5 RPM video; Gemini 30 RPM. 429/500/502/503 and timeouts retry with exponential backoff (3 attempts in total). 401, 402 and spend-limit/disabled-key 403s stop the command (`SystemExit`); other 403s (e.g. a blocked request) fail only that call.
+
+## Code Style Guidelines
 
 Code must be idiomatic, concise, precise and terse, self-documenting.
 

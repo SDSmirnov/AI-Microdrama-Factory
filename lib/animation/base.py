@@ -19,6 +19,24 @@ ANIMATION_PROHIBITIONS = (
 )
 
 
+def clip_path_for_panel(start_path: Path, out_dir: Path) -> Path:
+    """Return the canonical clip path for a panel image.
+
+    Panel images are named ``{scene:03d}_{panel:02d}_{frame}.png``; clips
+    must be named ``clip_{scene:02d}_{panel:03d}.mp4`` so ``studio.cutter``
+    can find them. Non-standard stems fall back to the legacy stem-derived
+    id.
+    """
+    parts = start_path.stem.split("_")
+    if len(parts) >= 2:
+        try:
+            return out_dir / f"clip_{int(parts[0]):02d}_{int(parts[1]):03d}.mp4"
+        except ValueError:
+            pass
+    legacy = start_path.stem.replace("_start", "").replace("_static", "")
+    return out_dir / f"clip_{legacy}.mp4"
+
+
 class BaseAnimator(ABC):
     """Abstract base for video animation backends."""
 

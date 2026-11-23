@@ -5,11 +5,12 @@ Detects speech segments in a dubbed MP3, then lowers the original MP4
 audio wherever the dub plays.
 """
 
-import sys
-from pathlib import Path
+import logging
 
 from pydub import AudioSegment
 from pydub.effects import normalize
+
+logger = logging.getLogger(__name__)
 
 
 def detect_speech_segments(
@@ -97,34 +98,31 @@ def run_ducking(
       4. Duck original audio
       5. Export result
     """
-    print(f"Extracting audio from video: {video_path}")
+    logger.info(f"Extracting audio from video: {video_path}")
     try:
         original = AudioSegment.from_file(video_path, format="mp4")
     except Exception as e:
-        print(f"Error reading video: {e}")
-        sys.exit(1)
+        raise RuntimeError(f"Cannot read video {video_path}: {e}") from e
 
-    print(f"Loading dubbed audio: {dubbed_path}")
+    logger.info(f"Loading dubbed audio: {dubbed_path}")
     try:
         dubbed = AudioSegment.from_mp3(dubbed_path)
     except Exception as e:
-        print(f"Error reading dubbed audio: {e}")
-        sys.exit(1)
+        raise RuntimeError(f"Cannot read dubbed audio {dubbed_path}: {e}") from e
 
     diff_ms = abs(len(original) - len(dubbed))
     if diff_ms > 1000:
-        print(f"Warning: {diff_ms / 1000:.2f}s duration mismatch — files may be out of sync")
+        logger.warning(f"{diff_ms / 1000:.2f}s duration mismatch — files may be out of sync")
 
     speech = detect_speech_segments(dubbed, threshold_db=threshold_db, min_silence_ms=min_silence_ms)
     if not speech:
-        print("No speech detected. Try a lower --threshold value.")
-        sys.exit(1)
+        raise RuntimeError("No speech detected. Try a lower --threshold value.")
 
-    print(f"Found {len(speech)} speech segments")
+    logger.info(f"Found {len(speech)} speech segments")
     ducked = apply_ducking(original, speech, duck_db=duck_db, fade_ms=fade_ms, padding_ms=padding_ms)
 
     if do_normalize:
         ducked = normalize(ducked)
 
     ducked.export(output_path, format="mp3", bitrate="192k")
-    print(f"Done: {output_path}  ({len(ducked) / 1000:.2f}s)")
+    logger.info(f"Done: {output_path}  ({len(ducked) / 1000:.2f}s)")

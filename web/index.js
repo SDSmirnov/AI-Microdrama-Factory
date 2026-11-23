@@ -378,7 +378,7 @@ function renderRefGrid(container, refs) {
   }
   refs.forEach(ref => {
     // Use actual filename from disk (tracks JSON name, avoids capitalisation mismatch)
-    const imgSrc  = `${PATHS.refDir}/${ref._filename || ref.name.toLowerCase().replace(/\s+/g, '-')}.png${CACHE_BUST}`;
+    const imgSrc  = `${PATHS.refDir}/${ref._filename || safeName(ref.name)}.png${CACHE_BUST}`;
     const typeCls = `type-${(ref.type || 'unknown').toLowerCase()}`;
     const card = el('div', 'ref-card');
     card.innerHTML = `
@@ -538,10 +538,15 @@ function renderScenes(container, data, sourceUrl) {
   });
 }
 
+// Mirror of lib.core.utils.safe_name: ref files are named by it.
+function safeName(name) {
+  return name.replaceAll('/', '-').replaceAll("'", ' ').replaceAll('"', '').replaceAll(' ', '_').toLowerCase();
+}
+
 // Map a reference name to its image URL, using castingAll if already loaded
 function refUrl(name) {
   const found = castingAll.find(r => r.name === name);
-  const filename = found?._filename ?? name.toLowerCase().replace(/\s+/g, '-');
+  const filename = found?._filename ?? safeName(name);
   return `${PATHS.refDir}/${filename}.png${CACHE_BUST}`;
 }
 

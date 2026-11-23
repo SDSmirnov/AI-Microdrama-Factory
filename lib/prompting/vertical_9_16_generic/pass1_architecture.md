@@ -43,6 +43,38 @@ For every named character present in this scene declare:
 
 ---
 
+## CLIP LENGTH — the ceiling and how to spend it
+
+The video model accepts clips of up to **{{VIDEO_MAX_SECONDS}} s** on our
+transport. A panel longer than that is rejected at request time — the
+still is rendered and QA'd, then the clip request fails. Never exceed
+{{VIDEO_MAX_SECONDS}} s.
+
+The durations above are DRAMATURGICAL choices: a cold open is short
+because a cold open is short. Where a hook type allows a range, take the
+long end when the beat needs it — a 9 s panel holds nine seconds of
+physical action, whereas a 9 s panel written as one 4 s beat padded to
+nine seconds is a frozen frame the viewer swipes away from.
+
+**Spend the extra seconds on MORE BEATS INSIDE THE SHOT**, not on a
+longer shot. Every second must carry a change (see the screenplay's
+CONSTANT CHANGE LAW). A 9 s panel is three beats of 3 s, not one beat
+stretched over nine.
+
+## MULTI-SHOT PANELS
+
+The model can hold SEVERAL SHOTS in one clip, so one panel may cover a
+short SEQUENCE of setups instead of one. Pass 2 decides whether a panel
+is multi-shot and breaks it down; you set the panel's TOTAL `duration`
+and its OPENING `scale`.
+
+When a panel covers more than one setup:
+  - the `duration` is the TOTAL for all of them;
+  - the `scale` is the OPENING shot's scale;
+  - the extra seconds carry MORE SETUPS OR MORE BEATS, never a longer
+    hold on the first setup - a single setup stretched over nine seconds
+    is a frozen frame the viewer swipes away from.
+
 ## PANEL STRUCTURE — SOURCE-FAITHFUL CHRONOLOGICAL FLOW
 
 Panels follow the source text in strict chronological order. No dramatic positions are mandated — the story dictates what each panel shows.

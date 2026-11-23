@@ -104,6 +104,7 @@ def cmd_srt(args):
         video_path=args.video,
         output_path=args.output,
         transcription_cache=args.transcription_cache,
+        language=args.language,
     )
     logger.info(f"\n✅ SRT saved: {args.output}")
 
@@ -128,17 +129,21 @@ def cmd_dynamic_subtitles(args):
 
 
 def cmd_duck(args):
-    run_ducking(
-        video_path=args.video,
-        dubbed_path=args.dubbed,
-        output_path=args.output,
-        duck_db=args.duck_db,
-        threshold_db=args.threshold,
-        min_silence_ms=args.min_silence,
-        fade_ms=args.fade,
-        padding_ms=args.padding,
-        do_normalize=args.normalize,
-    )
+    try:
+        run_ducking(
+            video_path=args.video,
+            dubbed_path=args.dubbed,
+            output_path=args.output,
+            duck_db=args.duck_db,
+            threshold_db=args.threshold,
+            min_silence_ms=args.min_silence,
+            fade_ms=args.fade,
+            padding_ms=args.padding,
+            do_normalize=args.normalize,
+        )
+    except RuntimeError as e:
+        logger.error(f"❌ {e}")
+        sys.exit(1)
     logger.info(f"\n✅ Ducking done: {args.output}")
 
 
@@ -169,11 +174,13 @@ def register(sub):
                    help='Path for the generated shell script (default: voiceover.sh)')
     p.set_defaults(func=cmd_voiceover)
 
-    p = sub.add_parser('srt', help='Transcribe video with Whisper → SRT file for manual editing')
-    p.add_argument('video', help='Input video (MP4)')
+    p = sub.add_parser('srt', help='Transcribe video/audio with Whisper → SRT file for manual editing')
+    p.add_argument('video', help='Input video (MP4) or audio file (WAV/MP3)')
     p.add_argument('output', help='Output SRT file')
     p.add_argument('--transcription-cache', default='transcription_cache.json',
                    help='Whisper transcription cache file')
+    p.add_argument('--language', default=None,
+                   help='Audio language for Whisper, e.g. "en", "ru" (auto-detect if omitted)')
     p.set_defaults(func=cmd_srt)
 
     p = sub.add_parser('dynamic-subtitles', help='Burn karaoke-style dynamic subtitles onto video')

@@ -144,39 +144,6 @@ def resolve_depth_order(
     ]
 
 
-def is_occluded_by(
-    camera: CameraRig,
-    subject: CharacterPose,
-    obj_x: float,
-    obj_y: float,
-    obj_height: float,
-) -> bool:
-    """Return True if obj lies between camera and subject on the camera-to-subject ray.
-
-    Projects obj onto the camera→subject ray via dot product. The object is considered
-    occluding when:
-      - Projection parameter t ∈ (0, 1)  (object is between camera and subject)
-      - Perpendicular distance < 0.5 m   (object is on the ray, not beside it)
-      - obj_height > subject.z           (object is tall enough to block view)
-    """
-    rx = subject.x - camera.x
-    ry = subject.y - camera.y
-    rlen_sq = rx * rx + ry * ry
-    if rlen_sq < 1e-9:
-        return False
-    ox = obj_x - camera.x
-    oy = obj_y - camera.y
-    t = (ox * rx + oy * ry) / rlen_sq
-    if not (0.0 < t < 1.0):
-        return False
-    # Perpendicular distance from obj to camera→subject line
-    # |cross product| / |ray| = |ox*ry - oy*rx| / sqrt(rlen_sq)
-    perp = abs(ox * ry - oy * rx) / math.sqrt(rlen_sq)
-    if perp > 0.5:  # 0.5 m = half typical furniture width
-        return False
-    return obj_height > subject.z
-
-
 def validate_180_rule(frames: list[PuppetFrame]) -> list[dict]:
     """Detect camera axis flips between consecutive panels.
 
@@ -350,9 +317,9 @@ def compile_visual_disposition(frame: PuppetFrame, anchor_points: dict) -> str:
     depth_items: list[tuple[str, float, float]] = [
         (c.name, c.x, c.y) for c in visible
     ] + [
-        (obj.get('label') or obj.get('id', ''), obj.get('x', 0.0), obj.get('y', 0.0))
+        (obj.get('id') or obj.get('label', ''), obj.get('x', 0.0), obj.get('y', 0.0))
         for obj in objects_data
-        if obj.get('label') or obj.get('id')
+        if obj.get('id') or obj.get('label')
     ]
     if depth_items:
         ordered = resolve_depth_order(cam, depth_items)
@@ -412,13 +379,21 @@ def build_scene_frames(panels: list[dict], anchor_points: dict) -> list[PuppetFr
         idx = panel.get('panel_index', 0)
         view_type = _infer_view_type(panel)
         cam = camera_from_view_type(view_type, anchor_points)
+        if all(isinstance(panel.get(k), (int, float)) for k in ('camera_x', 'camera_y', 'camera_look_x', 'camera_look_y')):
+            cam = CameraRig(panel['camera_x'], panel['camera_y'], panel.get('camera_z') or 0.5,
+                            panel['camera_look_x'], panel['camera_look_y'], panel.get('camera_look_z') or 0.5)
         pov_char = detect_pov_character(
             panel.get('lights_and_camera', ''),
             panel.get('visual_start', ''),
         )
         disp_text = panel.get('visual_disposition', '')
-        characters: dict[str, CharacterPose] = {}
-        for cname in panel.get('references', []):
+        # resolved positions (room_blocking.annotate) win; the text parsing is the legacy fallback
+        characters: dict[str, CharacterPose] = {
+            a['name']: CharacterPose(name=a['name'], x=a['pos']['x'], y=a['pos']['y'],
+                                     facing_deg=a['pos']['facing_deg'], pose=a['pos']['posture'])
+            for a in panel.get('state', {}).get('actors', []) if a.get('pos')
+        }
+        for cname in [] if characters else panel.get('references', []):
             if pov_char and cname.lower() == pov_char.lower():
                 characters[cname] = CharacterPose(
                     name=cname, x=cam.x, y=cam.y, visible=False,

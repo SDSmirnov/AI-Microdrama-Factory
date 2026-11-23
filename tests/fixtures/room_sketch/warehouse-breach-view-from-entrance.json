@@ -1,0 +1,257 @@
+{
+  "name": "Warehouse-Breach-View-From-Entrance",
+  "type": "Room",
+  "visual_desc": "ROOM SIZE: wrecked medium warehouse bay fragment ~10×8 m usable, partial roof, 4 m remaining walls. NORTH WALL (entrance/breach): large irregular wall breach open to street light, jagged brick, sand and rubble threshold — primary entry for troops. SOUTH WALL (opposite): collapsed shelving, toppled cardboard and plastic crates, gray dust, far intact loading door jammed. EAST WALL (right when entering): cracked concrete wall, old safety posters peeled, steel column bent. WEST WALL (left when entering): partial interior partition, fire-black tongue marks, empty pallet stack. CENTER: clear dusty floor patch for two kneeling firers, debris ring. CEILING/FLOOR: broken skylight shafts of pale dawn, water-stained concrete floor. SHOW EMPTY WITHOUT PEOPLE. Photoreal destroyed logistics interior. Wrecked warehouse bay used as fire position; irregular wall breach/prolom with broken brick; interior cover for two men; direct 200 m line of sight from breach cover to crab approach path on the street; early-dawn to morning light progression; Lin ends on haunches at the breach with unfired rifle.",
+  "anchor_points": {
+    "axes": "X=[0,1] image-left-to-right wall. Y=[0,1] entrance-to-far-wall. Z=[0,1] floor-to-ceiling. View-To-Entrance: x_mirrored = 1 - x (left↔right swap), Y depth reversed.",
+    "room_m": [
+      10,
+      8
+    ],
+    "objects": [
+      {
+        "id": "wall-breach",
+        "label": "Irregular wall breach / prolom (entrance)",
+        "x": 0.5,
+        "y": 0.02,
+        "z": 0.42,
+        "width_x": 0.48,
+        "depth_y": 0.06,
+        "facing_degrees_y": 180,
+        "notes": "Centered in entrance wall (y≈0.02). Large jagged brick opening to street light. Faces into room toward far wall. Primary troop entry."
+      },
+      {
+        "id": "rubble-threshold",
+        "label": "Sand and rubble threshold",
+        "x": 0.5,
+        "y": 0.1,
+        "z": 0.03,
+        "width_x": 0.55,
+        "depth_y": 0.14,
+        "facing_degrees_y": -1,
+        "notes": "Just inside entrance breach, entrance-side center (y≈0.1). Sand, broken brick, debris underfoot across breach mouth."
+      },
+      {
+        "id": "jagged-brick-edges",
+        "label": "Jagged brick breach edges",
+        "x": 0.5,
+        "y": 0.04,
+        "z": 0.5,
+        "width_x": 0.52,
+        "depth_y": 0.04,
+        "facing_degrees_y": -1,
+        "notes": "Framing the breach opening on entrance wall; broken brick lips left and right of opening center."
+      },
+      {
+        "id": "clear-floor-patch",
+        "label": "Clear dusty floor patch (firing positions)",
+        "x": 0.5,
+        "y": 0.32,
+        "z": 0.01,
+        "width_x": 0.36,
+        "depth_y": 0.22,
+        "facing_degrees_y": -1,
+        "notes": "Center entrance-side floor (x≈0.5, y≈0.32). Open dusty concrete for two kneeling firers; ringed by debris."
+      },
+      {
+        "id": "debris-ring",
+        "label": "Debris ring around clear patch",
+        "x": 0.5,
+        "y": 0.36,
+        "z": 0.06,
+        "width_x": 0.58,
+        "depth_y": 0.38,
+        "facing_degrees_y": -1,
+        "notes": "Encircles clear floor patch mid entrance-side. Scattered crate shards, brick, dust mounds."
+      },
+      {
+        "id": "interior-partition-left",
+        "label": "Partial interior partition",
+        "x": 0.1,
+        "y": 0.42,
+        "z": 0.38,
+        "width_x": 0.14,
+        "depth_y": 0.32,
+        "facing_degrees_y": 90,
+        "notes": "Against image-left wall (x≈0.1), mid-depth (y≈0.42). Partial wall segment with fire-black marks. Faces image-right toward center."
+      },
+      {
+        "id": "fire-black-marks-left",
+        "label": "Fire-black tongue marks",
+        "x": 0.03,
+        "y": 0.38,
+        "z": 0.52,
+        "width_x": 0.02,
+        "depth_y": 0.22,
+        "facing_degrees_y": 90,
+        "notes": "On image-left wall surface (x≈0.03), mid entrance-to-mid depth. Scorch tongues on partition/wall."
+      },
+      {
+        "id": "empty-pallet-stack-left",
+        "label": "Empty pallet stack",
+        "x": 0.14,
+        "y": 0.62,
+        "z": 0.18,
+        "width_x": 0.16,
+        "depth_y": 0.14,
+        "facing_degrees_y": -1,
+        "notes": "Image-left side (x≈0.14), far-mid depth (y≈0.62). Stacked empty wood pallets as side cover."
+      },
+      {
+        "id": "bent-steel-column-right",
+        "label": "Bent steel column",
+        "x": 0.9,
+        "y": 0.52,
+        "z": 0.5,
+        "width_x": 0.07,
+        "depth_y": 0.07,
+        "facing_degrees_y": -1,
+        "notes": "Image-right side (x≈0.9), mid-depth (y≈0.52). Structural column bent, floor to residual roof."
+      },
+      {
+        "id": "safety-posters-right",
+        "label": "Peeled old safety posters",
+        "x": 0.98,
+        "y": 0.4,
+        "z": 0.58,
+        "width_x": 0,
+        "depth_y": 0,
+        "facing_degrees_y": 270,
+        "notes": "Point feature on image-right cracked concrete wall (x≈0.98, y≈0.4). Posters peeled. Faces image-left toward room center."
+      },
+      {
+        "id": "cracked-concrete-right-wall",
+        "label": "Cracked concrete image-right wall",
+        "x": 0.99,
+        "y": 0.5,
+        "z": 0.5,
+        "width_x": 0.02,
+        "depth_y": 0.9,
+        "facing_degrees_y": 270,
+        "notes": "Full image-right wall plane. Cracked concrete run entrance-to-far. Faces image-left."
+      },
+      {
+        "id": "collapsed-shelving-far",
+        "label": "Collapsed shelving",
+        "x": 0.42,
+        "y": 0.92,
+        "z": 0.28,
+        "width_x": 0.48,
+        "depth_y": 0.12,
+        "facing_degrees_y": 0,
+        "notes": "Along far wall (y≈0.92), slightly image-left of center. Toppled metal shelving wreckage. Faces toward entrance."
+      },
+      {
+        "id": "toppled-crates-far",
+        "label": "Toppled cardboard and plastic crates",
+        "x": 0.58,
+        "y": 0.84,
+        "z": 0.14,
+        "width_x": 0.38,
+        "depth_y": 0.16,
+        "facing_degrees_y": -1,
+        "notes": "Far-side center-right (x≈0.58, y≈0.84). Cardboard and plastic crates spilled in gray dust."
+      },
+      {
+        "id": "loading-door-far",
+        "label": "Jammed intact loading door",
+        "x": 0.78,
+        "y": 0.98,
+        "z": 0.45,
+        "width_x": 0.28,
+        "depth_y": 0.03,
+        "facing_degrees_y": 0,
+        "notes": "Far wall image-right (x≈0.78, y≈0.98). Intact but jammed loading door. Faces toward entrance."
+      },
+      {
+        "id": "broken-skylight",
+        "label": "Broken skylight shafts",
+        "x": 0.5,
+        "y": 0.48,
+        "z": 0.96,
+        "width_x": 0.32,
+        "depth_y": 0.28,
+        "facing_degrees_y": -1,
+        "notes": "Overhead center (z≈0.96). Broken skylight casting pale dawn shafts onto dusty floor."
+      },
+      {
+        "id": "partial-roof-span",
+        "label": "Partial remaining roof",
+        "x": 0.5,
+        "y": 0.55,
+        "z": 0.98,
+        "width_x": 0.85,
+        "depth_y": 0.7,
+        "facing_degrees_y": -1,
+        "notes": "Fragmentary roof over mid-to-far bay; open gaps at breach and skylight."
+      },
+      {
+        "id": "water-stained-floor",
+        "label": "Water-stained concrete floor",
+        "x": 0.5,
+        "y": 0.5,
+        "z": 0.0,
+        "width_x": 0.95,
+        "depth_y": 0.95,
+        "facing_degrees_y": -1,
+        "notes": "Full bay floor plane. Water stains, gray dust, debris scatter; clear patch near entrance-center."
+      }
+    ],
+    "zones": [
+      {
+        "id": "breach-entry-zone",
+        "label": "Breach and rubble threshold entry",
+        "x": 0.5,
+        "y": 0.08,
+        "visual_disposition_hint": "Large irregular wall breach centered on entrance wall; jagged brick edges and rubble threshold in immediate foreground; pale street light pouring in; clear floor patch beyond threshold mid-ground. DEPTH: breach opening foreground → rubble threshold → clear floor patch mid-ground → far shelving/crates background.",
+        "visual_disposition_hint_to_entrance": "Breach opening and street light centered in far background; rubble threshold beyond mid-ground toward entrance; camera near far wall with collapsed shelving nearest. DEPTH: far-wall shelving/crates foreground → room mid → rubble threshold → breach opening background.",
+        "visual_disposition_hint_lateral": "Breach and rubble on entrance-side edge of frame; clear floor toward center; far wall debris on opposite edge. Image-right wall is far background when viewed from image-left wall. DEPTH along X: image-left partition edge → center clear patch → image-right cracked wall background."
+      },
+      {
+        "id": "firing-position-zone",
+        "label": "Center clear dusty floor firing patch",
+        "x": 0.5,
+        "y": 0.32,
+        "visual_disposition_hint": "Open dusty concrete patch center entrance-side (x≈0.5, y≈0.32) for two kneeling firers; debris ring around it; breach and rubble behind camera toward entrance; far collapsed shelving in background. DEPTH: entrance/rubble behind near plane → clear patch mid-ground → debris ring → far wall crates/shelving background.",
+        "visual_disposition_hint_to_entrance": "Clear firing patch in mid-ground center (x_mirrored≈0.5); debris ring around it; far-wall wreckage nearest camera; breach opening centered in background with street light. DEPTH: far-wall shelving foreground → debris ring → clear patch mid-ground → breach entrance background.",
+        "visual_disposition_hint_lateral": "Clear patch at mid room depth along lateral view; entrance-side rubble to one edge, far crates to the other; image-left pallets/partition near or behind camera if from left. DEPTH along X: image-left cover → clear patch center → bent column/image-right wall."
+      },
+      {
+        "id": "left-cover-zone",
+        "label": "Image-left partition and pallet cover",
+        "x": 0.12,
+        "y": 0.5,
+        "visual_disposition_hint": "Partial interior partition and fire-black marks on image-left side (x≈0.1–0.14); empty pallet stack farther along image-left (y≈0.62); clear floor patch to image-right of partition; far wall soft in background. DEPTH: entrance-side left wall → partition mid-ground → pallet stack → far wall background.",
+        "visual_disposition_hint_to_entrance": "Partition and pallets now on image-right (x_mirrored≈0.88–0.9); far-wall plane nearest camera left-of-center; entrance breach in background. DEPTH: far wall foreground → pallet/partition mid-ground image-right → entrance breach background.",
+        "visual_disposition_hint_lateral": "Zone sits near image-left wall; when camera on image-left wall this cover is behind/near camera; when from image-right wall, partition/pallets are far background along X. Entrance-side vs far-side edges set by Y. DEPTH from right: image-right wall → center floor → partition/pallets on image-left background."
+      },
+      {
+        "id": "right-wall-zone",
+        "label": "Image-right cracked wall and bent column",
+        "x": 0.9,
+        "y": 0.5,
+        "visual_disposition_hint": "Cracked concrete image-right wall with peeled safety posters; bent steel column at mid-depth image-right (x≈0.9, y≈0.52); room center clear patch to image-left of column. DEPTH: entrance-side right wall → posters/column mid-ground → far loading-door corner background.",
+        "visual_disposition_hint_to_entrance": "Bent column and cracked wall now image-left (x_mirrored≈0.1); far wall nearest camera; entrance breach background center-right. DEPTH: far wall foreground → column/posters mid-ground image-left → entrance background.",
+        "visual_disposition_hint_lateral": "From image-left wall looking across: bent column and right wall are far background along X; entrance-side posters vs far-side door jamb separated by Y. DEPTH: image-left edge → center floor → bent column → image-right wall background."
+      },
+      {
+        "id": "far-debris-zone",
+        "label": "Far wall collapsed shelving and crates",
+        "x": 0.55,
+        "y": 0.9,
+        "visual_disposition_hint": "Collapsed shelving along far wall slightly image-left of center; toppled cardboard/plastic crates far-center; jammed loading door far wall image-right; gray dust. DEPTH: entrance → clear patch mid-ground → crates → collapsed shelving and loading door far background.",
+        "visual_disposition_hint_to_entrance": "Collapsed shelving and crates in immediate foreground (near camera at far wall); loading door image-left in this view (x_mirrored≈0.22); room opens back to centered breach entrance in bright background. DEPTH: shelving/crates/loading-door foreground → mid room → rubble threshold → breach background.",
+        "visual_disposition_hint_lateral": "Far-wall debris along far-side edge of lateral frame; loading door toward image-right-far corner; shelving more center-far. DEPTH along X still wall-to-wall; far-side stack reads as one edge of frame."
+      },
+      {
+        "id": "skylight-overhead-zone",
+        "label": "Broken skylight light pool",
+        "x": 0.5,
+        "y": 0.48,
+        "visual_disposition_hint": "Pale dawn shafts from broken skylight over room center; illuminates dusty clear patch and debris ring from above; partial roof around opening. DEPTH: light falls mid-room on floor patch; entrance dimmer behind camera; far debris half-lit background.",
+        "visual_disposition_hint_to_entrance": "Skylight pool still mid-room overhead; floor highlight between far-wall foreground wreckage and entrance breach glowing in background. DEPTH: far wreckage foreground → lit mid floor → entrance background.",
+        "visual_disposition_hint_lateral": "Overhead center; light pool marks room middle independent of lateral camera; anchors vertical composition above clear patch."
+      }
+    ]
+  }
+}

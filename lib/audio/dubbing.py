@@ -12,6 +12,7 @@ import hashlib
 import json
 import logging
 import os
+import subprocess
 import time
 from pathlib import Path
 
@@ -19,24 +20,27 @@ logger = logging.getLogger(__name__)
 
 from pydub import AudioSegment
 
+from lib.core.project import Project
 from lib.llm.base import BaseLLM
 from lib.llm.gemini import GeminiLLM
-from lib.audio.tts import VOICE_MAP, generate_speech
+from lib.audio.tts import generate_speech
+from lib.audio.whisper import load_whisper
 
 try:
-    from moviepy.editor import VideoFileClip
+    # moviepy 2.x exposes the classes at package level; 1.x needs .editor
+    from moviepy import VideoFileClip
 except ImportError:
-    VideoFileClip = None
-
-try:
-    from faster_whisper import WhisperModel
-except ImportError:
-    WhisperModel = None
+    try:
+        from moviepy.editor import VideoFileClip
+    except ImportError:
+        VideoFileClip = None
 
 TARGET_WPM = 130          # Russian speech rate
 SPEED_TOLERANCE = 1.35    # max speedup factor
 MIN_GAP_MS = 50           # min gap between dub segments
 MAX_INTRA_GAP_SEC = 1.5   # word gap threshold to force-split a Whisper segment
+
+AUDIO_ONLY_EXTS = {".wav", ".mp3", ".m4a", ".aac", ".flac", ".ogg", ".opus", ".wma", ".aiff", ".aif"}
 
 
 # ---------------------------------------------------------------------------
@@ -47,7 +51,7 @@ def _default_llm(api_key: str | None = None) -> BaseLLM:
     key = api_key or os.getenv("GOOGLE_API_KEY") or os.getenv("IMG_AI_API_KEY")
     if not key:
         raise RuntimeError("GOOGLE_API_KEY not set")
-    return GeminiLLM(api_key=key, text_model="gemini-2.5-pro")
+    return GeminiLLM(api_key=key, text_model=Project().text_model)
 
 
 def _file_hash(filepath: str) -> str:
@@ -101,45 +105,145 @@ def _split_on_gaps(segments: list[dict], max_gap_sec: float = MAX_INTRA_GAP_SEC)
 # Step 1: Transcription (Whisper, cached)
 # ---------------------------------------------------------------------------
 
+def _ffprobe(path: str) -> dict:
+    """Return ffprobe metadata for a media file ({} if ffprobe unavailable)."""
+    try:
+        out = subprocess.run(
+            ["ffprobe", "-v", "error", "-show_format", "-show_streams", "-of", "json", path],
+            check=True, capture_output=True, text=True,
+        ).stdout
+        return json.loads(out)
+    except (OSError, subprocess.CalledProcessError, json.JSONDecodeError) as exc:
+        logger.debug("ffprobe failed for %s: %s", path, exc)
+        return {}
+
+
+def _wav_duration(path: str) -> float:
+    """Duration of a WAV file in seconds (0.0 if unknown)."""
+    try:
+        import wave
+        with wave.open(path, "rb") as wf:
+            frames = wf.getnframes()
+            rate = wf.getframerate()
+            return frames / rate if rate else 0.0
+    except Exception:
+        return 0.0
+
+
+def _has_video_stream(path: str) -> bool:
+    """True if the file contains a real (non-cover-art) video stream."""
+    info = _ffprobe(path)
+    streams = info.get("streams", [])
+    if not streams:
+        # ffprobe unavailable — fall back to extension guess
+        return Path(path).suffix.lower() not in AUDIO_ONLY_EXTS
+    for s in streams:
+        if s.get("codec_type") != "video":
+            continue
+        if (s.get("disposition") or {}).get("attached_pic"):
+            continue
+        return True
+    return False
+
+
+def _media_duration(path: str) -> float:
+    info = _ffprobe(path)
+    duration = 0.0
+    fmt = info.get("format") or {}
+    try:
+        duration = float(fmt.get("duration") or 0.0)
+    except (TypeError, ValueError):
+        duration = 0.0
+    if duration <= 0:
+        for s in info.get("streams", []):
+            try:
+                duration = float(s.get("duration") or 0.0)
+            except (TypeError, ValueError):
+                duration = 0.0
+            if duration > 0:
+                break
+    if duration <= 0:
+        duration = _wav_duration(path)
+    return duration
+
+
+def _extract_audio_track(source_path: str, temp_wav: str) -> tuple[str, float]:
+    """Return (path to audio usable by Whisper, duration_sec).
+
+    Audio-only inputs (wav/mp3/m4a/...) are supported: they are transcoded to a
+    16 kHz mono WAV unless they already are a WAV. Video inputs have their audio
+    stream extracted the same way.
+    """
+    duration = _media_duration(source_path)
+    ext = Path(source_path).suffix.lower()
+    audio_only = not _has_video_stream(source_path)
+
+    if audio_only and ext == ".wav":
+        logger.info("Input is an audio file — using it directly for transcription")
+        return source_path, duration
+
+    logger.info("Extracting audio track...")
+    try:
+        subprocess.run(
+            ["ffmpeg", "-y", "-i", source_path, "-vn", "-ac", "1", "-ar", "16000", temp_wav],
+            check=True, capture_output=True,
+        )
+        return temp_wav, duration
+    except (OSError, subprocess.CalledProcessError) as exc:
+        logger.warning("ffmpeg extraction failed (%s) — falling back to moviepy", exc)
+
+    if VideoFileClip is None:
+        raise RuntimeError(
+            "cannot extract audio: install ffmpeg (or moviepy); run: pip install moviepy"
+        )
+    clip = VideoFileClip(source_path)
+    try:
+        if duration <= 0:
+            duration = clip.duration
+        clip.audio.write_audiofile(temp_wav, logger=None)
+    finally:
+        clip.close()
+    return temp_wav, duration
+
+
 def transcribe_video(
     video_path: str,
     cache_path: str = "transcription_cache.json",
     temp_wav: str = "temp_source.wav",
+    language: str | None = None,
 ) -> tuple[list[dict], float]:
-    """Return (segments, total_duration_sec). Caches result in cache_path."""
-    if VideoFileClip is None:
-        raise RuntimeError("moviepy not installed; run: pip install moviepy")
+    """Return (segments, total_duration_sec). Caches result in cache_path.
 
+    Accepts video files (audio stream is extracted) as well as audio-only
+    files (wav/mp3/...). `language=None` lets Whisper auto-detect.
+    """
     video_hash = _file_hash(video_path)
 
     if os.path.exists(cache_path):
         try:
             cache = json.loads(Path(cache_path).read_text(encoding="utf-8"))
-            if cache.get("video_hash") == video_hash:
+            same_lang = cache.get("language") == language
+            if cache.get("video_hash") == video_hash and same_lang:
                 logger.info("Using cached transcription (%d segments)", len(cache["segments"]))
                 return cache["segments"], cache["total_duration"]
         except (json.JSONDecodeError, KeyError):
             pass
 
-    logger.info("Extracting audio from video...")
-    clip = VideoFileClip(video_path)
-    total_duration = clip.duration
-    if not os.path.exists(temp_wav):
-        clip.audio.write_audiofile(temp_wav, logger=None)
-    clip.close()
+    model = load_whisper()
+    audio_path, total_duration = _extract_audio_track(video_path, temp_wav)
 
     logger.info("Running Whisper transcription...")
-    if WhisperModel is None:
-        raise RuntimeError("faster-whisper not installed; run: pip install faster-whisper")
-    model = WhisperModel("medium", device="cpu", compute_type="int8")
-    segments_raw, _ = model.transcribe(
-        temp_wav,
+    segments_raw, info = model.transcribe(
+        audio_path,
         beam_size=10,
-        language="ru",
+        language=language,
         word_timestamps=True,
         vad_filter=True,
         vad_parameters=dict(min_silence_duration_ms=100),
     )
+    detected = getattr(info, "language", None)
+    if detected:
+        logger.info("Detected language: %s", detected)
     segments = [
         {
             "start": s.start,
@@ -152,12 +256,16 @@ def transcribe_video(
         }
         for s in segments_raw
     ]
+    if audio_path != video_path:
+        Path(audio_path).unlink(missing_ok=True)
     segments = _split_on_gaps(segments)
     logger.info("After gap-split: %d segments", len(segments))
 
     cache = {
         "video_hash": video_hash,
         "video_path": video_path,
+        "language": language,
+        "detected_language": detected,
         "total_duration": total_duration,
         "segments": segments,
         "timestamp": time.time(),
@@ -240,9 +348,8 @@ DATA: {json.dumps(input_data, ensure_ascii=False)}"""
     try:
         result = llm.make_json(prompt)
         splits_map = {item["id"]: item["splits"] for item in result}
-    except Exception:
-        logger.warning("Failed to parse translation response", exc_info=True)
-        return segments
+    except Exception as e:
+        raise RuntimeError("Dubbing translation response could not be parsed") from e
 
     enriched = []
     for i, seg in enumerate(segments):
@@ -357,6 +464,7 @@ def assemble_audio(
     segments = _resolve_overlaps(segments)
     track = AudioSegment.silent(duration=int(total_duration * 1000))
     segments_dir.mkdir(exist_ok=True)
+    voiced = 0
 
     for i, seg in enumerate(segments):
         text = seg.get("ru_text", "")
@@ -381,7 +489,10 @@ def assemble_audio(
                 audio = audio.speedup(playback_speed=factor)
 
         track = track.overlay(audio, position=int(seg_start * 1000))
+        voiced += 1
 
+    if segments and not voiced:
+        raise RuntimeError(f"No dubbing segment was synthesized ({len(segments)} planned): refusing to export a silent track")
     return track
 
 

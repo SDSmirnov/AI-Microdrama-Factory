@@ -2,7 +2,7 @@
 
 Some panels need to be animated by AI Image-to-Video in reversed order — the audience starts seeing an obscured / empty / hidden state and gradually the true subject is revealed. Classic example: *city lights smearing across a tinted window until a face becomes visible in the reflection*.
 
-Panels will be animated as 6 to 8 second clips by the AI video model, which does NOT support image references.
+Panels will be animated as clips of up to {{VIDEO_MAX_SECONDS}} s by an image-to-video model; only what the first frame shows is guaranteed to stay on-model.
 The only way to show a character or object ENTERING the frame is reverse playback:
 - render the character LEAVING, then play the clip reversed.
 
@@ -46,7 +46,7 @@ Set is_reversed=true for any panel where:
   - panel_index: Panel number (1–9)
   - visual_start: Initial static state (70+ words, 9:16 vertical framing, lighting specified)
   - visual_end: State after micro-action (70+ words)
-  - motion_prompt: Precise 6–8s action description with timestamps (100+ words)
+  - motion_prompt: Precise action description with timestamps, covering the panel's duration (100+ words)
   - lights_and_camera: Camera position, lens approximation, lighting setup for this panel
   - dialogue: Exact spoken line shown on screen if this panel carries dialogue (empty string if none)
-  - duration: Expected seconds (6–8)
+  - duration: Expected seconds (up to {{VIDEO_MAX_SECONDS}})

@@ -15,6 +15,36 @@ DEFAULT_OUTPUT_DIR = Path("cinematic_render")
 DEFAULT_REF_DIR = Path(os.getenv('AI_REF_DIR', 'ref_thriller'))
 
 
+# derived view → the location's canonical view (the one carrying anchor_points)
+VIEW_CANONICAL = {
+    'View-To-Entrance':        'View-From-Entrance',
+    'View-From-Left-Wall':     'View-From-Entrance',
+    'View-From-Right-Wall':    'View-From-Entrance',
+    'View-Center-To-Far':      'View-From-Entrance',
+    'View-Center-To-Entrance': 'View-From-Entrance',
+    'View-By-Far-Wall':        'View-From-Entrance',
+    'View-By-Entrance':        'View-From-Entrance',
+    'View-Opposite':           'View-Primary',
+    'View-Ortho-Primary':      'View-Primary',
+    'View-Ortho-Opposite':     'View-Primary',
+    'Interior-To-Entrance':    'Interior-From-Entrance',
+}
+CANONICAL_VIEWS = frozenset({'View-From-Entrance', 'View-Primary', 'Interior-From-Entrance', 'Exterior'})
+_VIEW_SUFFIXES = sorted(VIEW_CANONICAL.keys() | CANONICAL_VIEWS, key=len, reverse=True)
+
+
+def view_suffix(slug: str) -> str | None:
+    return next((s for s in _VIEW_SUFFIXES if slug.endswith(f'-{s}')), None)
+
+
+def canonical_ref_name(slug: str) -> str:
+    """The canonical view of the same location (`x-View-Opposite` → `x-View-Primary`); other slugs unchanged."""
+    suffix = view_suffix(slug)
+    if suffix not in VIEW_CANONICAL:
+        return slug
+    return f'{slug[:-len(suffix)]}{VIEW_CANONICAL[suffix]}'
+
+
 def is_portrait(aspect_ratio: str) -> bool:
     """Return True if aspect ratio is portrait (height > width), e.g. '9:16', '2:3'."""
     try:
@@ -22,6 +52,16 @@ def is_portrait(aspect_ratio: str) -> bool:
         return h > w
     except (ValueError, AttributeError):
         return True  # assume portrait on parse failure
+
+
+# GOST-16876 style Latin transliteration: ref-slug matching, ASCII ids.
+CYR_TO_LAT = str.maketrans({
+    "а": "a", "б": "b", "в": "v", "г": "g", "д": "d", "е": "e", "ё": "yo",
+    "ж": "zh", "з": "z", "и": "i", "й": "y", "к": "k", "л": "l", "м": "m",
+    "н": "n", "о": "o", "п": "p", "р": "r", "с": "s", "т": "t", "у": "u",
+    "ф": "f", "х": "h", "ц": "ts", "ч": "ch", "ш": "sh", "щ": "shch",
+    "ъ": "", "ы": "y", "ь": "", "э": "e", "ю": "yu", "я": "ya",
+})
 
 
 def safe_name(name: str) -> str:
@@ -83,18 +123,30 @@ _GRID_TABLE: dict[int, tuple[int, int, str]] = {
 }
 PANEL_COUNT_OPTIONS: list[int] = sorted(_GRID_TABLE)
 
+# Landscape (16:9) panels: only the counts with an exact grid AR.
+_GRID_TABLE_LANDSCAPE: dict[int, tuple[int, int, str]] = {
+    4:  (2, 2, "16:9"),
+    9:  (3, 3, "16:9"),
+    12: (3, 4, "4:3"),
+}
 
-def grid_dims(panel_count: int) -> tuple[int, int, str]:
+
+def grid_dims(panel_count: int, panel_ar: str = "9:16") -> tuple[int, int, str]:
     """Return (cols, rows, grid_ar) for the given panel count.
 
     grid_ar is the T2I API aspect ratio to request for the composite grid image.
     Raises ValueError for unsupported counts.
     """
-    if panel_count not in _GRID_TABLE:
+    table = _GRID_TABLE if is_portrait(panel_ar) else _GRID_TABLE_LANDSCAPE
+    if panel_count not in table:
         raise ValueError(
-            f"Unsupported panel_count={panel_count}. Allowed: {PANEL_COUNT_OPTIONS}"
+            f"Unsupported panel_count={panel_count} for {panel_ar} panels. Allowed: {sorted(table)}"
         )
-    return _GRID_TABLE[panel_count]
+    return table[panel_count]
+
+
+def orientation(aspect_ratio: str) -> str:
+    return 'portrait' if is_portrait(aspect_ratio) else 'landscape'
 
 
 def pad_to_ar(img: Image.Image, target_ar: str = "9:16") -> Image.Image:

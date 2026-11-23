@@ -1,7 +1,7 @@
 """
 Stylist — Novel analysis and custom prompt generation.
 
-Reads templates from lib/prompting/<style>/ (with legacy prompts/ fallback),
+Reads templates from lib/prompting/<style>/ (through the style's `extends` chain),
 generates custom_prompts/ overlay files for the selected style.
 """
 import json
@@ -9,13 +9,11 @@ import logging
 from pathlib import Path
 from typing import Dict
 
+from lib.core.prompts import WORLD_ANCHOR_HEADING, resolve_style_config, resolve_style_file
 from lib.llm.base import BaseLLM
 
 logger = logging.getLogger(__name__)
 
-_LIB_ROOT = Path(__file__).resolve().parent.parent.parent  # code repo root
-PROMPTING_DIR = _LIB_ROOT / "lib" / "prompting"   # library presets (always from code repo)
-PROMPTS_DIR = Path.cwd() / "prompts"               # project-local legacy fallback
 CUSTOM_DIR = Path.cwd() / "custom_prompts"         # project-local overrides
 
 # ---------------------------------------------------------------------------
@@ -44,6 +42,28 @@ STYLE_PRESETS: Dict[str, Dict] = {
         "needs_captions": False,
         "camera_style": "cinematic_fpov"
     },
+    "action_movie_9_16": {
+        "name": "Action Movie 9:16 - Vertical Action Cinema",
+        "format": "single_grid_animation",
+        "panel_count_options": [4, 6, 9, 10, 12],
+        "aspect_ratio": "9:16",
+        "resolution": "2K",
+        "needs_start_end": True,
+        "needs_dialogue": True,
+        "needs_captions": False,
+        "camera_style": "cinematic_fpov"
+    },
+    "action_movie_16_9_wide": {
+        "name": "Action Movie 16:9 Wide - Widescreen Action Short Film",
+        "format": "single_grid_animation",
+        "panel_count_options": [4, 9, 12],
+        "aspect_ratio": "16:9",
+        "resolution": "2K",
+        "needs_start_end": True,
+        "needs_dialogue": True,
+        "needs_captions": False,
+        "camera_style": "cinematic_fpov"
+    },
     "vertical_9_16_generic": {
         "name": "Vertical Generic - Faithful Cinematic Adaptation",
         "format": "single_grid_animation",
@@ -60,15 +80,8 @@ STYLE_PRESETS: Dict[str, Dict] = {
 _DEFAULT_STYLE = "vertical_9_16_microdrama"
 
 
-def _style_dir(style: str) -> Path:
-    """Return the prompting dir for style, falling back to legacy prompts/."""
-    d = PROMPTING_DIR / style
-    return d if d.exists() else PROMPTS_DIR
-
-
 def _load_template(filename: str, style: str) -> str:
-    path = _style_dir(style) / filename
-    return path.read_text(encoding='utf-8') if path.exists() else ""
+    return resolve_style_file(style, Path(filename).stem) or ""
 
 
 def _normalize_style_key(style_name: str) -> str:
@@ -79,6 +92,53 @@ def _normalize_style_key(style_name: str) -> str:
         if k in key or key in k:
             return k
     return _DEFAULT_STYLE
+
+
+_LIST = {"type": "array", "items": {"type": "string"}}
+WORLD_ANCHOR_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "analog": {"type": "string", "description": "Real place and time the world builds on, as exact as the text "
+                                                    "allows: 'Japan, Sengoku period, 1581 (Tensho 9)'."},
+        "evidence": {**_LIST, "description": "Verbatim lines of the text that date or place it."},
+        "departures": {**_LIST, "description": "What the novel changes or adds to the analog."},
+        "material_culture": {**_LIST, "description": "The analog's look: architecture, furniture, lighting, "
+                                                     "clothing, weapons, writing, transport, money."},
+        "not_in_this_world": {**_LIST, "description": "Things an image model drifts to that the analog lacks "
+                                                      "(later inventions, other cultures' furniture or dress)."},
+    },
+    "required": ["analog", "evidence", "departures", "material_culture", "not_in_this_world"],
+}
+
+_ANCHOR_ASK = """**World anchor**: a novel builds on our world — its technology, seasons, rituals, ranks, rulers and \
+countries — then adds its own assumptions. Name that real-world base as exactly as the text allows (place, era, \
+year), quoting the lines that date or place it. An invented world gets its nearest real analogs combined \
+("Britain in the 1990s, with a hidden society of wizards"; "the British Empire, bushido and far-space set \
+dressing"). Then: what the novel departs from it, the analog's material culture, and what is not in this world \
+although an image model drifts to it."""
+
+
+def anchor_markdown(anchor: dict) -> str:
+    """setting.md's real-world anchor section."""
+    def items(k):
+        return '; '.join(str(x) for x in anchor.get(k) or []) or '—'
+    return (f"{WORLD_ANCHOR_HEADING}\n- **Analog**: {anchor.get('analog') or '—'}\n- **Evidence**: {items('evidence')}\n"
+            f"- **Departures**: {items('departures')}\n- **Material culture**: {items('material_culture')}\n"
+            f"- **Not in this world**: {items('not_in_this_world')}\n")
+
+
+def with_anchor(setting: str, anchor: dict) -> str:
+    """setting.md with its real-world anchor section written (replaced when present, else appended)."""
+    head, sep, rest = setting.partition(f"\n{WORLD_ANCHOR_HEADING}")
+    tail = rest[rest.find('\n## '):] if sep and '\n## ' in rest else ''
+    return f"{head.rstrip()}\n\n{anchor_markdown(anchor)}{tail}"
+
+
+def analyze_anchor(text: str, llm: BaseLLM) -> dict | None:
+    """The world anchor alone (styles --anchor-only: the rest of custom_prompts/ stays)."""
+    result = llm.make_json(f"{_ANCHOR_ASK}\n\nReturn JSON matching the schema.\n\nNovel excerpt:\n{text[:100000]}",
+                           WORLD_ANCHOR_SCHEMA)
+    return result if isinstance(result, dict) and result.get('analog') else None
 
 
 def analyze_novel(text: str, llm: BaseLLM) -> dict:
@@ -108,8 +168,10 @@ def analyze_novel(text: str, llm: BaseLLM) -> dict:
             },
             "special_elements": {"type": "array", "items": {"type": "string"}},
             "visual_atmosphere": {"type": "array", "items": {"type": "string"}},
+            "world_anchor": WORLD_ANCHOR_SCHEMA,
         },
-        "required": ["genre", "setting", "pov", "tone", "main_character", "special_elements", "visual_atmosphere"],
+        "required": ["genre", "setting", "pov", "tone", "main_character", "special_elements", "visual_atmosphere",
+                     "world_anchor"],
     }
 
     prompt = f"""
@@ -122,6 +184,7 @@ Analyze this novel excerpt and extract key metadata:
 5. **Main Character**: Name and brief description of protagonist
 6. **Special Elements**: Magic systems, technology, supernatural elements, game mechanics, etc.
 7. **Visual Atmosphere**: Key visual themes (dark alleys, grand ballrooms, space stations, medieval castles)
+8. {_ANCHOR_ASK}
 
 Return as JSON matching the provided schema.
 
@@ -257,6 +320,10 @@ Return ONLY the filled markdown content, no explanations.
     content = setting_template
     for key, value in replacements.items():
         content = content.replace(key, str(value))
+    if anchor := novel_data.get('world_anchor'):
+        content = with_anchor(content, anchor)
+    else:
+        logger.warning("  ⚠️  no world anchor in the analysis: the bible and casting get no era guard")
     (CUSTOM_DIR / "setting.md").write_text(content, encoding='utf-8')
 
     # --- config.json ---
@@ -264,15 +331,13 @@ Return ONLY the filled markdown content, no explanations.
     # starting point. This preserves all fields (transitions, vertical, etc.)
     # that would otherwise be lost if we reconstruct from the preset dict alone.
     logger.info("  📝 Generating config.json...")
-    base_config_path = _style_dir(style_key) / "config.json"
-    if base_config_path.exists():
-        config = json.loads(base_config_path.read_text(encoding='utf-8'))
-    else:
+    config = resolve_style_config(style_key)
+    if not config:
         config = {
             "format": {
                 "type": preset['format'],
                 "panel_count_options": preset['panel_count_options'],
-                "panel_aspect_ratio": "9:16"
+                "panel_aspect_ratio": preset['aspect_ratio']
             },
             "image_generation": {
                 "aspect_ratio": preset['aspect_ratio'],

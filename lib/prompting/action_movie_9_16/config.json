@@ -1,0 +1,10 @@
+{
+  "extends": "vertical_9_16_generic",
+  "format": {
+    "framing_note": "Action geography is the primary dramatic instrument: full bodies, cover, exits and distances stay readable. Close-ups are reserved for impacts, decisions and dialogue.\nSubjects sharp; backgrounds stay legible enough to read positions and sight lines."
+  },
+  "transitions": {
+    "enabled": true,
+    "gap_threshold": "1h"
+  }
+}

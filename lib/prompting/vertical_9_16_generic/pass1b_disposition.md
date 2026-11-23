@@ -13,6 +13,7 @@ For each panel:
 - `camera_z` — camera height Z: 0.18 = ground/low, 0.45 = seated, 0.55 = eye-level standing, 0.80 = overhead crane
 - `location_references[]` — view slug(s) derived from camera position (see VIEW SELECTION below)
 - `visual_disposition` — camera-agnostic, anchor-grounded disposition prose
+- `placements[]` — one per actor in `state.actors`: anchor id + relation (see STEP 6); code turns these into coordinates
 
 ## FORBIDDEN IN THIS PASS
 
@@ -120,6 +121,20 @@ Rules:
 - FORBIDDEN: "same as before", "unchanged" — each panel's visual_disposition is fully self-contained
 - FORBIDDEN: anchor names not verbatim from ROOM ANCHOR POINTS
 
+## STEP 6 — WRITE placements
+
+One entry per actor in `state.actors` (in or out of frame). Code computes the coordinates, camera framing
+and frame sides from these; never write coordinates or frame-left/right here.
+
+- `anchor` — an object or zone `id` copied verbatim from ROOM ANCHOR POINTS; empty only when `target` is set
+- `relation` — `at` (standing at its open side) | `on` (sitting/lying on it) | `in-front-of` | `behind` |
+  `left-of` | `right-of` (image-left/right of the entrance or primary view) | `beside`
+- `target` — another actor's name when the position is relative to a person ("in front of Alisa"), else empty
+- `distance_m` — metres from the anchor/target edge; 0 = default spacing
+- `posture` — `standing` | `seated` | `lying` | `kneeling` | `crouching`
+- Seated on a chair, sofa or bed: `relation: on` with that furniture's id, not the table it faces.
+- A move between panels must be visible in that panel's motion_action.
+
 ---
 
 ## 180-RULE CONTINUITY
@@ -147,7 +162,15 @@ For vehicle interiors: use `vehicle_position` from `state.actors` to derive came
 
 ## OUTDOOR SCENES
 
-- `{Location}-View-Primary` — camera faces the primary direction (toward canonical background landmark)
-- `{Location}-View-Opposite` — camera faces 180° opposite; left/right swapped vs. View-Primary
+All four outdoor views stand at one camera STATION and turn in place (anchor coordinates: x grows to View-Primary's right,
+y grows ahead of it):
+- `{Location}-View-Primary` — faces AHEAD (+y), the primary direction (toward the canonical background landmark)
+- `{Location}-View-Opposite` — faces BEHIND (−y); left/right swapped vs. View-Primary
+- `{Location}-View-Ortho-Primary` — faces RIGHT (+x), e.g. the near facade of a street head-on
+- `{Location}-View-Ortho-Opposite` — faces LEFT (−x), e.g. across the street to the far side
 
 Use View-Opposite when the subject is moving toward the camera (retreating), or when the canonical background landmark is behind the subject.
+
+Pick the view whose heading matches where the camera looks: from a car in the street straight at the café facade →
+Ortho-Primary; from the café across the street → Ortho-Opposite; down the cross street of a crossroads → an Ortho view.
+Use only views listed as valid counterparts (older locations may lack the Ortho pair).

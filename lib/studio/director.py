@@ -39,7 +39,7 @@ CASTING_RULES = """
   - `{Room-Name}-View-From-Entrance`: wide shot from the entrance doorway looking INTO the room
   - `{Room-Name}-View-To-Entrance`: wide shot from inside looking BACK toward the entrance door;
     style_reference = {Room-Name}-View-From-Entrance (ensures identical furniture/materials)
-- Room visual_desc uses compass wall layout: NORTH/SOUTH/EAST/WEST walls with explicit contents
+- Room visual_desc uses entrance-relative wall layout: ENTRANCE/FAR/LEFT/RIGHT walls (left/right as seen when entering) with explicit contents
 
 ## Important for vehicles:
 - Each vehicle is split into THREE SEPARATE refs (one PNG each, empty, no people):
@@ -103,6 +103,9 @@ def enrich_and_regenerate_reference(
         return
 
     ref_data = json.loads(json_path.read_text(encoding='utf-8'))
+    if ref_data.get('type') == 'Room':
+        logger.info(f"  ⏭  {ref_name}: Room view — owned by room-views, not enriched")
+        return
     if len(usage_contexts) > 20:
         logger.info(f"  ℹ️  Truncating context for {ref_name}: {len(usage_contexts)} usages → 20")
     logger.info(f"🔍 Enriching: {ref_name} (used in {len(usage_contexts)} panels)")

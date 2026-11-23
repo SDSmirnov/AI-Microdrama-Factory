@@ -165,7 +165,7 @@ EPISODE ENTRY STATE:
 INITIAL SPATIAL DISPOSITION:
   [One line per character present at scene open: Name + position relative to room landmark + facing direction.]
   Use landmark language only (walls, doors, windows, furniture) — NOT screen directions.
-  Example: "Margaret is seated at the North end of the dining table facing South. Thomas stands near the sideboard on the East wall. Alice is at the doorway on the West wall, coat still on."
+  Example: "Margaret is seated at the far end of the dining table facing the entrance. Thomas stands near the sideboard on the right wall. Alice is at the doorway on the left wall, coat still on."
   Episode 1: describe opening starting positions. Episodes 2+: carry forward from previous EXIT STATE unless location changed. Omit for non-character transition scenes.
 
 P1 [scene_open | SCALE | LOCATION]:

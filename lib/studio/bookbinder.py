@@ -1,15 +1,17 @@
 """
 bookbinder.py — Split a novel into filmable episode chunks for vertical microdrama.
 
-Strategy: sliding windows of [_TAIL_CHAPTERS context] + [_BATCH_SIZE chapters to split].
+Strategy: sliding windows of [_TAIL_CHAPTERS context] + [chapters to split, ~_WINDOW_WORDS words].
 The LLM returns a short verbatim text anchor (first ~15 words of the last paragraph
 before each cut). The host resolves that anchor to a paragraph index and slices
 the original prose byte-for-byte — no rewriting, no numbering errors.
 """
-import inspect
 import logging
 import re
+import textwrap
 from pathlib import Path
+
+from lib.llm.base import accepted
 
 logger = logging.getLogger(__name__)
 
@@ -44,14 +46,90 @@ _CHAPTER_RES = [
     re.compile(r"^\d+\s*$"),
 ]
 
-_BATCH_SIZE = 2    # chapters per window (content to split)
-_TAIL_CHAPTERS = 1 # chapters of narrative overlap (context only)
+_WINDOW_WORDS = 6000  # content words per window, rounded up to a chapter boundary: room for 2–4 episodes
+_TAIL_CHAPTERS = 1    # chapters of narrative overlap (context only)
+# Back matter (notes, comments): its numbered entries look like chapter numbers and are not story.
+_BACK_MATTER_RE = re.compile(
+    r"^(Примечания|Комментарии|Сноски|Notes|Endnotes|Footnotes|Glossary|Глоссарий)\.?$", re.IGNORECASE)
 _WORDS_WARN = 45_000
 _ANCHOR_MATCH_LEN = 40  # chars used for paragraph matching
 
 
+_LONG_LINE = 150  # hard-wrapped prose never has lines this long; when 5%+ of lines do, a line is a paragraph
+_FALLBACK_WORDS = 2500  # episode size when a window gets no usable reply
+SPLIT_REASONING_TOKENS = 8_000  # thinking cap on top of the reply: uncapped, nemotron-3.5 spent ~20k per window
+_MIN_EPISODE_WORDS = 800  # a shorter episode is merged into its neighbour
+
+
+_ILLUSTRATION = re.compile(r'[ \t]*\[(?:Картинка|Рисунок|Иллюстрация|Image|Picture|Illustration):[^\]\n]*\]', re.I)
+_INDENTED = re.compile(r'^(?: {2,}|\t)\S', re.M)  # lib.ru-style prose: hard-wrapped lines, each paragraph opens indented
+_LIBRU_FOOTER = re.compile(r'^Last-modified: .*(?:\n.*){0,5}\Z', re.M)  # lib.ru's tail: a timestamp, counter ids
+
+
 def _split_paragraphs(text: str) -> list[str]:
+    """Blank-line blocks for hard-wrapped text; one paragraph per line when lines are whole paragraphs
+    (blank lines then only separate sections, and a block would be a whole section); an indented line opens
+    a paragraph when 5%+ of lines are indented (beyond the indent all lines share)."""
+    text = textwrap.dedent(text)
+    lines = [line for line in text.splitlines() if line.strip()]
+    if lines and sum(len(line) > _LONG_LINE for line in lines) >= 0.05 * len(lines):
+        return [line.strip() for line in lines]
+    if lines and len(_INDENTED.findall(text)) >= 0.05 * len(lines):
+        text = _INDENTED.sub(lambda m: '\n' + m.group(), text)
     return [p.strip() for p in text.split("\n\n") if p.strip()]
+
+
+def _even_ends(paragraphs: list[str], start: int, end: int) -> list[int]:
+    """Even paragraph-boundary cuts, the episode count nearest to _FALLBACK_WORDS each, for a window the
+    model did not split."""
+    counts = [len(p.split()) for p in paragraphs[start:end]]
+    n = max(1, round(sum(counts) / _FALLBACK_WORDS))
+    ends, words, k = [], 0, 1
+    for i, c in enumerate(counts[:-1]):
+        words += c
+        if k < n and words >= k * sum(counts) / n:
+            ends.append(start + i + 1)
+            k += 1
+    return ends + [end]
+
+
+def _merge_short(paragraphs: list[str], ends: list[int]) -> list[int]:
+    """Drop cuts that leave an episode under _MIN_EPISODE_WORDS: it joins the next one (the last joins the
+    previous)."""
+    out, start = [], 0
+    for e in ends:
+        if sum(len(p.split()) for p in paragraphs[start:e]) >= _MIN_EPISODE_WORDS or e == ends[-1]:
+            out.append(e)
+            start = e
+    if len(out) > 1 and sum(len(p.split()) for p in paragraphs[out[-2]:out[-1]]) < _MIN_EPISODE_WORDS:
+        del out[-2]
+    return out
+
+
+def _strip_back_matter(paragraphs: list[str]) -> list[str]:
+    """Drop everything from a back-matter heading on; only in the second half by words (notes are many short
+    paragraphs), so story text never triggers it."""
+    half, words = sum(len(p.split()) for p in paragraphs) / 2, 0
+    for i, p in enumerate(paragraphs):
+        if words >= half and _BACK_MATTER_RE.match(p.strip()):
+            logger.info(f"✂️  Back matter from §{i + 1} ({paragraphs[i].strip()!r}, "
+                        f"{len(paragraphs) - i} paragraph(s)) is not story — dropped")
+            return paragraphs[:i]
+        words += len(p.split())
+    return paragraphs
+
+
+def _windows(paragraphs: list[str], chapter_starts: list[int]) -> list[tuple[int, int]]:
+    """Chapter-index ranges [a, b) whose content reaches _WINDOW_WORDS (the last takes the rest)."""
+    out, a, words = [], 0, 0
+    for c in range(len(chapter_starts) - 1):
+        words += sum(len(p.split()) for p in paragraphs[chapter_starts[c]:chapter_starts[c + 1]])
+        if words >= _WINDOW_WORDS:
+            out.append((a, c + 1))
+            a, words = c + 1, 0
+    if a < len(chapter_starts) - 1:
+        out.append((a, len(chapter_starts) - 1))
+    return out
 
 
 def _detect_chapter_starts(paragraphs: list[str]) -> list[int]:
@@ -66,22 +144,25 @@ def _detect_chapter_starts(paragraphs: list[str]) -> list[int]:
     return starts
 
 
+def _words(text: str) -> str:
+    """Lowercase words joined by single spaces: punctuation, dash and space variants (NBSP after a dialogue
+    dash, «» vs "") and ё/е do not break a verbatim anchor match."""
+    return " ".join(re.findall(r"\w+", text.lower().replace("ё", "е")))
+
+
 def _find_split_paragraph(paragraphs: list[str], anchor: str, search_from: int) -> int:
     """
-    Find the paragraph index whose text best matches `anchor`.
-    Uses first _ANCHOR_MATCH_LEN chars; falls back to a shorter 20-char match.
-    Returns -1 if not found.
+    Index of the first paragraph from `search_from` that starts with `anchor`'s first _ANCHOR_MATCH_LEN
+    chars (compared as words, see _words); else the first containing its first 20. -1 if none.
     """
-    needle_long = anchor.strip()[:_ANCHOR_MATCH_LEN].lower()
-    needle_short = anchor.strip()[:20].lower()
-    if not needle_short:
+    needle = _words(anchor)
+    if not needle:
         return -1
-    for i in range(search_from, len(paragraphs)):
-        if paragraphs[i].lower().startswith(needle_long):
-            return i
-    for i in range(search_from, len(paragraphs)):
-        if needle_short in paragraphs[i].lower():
-            return i
+    texts = [_words(p) for p in paragraphs[search_from:]]
+    for prefix, test in ((needle[:_ANCHOR_MATCH_LEN], str.startswith), (needle[:20], str.__contains__)):
+        for i, t in enumerate(texts):
+            if test(t, prefix):
+                return search_from + i
     return -1
 
 
@@ -139,12 +220,25 @@ def _call_window(
     Returns sorted list of end-paragraph indices (exclusive: slice [:idx+1]).
     Always includes content_end as the final boundary.
     """
-    kwargs: dict = {"schema": _WINDOW_SCHEMA}
-    if "max_tokens" in inspect.signature(llm.make_json).parameters:
-        kwargs["max_tokens"] = 16_000
+    kwargs = {"schema": _WINDOW_SCHEMA, **accepted(llm.make_json, max_tokens=33_000,
+                                                    reasoning_tokens=SPLIT_REASONING_TOKENS)}
 
-    data = llm.make_json(prompt, **kwargs)
-    raw_splits = data.get("splits") or []
+    data = None
+    for attempt in (1, 2):  # an empty or unparseable reply gets one retry
+        try:
+            data = llm.make_json(prompt, **kwargs)
+        except (ValueError, RuntimeError) as e:
+            logger.warning(f"  ⚠️  Window §{content_start + 1}–§{content_end}: bad reply (attempt {attempt}): {e}")
+            continue
+        if isinstance(data, dict) and data.get("splits"):
+            break
+        logger.warning(f"  ⚠️  Window §{content_start + 1}–§{content_end}: no splits (attempt {attempt})")
+    if not isinstance(data, dict) or not data.get("splits"):
+        ends = _even_ends(paragraphs, content_start, content_end)
+        logger.error(f"  ❌ Window §{content_start + 1}–§{content_end}: no usable reply — cut at paragraph "
+                     f"boundaries into {len(ends)} episode(s) of ~{_FALLBACK_WORDS} words, no cliffhanger choice")
+        return ends
+    raw_splits = data["splits"]
 
     resolved: list[int] = []
     search_from = content_start
@@ -189,8 +283,8 @@ def split_book(
     Split `text` into filmable episode chunks using sliding chapter windows.
 
     Processing:
-      1. Detect chapter boundaries.
-      2. For each window of _BATCH_SIZE chapters (+ _TAIL_CHAPTERS context):
+      1. Drop back matter (notes); detect chapter boundaries.
+      2. For each window of whole chapters reaching _WINDOW_WORDS (+ _TAIL_CHAPTERS context):
          - Send raw prose text (no numbering).
          - LLM returns verbatim 15-word anchors marking split points.
          - Host resolves anchors to paragraph indices.
@@ -198,7 +292,7 @@ def split_book(
 
     Raises RuntimeError if all windows return no splits.
     """
-    paragraphs = _split_paragraphs(text)
+    paragraphs = _strip_back_matter(_split_paragraphs(_LIBRU_FOOTER.sub('', _ILLUSTRATION.sub('', text))))  # e-book "[Картинка: _01.jpg]"
     n_para = len(paragraphs)
     n_words = len(text.split())
     logger.info(f"📖 Book: {n_words:,} words, {n_para} paragraphs")
@@ -212,9 +306,9 @@ def split_book(
 
     all_ends: list[int] = []
     prev_split_end = 0
+    windows = _windows(paragraphs, chapter_starts)
 
-    for batch_idx in range(0, n_chapters, _BATCH_SIZE):
-        batch_end = min(batch_idx + _BATCH_SIZE, n_chapters)
+    for window_idx, (batch_idx, batch_end) in enumerate(windows):
         content_start = chapter_starts[batch_idx]
         content_end = chapter_starts[batch_end]
 
@@ -223,7 +317,7 @@ def split_book(
         tail_end = content_start
 
         logger.info(
-            f"  → Window {batch_idx // _BATCH_SIZE + 1}: "
+            f"  → Window {window_idx + 1}/{len(windows)}: "
             f"context §{tail_start + 1}–§{tail_end} | "
             f"split §{content_start + 1}–§{content_end}"
         )
@@ -246,6 +340,10 @@ def split_book(
     unique_ends = sorted(set(all_ends))
     if unique_ends[-1] != n_para:
         unique_ends.append(n_para)
+    if (merged := _merge_short(paragraphs, unique_ends)) != unique_ends:
+        logger.info(f"  🔗 {len(unique_ends) - len(merged)} episode(s) under {_MIN_EPISODE_WORDS} words merged "
+                    "into a neighbour")
+        unique_ends = merged
 
     # Write output files
     ep_prefix = f"s{season:02d}e"

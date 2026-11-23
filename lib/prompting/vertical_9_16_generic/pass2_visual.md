@@ -10,7 +10,7 @@ Input: panel state from Pass 1A + panel skeleton (scale, motion_intent) from Pas
 Generate `camera_master` and `lighting_master` at the response root before the panels array.
 
 **camera_master** — one sentence: dominant lens (mm), angle bias, primary lighting condition shared by ALL panels as their baseline.
-Example: "85mm CU bias, eye-level, harsh midday daylight from panoramic windows, deep East-wall shadows."
+Example: "85mm CU bias, eye-level, harsh midday daylight from panoramic windows, deep shadows on the image-right wall."
 
 **lighting_master** — one sentence: key light direction/color/quality, fill ratio, any visible practicals. ALL panels inherit this DNA.
 LIGHTING CONTINUITY CONTRACT: every panel's `lights_and_camera` must remain within this baseline.
@@ -33,6 +33,32 @@ When a panel deviates for dramatic effect, flag it explicitly in `lights_and_cam
 - `drama_requirements` — already declared in Pass 1; injected via DRAMA REQUIREMENTS block below. Copy verbatim into output if schema requires it; never override.
 - Camera placement (`camera_x/y/z`, `location_references`, `visual_disposition`) — authoritative from Pass 1B when anchors are present.
 
+## MULTI-SHOT PANELS (optional) — `shots`
+
+The video model can hold SEVERAL SHOTS inside ONE generated clip. A panel
+may therefore describe a short SEQUENCE of shots instead of one setup.
+
+  "shots": [
+    {"scale": "MS", "duration": 3, "description": "Lin pushes the door open and steps into the corridor", "camera": "locked off"},
+    {"scale": "CU", "duration": 3, "description": "his face as he sees the figure at the far end", "camera": "slow push in"}
+  ]
+
+RULES:
+  - The shot durations MUST sum to the panel `duration` (from Pass 1),
+    and that total MUST be ≤ {{VIDEO_MAX_SECONDS}} s — the video model
+    rejects a longer clip.
+  - Each `description` must be INDEPENDENTLY FILMABLE — the model will cut
+    between shots, so each one needs its own subject, action and framing.
+  - Identity, wardrobe, location and lighting must stay IDENTICAL across
+    the shots. A shot that changes the room is a separate panel.
+  - `visual_start` still describes the FIRST shot only — it is the frame
+    the pipeline renders and the QA judge scores.
+  - Leave `shots` EMPTY for a normal single-shot panel. That is the default
+    and the safe choice: a multi-shot clip is only as good as its weakest
+    shot, and it cannot be re-rendered without redoing the whole clip.
+
+---
+
 ## FORBIDDEN in this pass
 - `motion_prompt` or timestamped motion steps
 - Dialogue, voiceover, audio content
@@ -47,7 +73,7 @@ When a panel deviates for dramatic effect, flag it explicitly in `lights_and_cam
 
 ```
 [SCALE] [LENS]mm [ANGLE] cam@[CAMERA_POSITION_ANCHOR]
-[ACTOR_NAME]: frame-[LEFT|CENTER|RIGHT] [FG|MG|BG], [PROFILE]→gaze:[GAZE_TARGET], [POSE], [BODY_DETAIL_1], [BODY_DETAIL_2 or omit]
+[ACTOR_NAME]: frame-[LEFT|CENTER|RIGHT] [FG|MG|BG], [PROFILE]→gaze:[GAZE_TARGET],chest->[CHEST_TARGET],head->[HEAD_TARGET], [POSE], [BODY_DETAIL_1], [BODY_DETAIL_2 or omit]
 ... (one ACTOR line per in_frame=true actor)
 BG: [NAMED_WALL or SURFACE], [ELEMENT_1] [sharp|soft|heavy-bokeh], [ELEMENT_2 or —]
 BGD: [DENSITY] [CROWD_TYPE], [DEPTH_PLANE], heavy-bokeh   ← MANDATORY in EVERY MS/MWS/WS/XWS panel when BACKGROUND ACTIVITY block is present; OMIT at ECU/CU/Macro; missing BGD = checklist failure
@@ -68,6 +94,11 @@ CONTEXT: [≤15 words — scene-specific visual fact not encodable above]  ← o
 | FOCUS | `sharp` `soft` `heavy-bokeh` |
 | QUALITY | `hard` `soft` `diffuse` `rim` `flat` |
 | COLOR_TEMP | `warm` (≈3000 K) `neutral` (≈5500 K) `cold` (≈7000 K) or exact K value |
+
+PROFILE is derived from camera direction and actor position with respect to actor body and head rotation.
+Example:
+- actor is by far wall, camera at the doorway, actor looks at the doorway -> PROFILE: 3Q-FRONT or FRONTAL
+- actor in the doorway, camera at the doorway, actor comes in and looks inside the room -> PROFILE: 3Q-REAR or BACK
 
 **GAZE_TARGET** — named anchor slug, canonical person name, or `lens(DIRECT-ADDRESS)`. Never blank or vague ("ahead", "nowhere", "distance").
 
@@ -137,8 +168,8 @@ Apply the matching projection rule (center band = [0.35, 0.65] on the lateral ax
 |---|---|---|---|---|
 | **Entrance** (y≈0, looking toward y=1) | x | x < 0.35 | x > 0.65 | low Y → high Y |
 | **Far-wall** (y≈1, looking toward y=0) | 1 − x | x > 0.65 | x < 0.35 | high Y → low Y |
-| **Image-left-wall** (x≈0, looking toward x=1) | y | y < 0.35 | y > 0.65 | low X → high X |
-| **Image-right-wall** (x≈1, looking toward x=0) | 1 − y | y > 0.65 | y < 0.35 | high X → low X |
+| **Image-left-wall** (x≈0, looking toward x=1) | 1 − y | y > 0.65 | y < 0.35 | low X → high X |
+| **Image-right-wall** (x≈1, looking toward x=0) | y | y < 0.35 | y > 0.65 | high X → low X |
 | **Center-room** | determined by character's `chest_direction` | toward lower x or y | toward higher x or y | by distance |
 
 **STEP 1B — PROFILE token derivation (mandatory for every in_frame actor).**
@@ -158,8 +189,8 @@ For each actor, compare `actor.chest_direction` with `camera_direction`:
 |---|---|
 | Same direction (both toward far wall, or both toward entrance, etc.) | `BACK` |
 | ~45° off camera direction (oblique, same general hemisphere) | `3Q-REAR` |
-| ~135° off camera direction (oblique, facing-camera hemisphere) | `3Q-FRONT` |
 | ~90° off camera direction (perpendicular / lateral) | `SIDE` |
+| ~135° off camera direction (oblique, facing-camera hemisphere) | `3Q-FRONT` |
 | Opposite direction (actor faces toward the camera position) | `FRONTAL` |
 
 **CRITICAL EXAMPLES — apply mechanically:**
@@ -201,21 +232,7 @@ use `visual_disposition_hint_to_entrance` instead, which already encodes the inv
 At ECU and CU scale the camera is physically ~0.3–1 m from the subject. The background is NOT the
 wide-room vista — it is the local slice of the room immediately BEHIND the subject's head/shoulders.
 
-**Compute the background wall using coordinates:**
-
-1. Camera is at (camera_x, camera_y). Subject is at their nearest anchor (sub_x, sub_y).
-2. Direction vector D = (sub_x − camera_x, sub_y − camera_y). This is the direction the camera looks.
-3. Extend the line PAST the subject: background_point = (sub_x + t·Dx, sub_y + t·Dy), t > 0.
-4. Find which wall this line exits through first (smallest positive t):
-   - Hits x=0 (image-left wall) when t = −sub_x / Dx  (if Dx < 0)
-   - Hits x=1 (image-right wall) when t = (1 − sub_x) / Dx  (if Dx > 0)
-   - Hits y=0 (entrance wall) when t = −sub_y / Dy  (if Dy < 0)
-   - Hits y=1 (far wall) when t = (1 − sub_y) / Dy  (if Dy > 0)
-   - The **smallest positive t wins** → that is the background wall.
-
-5. Cross-check with the subject's `facing_degrees_y`: the background should be roughly OPPOSITE the
-   subject's facing direction (the wall their back is toward). Facing 90° → back toward x=0 wall.
-   If geometry and facing contradict, trust the camera→subject→wall projection (step 2–4).
+**The background wall is computed for you:** the BLOCKING line `Background behind the subject: the <wall> — on it near the camera axis: [ids]` comes from the panel camera and the subject's resolved position. Use that wall and those anchors. With no such line, take the wall the subject's back is toward.
 
 **Background wall → what to describe:**
 
@@ -233,7 +250,7 @@ on the opposite wall.
 HARD FAILURE: `visual_start` for ECU/CU that says "the room stretches behind him" / "the full
 living room behind her" / describes a wide vista — forbidden at these scales.
 HARD FAILURE: naming the entrance door behind a character whose geometric background is the far wall,
-or vice versa — the background MUST match the camera→subject→wall projection.
+or vice versa — the background MUST match the BLOCKING `Background behind the subject` line.
 
 **visual_start TIMING LAW**: visual_start = the split second BEFORE motion begins.
 - WRONG: residual state of the previous panel's outcome
@@ -276,17 +293,16 @@ If you need both face reaction AND floor object → use two consecutive panels.
 
 ### CAMERA-FACING ORIENTATION
 
-**Solo shots** — state one of:
-- "faces visible to camera" (frontal, default for CU/ECU)
-- "three-quarter profile to camera"
-- "back to camera" (only when intentional dramatic choice)
+Orientation lives in the ACTOR line's `PROFILE` token and its `chest->` / `head->` targets — never in a sentence.
 
-**Multi-character shots** — use the compound form ONLY:
-- "camera sees [A] in side profile, chest directed toward [B] at frame-[X]" — confrontation
-- "camera sees [A] in three-quarter profile, chest angled toward [B] at frame-[X]" — approach / ambivalence
-- "camera sees [A] in three-quarter rear profile, neck turned back toward [B] at frame-[X]" — reluctant attention
-- "camera sees [A]'s back, body fully to [B] at frame-[X]" — rejection / vulnerability
-CONTRADICTION: "faces visible to camera" + "half-turned toward [B]" = HARD FAILURE.
+**Solo shots** — `FRONTAL` (default for CU/ECU), `3Q-FRONT`, or `BACK` (only as an intentional dramatic choice).
+
+**Multi-character shots** — PROFILE plus targets naming the other character:
+- confrontation: `SIDE→gaze:[B],chest->[B],head->[B]`
+- approach / ambivalence: `3Q-FRONT→gaze:[B],chest->[B],head->[B]`
+- reluctant attention: `3Q-REAR→gaze:[B],chest->[exit-door],head->[B]`
+- rejection / vulnerability: `BACK→gaze:[B],chest->[B],head->[B]`
+CONTRADICTION: `FRONTAL` with `chest->` at another character at frame-left/right = HARD FAILURE (FRONTAL faces the lens).
 
 ### GAZE DIRECTION
 
@@ -471,8 +487,8 @@ AVAILABILITY: side-wall, center, and by-wall views may not exist for every room.
 **Rooms — eight views:**
 - `{Room}-View-From-Entrance` — entrance axis; X coordinates map left/right directly.
 - `{Room}-View-To-Entrance` — entrance axis reversed; L/R **swapped**, depth reversed.
-- `{Room}-View-From-Left-Wall` — lateral axis; **Y** drives L/R (low Y = entrance side = frame-left). X drives depth.
-- `{Room}-View-From-Right-Wall` — lateral axis mirrored; **1−Y** drives L/R (low Y = entrance side = frame-right). 1−X drives depth.
+- `{Room}-View-From-Left-Wall` — lateral axis; **1−Y** drives L/R (low Y = entrance side = frame-right). X drives depth.
+- `{Room}-View-From-Right-Wall` — lateral axis mirrored; **Y** drives L/R (low Y = entrance side = frame-left). 1−X drives depth.
 - `{Room}-View-Center-To-Far` — center/entrance axis; same L/R as View-From-Entrance. Shallower depth.
 - `{Room}-View-Center-To-Entrance` — center/entrance axis reversed; L/R **swapped** vs View-From-Entrance.
 - `{Room}-View-By-Far-Wall` — 1m from far wall; same L/R as View-From-Entrance. Far wall fills frame; no mid-room furniture.
@@ -480,10 +496,22 @@ AVAILABILITY: side-wall, center, and by-wall views may not exist for every room.
 
 **Vehicles — three views:** `{Vehicle}-Exterior` / `{Vehicle}-Interior-From-Entrance` / `{Vehicle}-Interior-To-Entrance`
 
-**Outdoor — two views:**
+**Vehicle interiors — `vehicle_shot`.** Inside a vehicle, set `vehicle_shot` per panel to the camera mount; the render
+derives lens, framing and every occupant's frame side from it plus the seats in `state.actors[].vehicle_position`, and
+overrides any frame-left/right you write. Ids: `windshield-front` (front-row two-shot through the windshield),
+`windshield-driver`, `windshield-passenger`, `front-center-back` (between the front seats, facing the rear row),
+`rear-center-forward` (behind the last row, over shoulders toward the windshield), `mirror-back` (rear-view mirror,
+whole cabin), `rear-window`, `side-<seat>` (outside, through that seat's window), `dash-driver`, `dash-front-passenger`,
+`lap-<seat>` (top-down insert), `pov:<seat>><seat>` and `ots:<seat>><seat>` (camera at / over the shoulder of the first
+seat, looking at the second). Leave it empty outside vehicles. In a camera facing the rear (`front-center-back`,
+`mirror-back`) the vehicle's LEFT side is on frame-RIGHT.
+
+**Outdoor — four views from one station:**
 - `{Outdoor}-View-Primary` — camera faces the primary direction (toward canonical background landmark).
 - `{Outdoor}-View-Opposite` — camera faces the opposite direction (180°; left/right swapped).
 - **KEY RULE**: "archway behind her" + archway is the PRIMARY-end landmark → camera faces Opposite → View-Opposite.
+- `{Outdoor}-View-Ortho-Primary` — same station, turned 90° right (faces +x; features behind View-Primary appear frame-right),
+  `{Outdoor}-View-Ortho-Opposite` — turned 90° left (faces −x; features behind View-Primary appear frame-left). Use only when listed as valid.
 
 Names must match existing refs EXACTLY — lowercase, hyphens only, no spaces, no capitalisation. A single letter difference silently skips the reference image. Copy the slug from ROOM ANCHOR POINTS verbatim.
 
@@ -502,9 +530,9 @@ View-By-Entrance: entrance door fills ~80% of frame — no mid-room furniture.
 If zones have `visual_disposition_hint_to_entrance`, use it as the `visual_start` starting point.
 
 **View-From-Left-Wall** (camera x≈0, looking toward x=1 wall):
-Image-left-wall axis — lateral = **Y**. `y < 0.35` (entrance side) → frame-left. `y > 0.65` (far side) → frame-right.
+Image-left-wall axis — lateral = **1−Y**. `y < 0.35` (entrance side) → frame-right. `y > 0.65` (far side) → frame-left.
 Depth: low-X near/foreground → high-X (image-right wall) background.
 
 **View-From-Right-Wall** (camera x≈1, looking toward x=0 wall):
-Image-right-wall axis — lateral = **1−Y**. `y > 0.65` (far side) → frame-left. `y < 0.35` (entrance side) → frame-right.
+Image-right-wall axis — lateral = **Y**. `y < 0.35` (entrance side) → frame-left. `y > 0.65` (far side) → frame-right.
 Depth: high-X near/foreground → low-X (image-left wall) background.

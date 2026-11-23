@@ -1,4 +1,5 @@
 {
+  "extends": "vertical_9_16_generic",
   "episodes_count": 2,
   "format": {
     "type": "single_grid_animation",

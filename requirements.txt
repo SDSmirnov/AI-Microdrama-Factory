@@ -1,9 +1,13 @@
-google-genai>=0.3.0
-google-api-core>=2.0.0
-Pillow>=10.0.0
-requests>=2.31.0
-xai-sdk>=0.1.0
-elevenlabs>=1.0.0
-pydub>=0.25.1
-moviepy>=1.0.3
-faster-whisper>=1.0.0
+google-genai==2.12.1
+google-api-core==2.32.0
+Pillow==11.3.0
+requests==2.34.2
+xai-sdk==1.17.0
+elevenlabs==2.58.0
+pydub==0.25.1
+audioop-lts==0.2.2; python_version >= "3.13"  # pydub needs audioop, removed from stdlib in 3.13
+moviepy==2.2.1
+faster-whisper==1.2.1
+pyvista>=0.49  # optional: AI_RENDER3D=pyvista|auto 3D sketches without Blender
+pytest==9.2.0
+pytest-cov==7.1.0

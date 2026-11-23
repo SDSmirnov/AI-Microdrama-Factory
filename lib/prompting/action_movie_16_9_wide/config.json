@@ -1,0 +1,12 @@
+{
+  "extends": "action_movie_9_16",
+  "episodes_count": 1,
+  "format": {
+    "panel_count_options": [4, 9, 12],
+    "panel_aspect_ratio": "16:9",
+    "framing_note": "Widescreen action cinema: stage in width and depth — opponents across the frame, cover and exits readable, foreground and background both in play.\nDepth of field follows shot scale: deep at WS, shallow only at CU/ECU."
+  },
+  "image_generation": {
+    "aspect_ratio": "16:9"
+  }
+}

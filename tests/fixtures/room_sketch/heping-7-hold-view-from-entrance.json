@@ -1,0 +1,321 @@
+{
+  "name": "Heping-7-Hold-View-From-Entrance",
+  "type": "Room",
+  "visual_desc": "ROOM SIZE: converted freighter cargo hold ops bay ~8×5 m, 2.6 m ceiling, steel deck plates, bare metal bulkheads with stiffener ribs and rust blooms. NORTH WALL (entrance): heavy watertight hatch center open, cable trunking above, life-vest locker right of hatch, extinguisher left. SOUTH WALL (opposite): dual large monitors on bolted rack showing dark strait maps dense with green swarm dots, fold-out metal desk, simple folding chair, clipboard zone, noodle container zone, secondary small status screen. EAST WALL (right when entering): row of black 19-inch server racks with blinking LEDs, cold-aisle ~1 m gap, cable ladders overhead, floor cable trays. WEST WALL (left when entering): more server racks and UPS cabinets, printed logistics binders on a crate seat for Guo, coiled fiber spools. CENTER: narrow clear walk ~1 m between racks to desk, empty of people. CEILING/FLOOR: exposed cable trays, fluorescent battens cold white + green monitor spill; scuffed anti-slip steel floor. SHOW EMPTY WITHOUT PEOPLE. Photoreal cramped utilitarian night-shift tech hold, portrait-wide from entrance. Converted freighter cargo hold used as swarm ops bay: rows of live server racks with blinking LEDs and audible fan roar; open cable runs along bare metal bulkheads with stiffener ribs and rust blooms; cold fluorescent light mixed with monitor glow and rack indicator colors; narrow ~1 m aisles; utilitarian temporary feel; Chen’s folding chair, large swarm-map console, paper checklist, pencil, plastic beef-noodle container with cooled broth; Guo seated adjacent with paper logistics printout stack; possible slight ship roll/vibration.",
+  "anchor_points": {
+    "axes": "X=[0,1] image-left-to-right wall. Y=[0,1] entrance-to-far-wall. Z=[0,1] floor-to-ceiling. View-To-Entrance: x_mirrored = 1 - x (left↔right swap), Y depth reversed. View-From-Left-Wall (x≈0): lateral=Y, depth=X. View-From-Right-Wall (x≈1): lateral=1-Y, depth=1-X. View-Center-To-Far: same as From-Entrance. View-Center-To-Entrance: same as To-Entrance. View-By-Far-Wall (y≈0.85): same as From-Entrance. View-By-Entrance (y≈0.15): same as To-Entrance.",
+    "room_m": [
+      5.0,
+      8.0
+    ],
+    "objects": [
+      {
+        "id": "watertight-hatch",
+        "label": "Heavy watertight hatch (open)",
+        "x": 0.5,
+        "y": 0.02,
+        "z": 0.48,
+        "width_x": 0.28,
+        "depth_y": 0.04,
+        "facing_degrees_y": 180,
+        "notes": "Centered on entrance wall (y≈0.02, x≈0.5). Open doorway into hold. Faces far wall. width_x≈0.28, depth_y≈0.04."
+      },
+      {
+        "id": "cable-trunking-entrance",
+        "label": "Cable trunking above hatch",
+        "x": 0.5,
+        "y": 0.02,
+        "z": 0.88,
+        "width_x": 0.55,
+        "depth_y": 0.05,
+        "facing_degrees_y": -1,
+        "notes": "Along entrance wall above hatch (y≈0.02, z≈0.88). Omnidirectional trunking run."
+      },
+      {
+        "id": "fire-extinguisher",
+        "label": "Fire extinguisher",
+        "x": 0.3,
+        "y": 0.02,
+        "z": 0.38,
+        "width_x": 0.04,
+        "depth_y": 0.03,
+        "facing_degrees_y": -1,
+        "notes": "Entrance wall, image-left of hatch (x≈0.3, y≈0.02). Point fixture on bulkhead."
+      },
+      {
+        "id": "life-vest-locker",
+        "label": "Life-vest locker",
+        "x": 0.72,
+        "y": 0.03,
+        "z": 0.42,
+        "width_x": 0.14,
+        "depth_y": 0.06,
+        "facing_degrees_y": 180,
+        "notes": "Entrance wall, image-right of hatch (x≈0.72, y≈0.03). Faces into room toward far wall."
+      },
+      {
+        "id": "server-racks-left",
+        "label": "Server racks image-left wall",
+        "x": 0.12,
+        "y": 0.48,
+        "z": 0.42,
+        "width_x": 0.22,
+        "depth_y": 0.72,
+        "facing_degrees_y": 90,
+        "notes": "Against image-left wall (x≈0.12), spanning mid entrance-to-far depth (y≈0.12–0.84). Faces image-right into center aisle. Blinking LEDs, fan face to aisle."
+      },
+      {
+        "id": "ups-cabinets-left",
+        "label": "UPS cabinets image-left",
+        "x": 0.12,
+        "y": 0.22,
+        "z": 0.38,
+        "width_x": 0.2,
+        "depth_y": 0.16,
+        "facing_degrees_y": 90,
+        "notes": "Image-left wall, entrance-side of left rack row (x≈0.12, y≈0.22). Faces image-right into aisle."
+      },
+      {
+        "id": "crate-seat-guo",
+        "label": "Crate seat with logistics binders",
+        "x": 0.3,
+        "y": 0.58,
+        "z": 0.18,
+        "width_x": 0.14,
+        "depth_y": 0.12,
+        "facing_degrees_y": 90,
+        "notes": "Image-left side of center aisle (x≈0.3, y≈0.58), mid-far depth. Crate used as seat; binders stacked on/beside. Faces image-right toward aisle/desk approach."
+      },
+      {
+        "id": "logistics-binders",
+        "label": "Printed logistics binders stack",
+        "x": 0.3,
+        "y": 0.58,
+        "z": 0.32,
+        "width_x": 0.08,
+        "depth_y": 0.06,
+        "facing_degrees_y": -1,
+        "notes": "Atop crate-seat-guo (x≈0.3, y≈0.58, z≈0.32). Paper printout stack. Point-stack feature."
+      },
+      {
+        "id": "fiber-spools",
+        "label": "Coiled fiber spools",
+        "x": 0.16,
+        "y": 0.72,
+        "z": 0.12,
+        "width_x": 0.12,
+        "depth_y": 0.1,
+        "facing_degrees_y": -1,
+        "notes": "Image-left wall base, far-side of left racks (x≈0.16, y≈0.72). Floor-level coils."
+      },
+      {
+        "id": "server-racks-right",
+        "label": "Server racks image-right wall",
+        "x": 0.88,
+        "y": 0.48,
+        "z": 0.42,
+        "width_x": 0.22,
+        "depth_y": 0.72,
+        "facing_degrees_y": 270,
+        "notes": "Against image-right wall (x≈0.88), spanning mid depth (y≈0.12–0.84). Faces image-left into center aisle. Black 19-inch racks, blinking LEDs."
+      },
+      {
+        "id": "floor-cable-trays",
+        "label": "Floor cable trays",
+        "x": 0.55,
+        "y": 0.42,
+        "z": 0.03,
+        "width_x": 0.28,
+        "depth_y": 0.55,
+        "facing_degrees_y": -1,
+        "notes": "Along center-right floor of aisle (x≈0.55, y≈0.42). Low trays on steel deck."
+      },
+      {
+        "id": "cable-ladders-overhead",
+        "label": "Overhead cable ladders",
+        "x": 0.5,
+        "y": 0.5,
+        "z": 0.93,
+        "width_x": 0.7,
+        "depth_y": 0.7,
+        "facing_degrees_y": -1,
+        "notes": "Ceiling-level cable ladders spanning center (x≈0.5, y≈0.5, z≈0.93). Exposed runs."
+      },
+      {
+        "id": "fluorescent-battens",
+        "label": "Fluorescent ceiling battens",
+        "x": 0.5,
+        "y": 0.5,
+        "z": 0.98,
+        "width_x": 0.35,
+        "depth_y": 0.65,
+        "facing_degrees_y": -1,
+        "notes": "Cold-white fluorescent battens on ceiling centerline (z≈0.98). Mix with green monitor spill."
+      },
+      {
+        "id": "fold-out-metal-desk",
+        "label": "Fold-out metal desk",
+        "x": 0.52,
+        "y": 0.88,
+        "z": 0.36,
+        "width_x": 0.38,
+        "depth_y": 0.14,
+        "facing_degrees_y": 0,
+        "notes": "Far-side ops desk (x≈0.52, y≈0.88). Against far-wall monitor rack; open user side toward entrance. width_x≈0.38, depth_y≈0.14."
+      },
+      {
+        "id": "swarm-map-monitors",
+        "label": "Dual large swarm-map monitors",
+        "x": 0.52,
+        "y": 0.96,
+        "z": 0.58,
+        "width_x": 0.4,
+        "depth_y": 0.04,
+        "facing_degrees_y": 0,
+        "notes": "Bolted rack on far wall (x≈0.52, y≈0.96). Dual large screens show dark strait maps with green swarm dots. Face entrance (toward operator)."
+      },
+      {
+        "id": "monitor-rack-bolted",
+        "label": "Bolted monitor rack frame",
+        "x": 0.52,
+        "y": 0.97,
+        "z": 0.52,
+        "width_x": 0.42,
+        "depth_y": 0.05,
+        "facing_degrees_y": 0,
+        "notes": "Far wall structural rack holding dual monitors (x≈0.52, y≈0.97). Faces entrance."
+      },
+      {
+        "id": "secondary-status-screen",
+        "label": "Secondary small status screen",
+        "x": 0.78,
+        "y": 0.95,
+        "z": 0.52,
+        "width_x": 0.1,
+        "depth_y": 0.03,
+        "facing_degrees_y": 0,
+        "notes": "Far wall, image-right of main monitors (x≈0.78, y≈0.95). Small status display facing entrance."
+      },
+      {
+        "id": "folding-chair-chen",
+        "label": "Simple folding chair (Chen)",
+        "x": 0.5,
+        "y": 0.78,
+        "z": 0.22,
+        "width_x": 0.1,
+        "depth_y": 0.1,
+        "facing_degrees_y": 180,
+        "notes": "Center aisle, entrance-side of desk (x≈0.5, y≈0.78). Faces far wall / swarm monitors."
+      },
+      {
+        "id": "clipboard-checklist",
+        "label": "Clipboard and paper checklist",
+        "x": 0.4,
+        "y": 0.86,
+        "z": 0.4,
+        "width_x": 0.06,
+        "depth_y": 0.05,
+        "facing_degrees_y": -1,
+        "notes": "On desk surface image-left side (x≈0.4, y≈0.86, z≈0.4). Paper checklist zone."
+      },
+      {
+        "id": "pencil",
+        "label": "Pencil",
+        "x": 0.44,
+        "y": 0.86,
+        "z": 0.39,
+        "width_x": 0.02,
+        "depth_y": 0.01,
+        "facing_degrees_y": -1,
+        "notes": "On desk beside checklist (x≈0.44, y≈0.86). Point feature."
+      },
+      {
+        "id": "noodle-container",
+        "label": "Plastic beef-noodle container",
+        "x": 0.64,
+        "y": 0.86,
+        "z": 0.4,
+        "width_x": 0.05,
+        "depth_y": 0.05,
+        "facing_degrees_y": -1,
+        "notes": "On desk surface image-right side (x≈0.64, y≈0.86). Cooled broth container."
+      },
+      {
+        "id": "steel-deck-floor",
+        "label": "Scuffed anti-slip steel deck",
+        "x": 0.5,
+        "y": 0.5,
+        "z": 0.01,
+        "width_x": 1.0,
+        "depth_y": 1.0,
+        "facing_degrees_y": -1,
+        "notes": "Full-room steel deck plates (z≈0.01). Scuffed anti-slip surface."
+      }
+    ],
+    "zones": [
+      {
+        "id": "entrance-zone",
+        "label": "Entrance hatch zone",
+        "x": 0.5,
+        "y": 0.08,
+        "visual_disposition_hint": "Open watertight hatch centered on entrance wall; extinguisher image-left of hatch; life-vest locker image-right of hatch; cable trunking above. Narrow aisle mouth beyond threshold between left and right rack ends. DEPTH: entrance hatch threshold → aisle mouth → rack rows mid-ground → far desk and monitors background.",
+        "visual_disposition_hint_to_entrance": "Hatch and entrance wall in far background center; aisle runs toward camera from background; rack ends frame the path. Extinguisher at x_mirrored≈0.7 (image-right in this view); life-vest locker at x_mirrored≈0.28 (image-left in this view). DEPTH: center aisle foreground → rack corridor mid-ground → open hatch entrance wall background.",
+        "visual_disposition_hint_lateral": "From image-left wall: entrance hatch appears toward entrance-side edge of frame; life-vest locker and image-right wall deeper along X; aisle runs entrance-to-far beside camera. DEPTH along X: image-left wall behind camera → aisle → image-right racks background."
+      },
+      {
+        "id": "center-aisle",
+        "label": "Narrow center walk aisle",
+        "x": 0.5,
+        "y": 0.45,
+        "visual_disposition_hint": "Clear ~1 m walk centered (x≈0.5) between image-left server racks and image-right server racks; floor cable trays along aisle; overhead cable ladders and fluorescent battens above. DEPTH: entrance threshold → aisle mid-ground between rack faces → fold-out desk and swarm monitors far background.",
+        "visual_disposition_hint_to_entrance": "Aisle mid-ground center; far-wall desk/monitors nearest behind camera; rack faces on both sides (image-left racks now at x_mirrored≈0.88 frame-right; image-right racks at x_mirrored≈0.12 frame-left). DEPTH: desk-side aisle foreground → rack corridor mid-ground → entrance hatch background.",
+        "visual_disposition_hint_lateral": "From image-left wall looking across: aisle is mid-depth along X; entrance-side toward one frame edge, far-desk toward the other; image-right racks are far background wall. DEPTH: image-left rack face → center aisle → image-right rack row background."
+      },
+      {
+        "id": "server-left-zone",
+        "label": "Image-left server and UPS zone",
+        "x": 0.14,
+        "y": 0.45,
+        "visual_disposition_hint": "Server racks and UPS cabinets hard against image-left wall (x≈0.12–0.25); LED faces toward center aisle; fiber spools near far-side base; crate seat protrudes into aisle edge. DEPTH: entrance-side UPS → left rack row mid-ground → fiber spools and far bulkhead corner background.",
+        "visual_disposition_hint_to_entrance": "Left-wall racks appear image-right in this view (x_mirrored≈0.86–0.88); UPS toward entrance background along wall; fiber spools nearer far-wall foreground on that side. DEPTH: far-side left-wall gear foreground → rack faces mid-ground → entrance-side UPS and hatch background.",
+        "visual_disposition_hint_lateral": "From image-left wall: racks are immediately beside/behind camera along wall; aisle and image-right racks in background across X; entrance-side UPS at one lateral edge, far-side fiber at the other. DEPTH: image-left rack → aisle → image-right wall background."
+      },
+      {
+        "id": "server-right-zone",
+        "label": "Image-right server racks zone",
+        "x": 0.86,
+        "y": 0.45,
+        "visual_disposition_hint": "Black 19-inch server rack row hard against image-right wall (x≈0.78–0.98); LED faces toward center aisle; cold-aisle gap to center walk; cable ladders above. DEPTH: entrance-side right rack ends → right rack row mid-ground → far-wall secondary status screen corner background.",
+        "visual_disposition_hint_to_entrance": "Right-wall racks appear image-left in this view (x_mirrored≈0.12–0.14); secondary status screen near far-wall foreground image-left; rack corridor runs to entrance hatch background. DEPTH: far-side right racks foreground → rack faces mid-ground → entrance wall background.",
+        "visual_disposition_hint_lateral": "From image-right wall: racks immediately beside/behind camera; aisle then image-left racks in background across X; entrance-side vs far-side run along lateral Y. DEPTH: image-right rack → center aisle → image-left wall background."
+      },
+      {
+        "id": "guo-seat-zone",
+        "label": "Guo crate seat and logistics zone",
+        "x": 0.3,
+        "y": 0.58,
+        "visual_disposition_hint": "Crate seat on image-left side of aisle (x≈0.3, y≈0.58) with logistics binder stack; adjacent to left server racks; fiber spools farther toward far wall on image-left. DEPTH: center aisle approach → crate and binders mid-ground image-left → left racks and far bulkhead background.",
+        "visual_disposition_hint_to_entrance": "Crate seat mid-ground image-right (x_mirrored≈0.7); binders readable as stack prop; far-wall desk gear nearer camera center/left; entrance hatch distant background. DEPTH: far-wall foreground → crate seat mid-ground image-right → aisle to entrance background.",
+        "visual_disposition_hint_lateral": "From image-left wall: crate is near-field just into aisle (low X depth); entrance-side vs far-side along Y; image-right racks far across room. DEPTH: image-left wall/crate → aisle → image-right racks background."
+      },
+      {
+        "id": "ops-desk-zone",
+        "label": "Far-wall swarm ops desk zone",
+        "x": 0.52,
+        "y": 0.88,
+        "visual_disposition_hint": "Fold-out metal desk center-far (x≈0.52, y≈0.88); dual swarm-map monitors on bolted rack directly behind on far wall; clipboard/checklist and pencil image-left on desk; noodle container image-right on desk; secondary status screen far-wall image-right; folding chair on entrance-side of desk. DEPTH: folding chair mid-ground → desk surface → dual monitors and far wall background.",
+        "visual_disposition_hint_to_entrance": "Dual monitors and bolted rack nearest camera (far wall foreground); desk surface immediately in front of monitors; chair beyond desk toward room center; checklist at x_mirrored≈0.6 (image-right here); noodle at x_mirrored≈0.36 (image-left here); secondary screen image-left foreground (x_mirrored≈0.22). DEPTH: far-wall monitors foreground → desk → chair mid-ground → center aisle → entrance hatch background.",
+        "visual_disposition_hint_lateral": "From image-left wall: desk and monitors at far-side lateral edge, mid-to-high X depth; chair entrance-side of desk; image-right secondary screen and right racks toward far background X. DEPTH: image-left edge → desk/chair → image-right far-wall corner background."
+      },
+      {
+        "id": "chen-seat-zone",
+        "label": "Chen folding-chair ops seat",
+        "x": 0.5,
+        "y": 0.78,
+        "visual_disposition_hint": "Folding chair centered (x≈0.5, y≈0.78) facing far wall; desk and dual swarm monitors directly beyond chair; rack faces left and right frame the seat pocket. DEPTH: aisle approach → folding chair mid-ground → desk → swarm monitors far wall background.",
+        "visual_disposition_hint_to_entrance": "Chair mid-ground center facing camera (person would face far wall/cameras behind); desk and monitors in foreground between camera and chair back; aisle and entrance hatch in background. DEPTH: monitors and desk foreground → chair mid-ground → aisle → entrance background.",
+        "visual_disposition_hint_lateral": "From side wall: chair mid-room at mid X depth, far-side of center; desk just beyond chair toward far wall edge; entrance-side aisle extends opposite lateral. DEPTH: near side wall → chair/desk → opposite wall racks background."
+      }
+    ]
+  }
+}

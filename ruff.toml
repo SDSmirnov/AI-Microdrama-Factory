@@ -1,0 +1,7 @@
+include = ["cli.py", "lib/**/*.py", "tests/**/*.py"]
+
+[lint]
+select = ["F", "E9"]
+
+[lint.per-file-ignores]
+"lib/studio/artist/__init__.py" = ["F401"]

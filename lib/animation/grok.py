@@ -7,49 +7,24 @@ import asyncio
 import base64
 import json
 import logging
-import os
 from pathlib import Path
 from typing import Optional
 
 import requests
 import xai_sdk
 
-from lib.animation.base import ANIMATION_PROHIBITIONS, BaseAnimator
+from lib.animation.base import BaseAnimator, clip_path_for_panel
+from lib.animation.capabilities import caps_for
+from lib.animation.prompt_builder import build_video_prompt
 
 logger = logging.getLogger(__name__)
 
 DEFAULT_MODEL = "grok-imagine-video"
 DEFAULT_DURATION = 6
-DEFAULT_ASPECT_RATIO = os.getenv('AI_ASPECT_RATIO', '9:16')
+DEFAULT_ASPECT_RATIO = '9:16'
 DEFAULT_RESOLUTION = "720p"
 BATCH_SIZE = 9
 BATCH_SLEEP = 30
-
-
-def _build_prompt(meta: dict) -> str:
-    """Build the Grok video prompt from panel metadata."""
-    motion_prompt = meta.get('motion_prompt', 'Animate this.')
-    dialogue = meta.get('dialogue', '')
-    voiceover = meta.get('voiceover', '')
-
-    vo_speech = ''
-    if voiceover:
-        if dialogue:
-            vo_speech = ''
-        else:
-            vo_speech = f'OFF-SCREEN VOICE OVER (lips do not move): "{voiceover}"'
-
-    return (
-        f"{ANIMATION_PROHIBITIONS}"
-        f"BACKGROUND SOUNDS: SFX ONLY, NO MUSIC\n\n"
-        f"VIDEO INSTRUCTIONS: Filming Action Movie. Smooth transition, high temporal consistency.\n"
-        f"STYLE: Hyper-realistic cinematic photography, shot on Arri Alexa Mini LF with 50mm lens.\n\n"
-        f"START: {meta.get('visual_start', '')}\n\n"
-        f"CAMERA: {meta.get('lights_and_camera', '')}\n\n"
-        f"ANIMATION: {motion_prompt}\n\n"
-        f"{'DIALOGUE:' if dialogue else ''} {dialogue}\n\n"
-        f"{vo_speech}\n\n"
-    )
 
 
 def _load_image_as_data_url(path: Path) -> str:
@@ -58,21 +33,30 @@ def _load_image_as_data_url(path: Path) -> str:
     return f"data:image/png;base64,{b64}"
 
 
-async def _generate_batch(client, tasks: list[dict]) -> list[dict]:
+async def _generate_batch(client, tasks: list[dict], model: str, aspect_ratio: str,
+                          resolution: str) -> list[dict]:
     """Run a batch of video generation tasks concurrently."""
     coros = [
         client.video.generate(
             prompt=task['prompt'],
-            model=DEFAULT_MODEL,
-            duration=DEFAULT_DURATION,
-            aspect_ratio=DEFAULT_ASPECT_RATIO,
-            resolution=DEFAULT_RESOLUTION,
+            model=model,
+            duration=task['duration'],
+            aspect_ratio=aspect_ratio,
+            resolution=resolution,
             image_url=task['image_url'],
         )
         for task in tasks
     ]
     results = await asyncio.gather(*coros, return_exceptions=True)
     return list(zip(tasks, results))
+
+
+def _download(url: str, out: Path) -> None:
+    response = requests.get(url, timeout=120)
+    response.raise_for_status()
+    if not response.content:
+        raise RuntimeError(f"Empty video body from {url}")
+    out.write_bytes(response.content)
 
 
 class GrokAnimator(BaseAnimator):
@@ -91,14 +75,25 @@ class GrokAnimator(BaseAnimator):
         resolution: str = DEFAULT_RESOLUTION,
         batch_size: int = BATCH_SIZE,
         batch_sleep: int = BATCH_SLEEP,
+        prompts: dict = None,
     ):
         self.api_key = api_key
+        self.prompts = prompts
         self.model = model
         self.duration = duration
         self.aspect_ratio = aspect_ratio
         self.resolution = resolution
         self.batch_size = batch_size
         self.batch_sleep = batch_sleep
+
+    def _task(self, meta: dict, image: Path, out: Path) -> dict:
+        seconds = caps_for(self.model).clamp_seconds(meta.get('duration') or self.duration, using_references=False)
+        return {
+            'prompt': build_video_prompt(meta, [], [], seconds, prompts=self.prompts),
+            'duration': seconds,
+            'image_url': _load_image_as_data_url(image),
+            'output': out,
+        }
 
     def animate(
         self,
@@ -111,22 +106,17 @@ class GrokAnimator(BaseAnimator):
         """Animate a single panel (synchronous wrapper around async API)."""
         out_dir.mkdir(parents=True, exist_ok=True)
 
-        clip_id = start_path.stem.replace('_start', '').replace('_static', '')
-        out_path = out_dir / f"clip_{clip_id}.mp4"
+        out_path = clip_path_for_panel(start_path, out_dir)
 
         if out_path.exists() and out_path.stat().st_size > 0:
             logger.info(f"[{index:02d}] ⏭️  Skipping: {out_path.name} already exists.")
             return out_path
 
-        task = {
-            'prompt': _build_prompt(meta),
-            'image_url': _load_image_as_data_url(start_path),
-            'output': out_path,
-        }
+        task = self._task(meta, start_path, out_path)
 
         async def _run():
             client = xai_sdk.AsyncClient(api_key=self.api_key)
-            pairs = await _generate_batch(client, [task])
+            pairs = await _generate_batch(client, [task], self.model, self.aspect_ratio, self.resolution)
             return pairs
 
         pairs = asyncio.run(_run())
@@ -136,8 +126,7 @@ class GrokAnimator(BaseAnimator):
                 return None
             try:
                 logger.info(f"[{index:02d}] ⬇️  Downloading {result.url}")
-                video_response = requests.get(result.url, timeout=120)
-                t['output'].write_bytes(video_response.content)
+                _download(result.url, t['output'])
                 logger.info(f"[{index:02d}] ✅ Saved: {t['output']}")
                 return t['output']
             except Exception as e:
@@ -185,17 +174,14 @@ class GrokAnimator(BaseAnimator):
                     logger.warning(f"⚠️  Image not found: {img_path}, skipping")
                     continue
 
-                tasks.append({
-                    'prompt': _build_prompt(panel),
-                    'image_url': _load_image_as_data_url(img_path),
-                    'output': out_path,
-                })
+                tasks.append(self._task(panel, img_path, out_path))
 
         if not tasks:
             logger.info("No panels to animate.")
             return
 
         logger.info(f"🎬 Animating {len(tasks)} panel(s) in batches of {self.batch_size}...")
+        failures: list[tuple[str, BaseException]] = []
 
         async def _run_all():
             client = xai_sdk.AsyncClient(api_key=self.api_key)
@@ -203,17 +189,20 @@ class GrokAnimator(BaseAnimator):
             while n < len(tasks):
                 batch = tasks[n:n + self.batch_size]
                 logger.info(f"Batch {n}:{n + len(batch) - 1}")
-                pairs = await _generate_batch(client, batch)
+                pairs = await _generate_batch(client, batch, self.model, self.aspect_ratio, self.resolution)
                 for t, result in pairs:
-                    if isinstance(result, Exception):
+                    if isinstance(result, BaseException):
+                        if not isinstance(result, Exception):
+                            raise result
+                        failures.append((t['output'].name, result))
                         logger.error(f"❌ {t['output'].name}: {result}")
                         continue
                     try:
                         logger.info(f"⬇️  {t['output'].name}: {result.url}")
-                        video_response = requests.get(result.url, timeout=120)
-                        t['output'].write_bytes(video_response.content)
+                        await asyncio.to_thread(_download, result.url, t['output'])
                         logger.info(f"✅ Saved: {t['output']}")
                     except Exception as e:
+                        failures.append((t['output'].name, e))
                         logger.error(f"❌ Download failed {t['output'].name}: {e}")
                 n += self.batch_size
                 if n < len(tasks):
@@ -221,4 +210,11 @@ class GrokAnimator(BaseAnimator):
                     await asyncio.sleep(self.batch_sleep)
 
         asyncio.run(_run_all())
+
+        if failures:
+            names = ", ".join(name for name, _ in failures[:5])
+            more = "" if len(failures) <= 5 else f" (+{len(failures) - 5} more)"
+            raise RuntimeError(
+                f"{len(failures)}/{len(tasks)} clip(s) failed: {names}{more}")
+
         logger.info(f"\n✅ Done. Clips in {out_dir}/")

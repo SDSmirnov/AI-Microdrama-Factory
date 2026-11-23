@@ -12,8 +12,10 @@ from typing import Dict, List, Optional, Tuple
 from PIL import Image
 
 from lib.core.project import Project
-from lib.core.utils import DEFAULT_OUTPUT_DIR, DEFAULT_REF_DIR, load_metadata, safe_name
+from lib.core.prompts import NO_LABEL_TEXT, actor_line
+from lib.core.utils import DEFAULT_OUTPUT_DIR, DEFAULT_REF_DIR, orientation, safe_name
 from lib.llm.base import BaseLLM
+from lib.studio.artist.render_utils import _ref_label
 
 logger = logging.getLogger(__name__)
 
@@ -52,17 +54,12 @@ def load_character_references(references: List[str], ref_dir: Path = DEFAULT_REF
                         data = json.loads(json_path.read_text(encoding='utf-8'))
                         desc = data.get('visual_desc', '')
                         ref_type = data.get('type', 'Character')
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logger.warning(f"⚠️  Unreadable {json_path.name}: {e}")
 
                 # Image before annotation — model sees visual before reading label
                 ref_content.append(img)
-                if ref_type in ('Location', 'Room'):
-                    ref_content.append(f"↑ SCENE ENVIRONMENT: \"{ref_name}\" — match this background/location.\n{desc}\n")
-                elif ref_type in ('Object', 'Vehicle', 'Interface'):
-                    ref_content.append(f"↑ PROP: \"{ref_name}\" — match this object's appearance exactly.\n{desc}\n")
-                else:
-                    ref_content.append(f"↑ CHARACTER: \"{ref_name}\" — match face, hair, clothing exactly.\n{desc}\n")
+                ref_content.append(_ref_label(ref_name, ref_type, desc))
                 loaded_refs.append(ref_name)
                 logger.info(f"  ✓ Loaded ref: {ref_name}")
             except Exception as e:
@@ -76,6 +73,60 @@ def load_character_references(references: List[str], ref_dir: Path = DEFAULT_REF
 # Panels with fidelity below this score are too broken for I2I — use full T2I regeneration instead.
 _REGEN_FIDELITY_THRESHOLD = 3
 
+# A SCALE/framing defect is structurally unfixable by an I2I edit: the edit
+# inherits the source crop. Measured 2026-11-11 on panel 6 with three image
+# models - told "Reframe to a low-angle Medium Shot (MS) from the waist up",
+# EVERY model kept the source full-body crop, and the scale error survived
+# every attempt. So a scale defect must go through a full T2I re-render
+# (no source frame to inherit), not an edit.
+_SCALE_DEFECT_PATTERNS = (
+    "shot scale",
+    "wrong scale",
+    "scale error",
+    "size/scale",
+    "relative size",
+    "instead of the requested",
+    "framing",
+    "camera angle",
+    "wide shot",
+    "medium shot",
+    "close-up",
+    "close up",
+    "full body",
+    "full-body",
+    "crop",
+)
+
+
+def _wants_reframe(correction: str) -> bool:
+    """Does this refinement request a change of framing / camera / scale?
+
+    Such a request contradicts "preserve composition and framing exactly",
+    so that lock must be dropped for it.
+    """
+    if not correction:
+        return False
+    low = correction.lower()
+    if any(w in low for w in ("reframe", "re-frame", "change the framing",
+                              "change framing", "change the camera",
+                              "change camera", "wider shot", "tighter shot",
+                              "pull back", "push in", "crop")):
+        return True
+    return any(p in low for p in _SCALE_DEFECT_PATTERNS)
+
+
+def _is_scale_defect(correction: str) -> bool:
+    """Is this refinement request specifically about shot scale / framing?
+
+    Those need a T2I re-render, not an I2I edit.
+    """
+    if not correction:
+        return False
+    low = correction.lower()
+    return any(p in low for p in _SCALE_DEFECT_PATTERNS) or \
+        any(w in low for w in ("reframe", "re-frame", "change the framing",
+                               "change framing", "change the camera"))
+
 
 def _regenerate_t2i(
     llm: BaseLLM,
@@ -86,6 +137,8 @@ def _regenerate_t2i(
     aspect_ratio: str,
     prompts: dict = None,
     anchor_context: str = '',
+    correction: str = '',
+    config: dict = None,
 ) -> bytes:
     """Full T2I regeneration for panels too broken for I2I editing."""
     disposition = panel.get('visual_disposition', '')
@@ -95,11 +148,11 @@ def _regenerate_t2i(
         panel.get('lights_and_camera', ''),
     ]))
     actors_info = [
-        f"{a['name']}: {a['pose']} {a['position']}, looking at {a['gaze_target']}, body turned to {a['chest_direction']}, head turned to {a['head_direction']}."
-        for a in panel.get('state', {}).get('actors', []) if a['in_frame']
+        actor_line(a, a.get('name', ''))
+        for a in panel.get('state', {}).get('actors', []) if a.get('in_frame')
     ]
     actors_line = ' '.join(actors_info)
-    single_panel_spec = f"Render a SINGLE {aspect_ratio} portrait image. One panel only — no grid."
+    single_panel_spec = f"Render a SINGLE {aspect_ratio} {orientation(aspect_ratio)} image. One panel only — no grid."
     style_block = "\n\n".join(filter(None, [
         (prompts or {}).get('style', ''),
         (prompts or {}).get('imagery', '').replace('{grid_layout}', single_panel_spec),
@@ -107,7 +160,7 @@ def _regenerate_t2i(
     ]))
     prompt = (
         (f"{style_block}\n\n" if style_block else "")
-        + f"Generate a SINGLE portrait {aspect_ratio} cinematic panel. "
+        + f"Generate a SINGLE {orientation(aspect_ratio)} {aspect_ratio} cinematic panel. "
         f"Location: {scene.get('location', '')}. "
         f"Scene: {scene.get('pre_action_description', '')}. "
         + (f"Actors: {actors_line}. " if actors_line else "")
@@ -116,9 +169,17 @@ def _regenerate_t2i(
         + (f"\n{anchor_context}\n" if anchor_context else "")
         + (f"Camera/Lighting: {lighting_context}. " if lighting_context else "")
         + "CONSISTENCY RULE: Maintain IDENTICAL face, hair, clothing, and body proportions as shown in the reference images. "
-        + "NO CAPTIONS. NO TEXT OVERLAYS. NO WATERMARKS. NO TEARS. NO SPITTING."
+        + "NO CAPTIONS. NO TEXT OVERLAYS. NO WATERMARKS. NO TEARS. NO SPITTING. " + NO_LABEL_TEXT
+        # The QA's own correction must survive the re-render. It used to be
+        # DISCARDED here, which is why a re-render could not fix a scale
+        # error: the new image was rendered from the same (wrong) spec with
+        # no mention of what to change.
+        + (f"\nCORRECTION TO APPLY (mandatory): {correction.strip()}"
+           if correction and correction.strip() else "")
     )
-    return llm.make_image(prompt, refs=char_refs, aspect_ratio=aspect_ratio, image_size='1K')
+    from lib.studio.artist import _panel_image_size
+    return llm.make_image(prompt, refs=char_refs, aspect_ratio=aspect_ratio,
+                          image_size=_panel_image_size(config))
 
 
 def refine_panel(
@@ -182,6 +243,16 @@ def refine_panel(
 
     # Panels with very low fidelity are too broken for I2I to fix — regenerate from scratch
     force_regen = fidelity < _REGEN_FIDELITY_THRESHOLD
+    # A shot-scale/framing defect is ALSO structurally unfixable by an I2I
+    # edit (the edit inherits the source crop — measured 2026-11-11, all
+    # three image models kept the full-body crop through a reframe
+    # instruction). Those panels must be re-rendered from scratch.
+    if not force_regen and _is_scale_defect(panel_specific):
+        force_regen = True
+        logger.info(
+            "🔄 Refinement requests a shot-scale/framing change — full T2I "
+            "regeneration (an I2I edit cannot change the source crop)."
+        )
 
     refined_filename = f"{scene_id:03d}_{panel_id:02d}_{frame_type}_refined.png"
     refined_path = refined_dir / refined_filename
@@ -198,9 +269,12 @@ def refine_panel(
         char_refs.extend(ref_content)
 
     anchor_context = ''
+    regen_refs = char_refs
     if project:
-        from lib.studio.artist import _panel_anchor_context
-        anchor_context = _panel_anchor_context(panel, project)
+        from lib.studio.artist import _panel_blocking_context, _with_sketch
+        # an I2I edit's image 1 is the panel itself, so only a full regeneration gets the sketch
+        anchor_context, sketch = _panel_blocking_context(scene, panel, project, aspect_ratio, with_sketch=force_regen)
+        regen_refs = _with_sketch(char_refs, sketch)
 
     img_bytes = None
     try:
@@ -209,7 +283,7 @@ def refine_panel(
                 f"🔄 Fidelity={fidelity} < {_REGEN_FIDELITY_THRESHOLD} — full T2I regeneration "
                 f"(using {len(loaded_refs)} refs)..."
             )
-            img_bytes = _regenerate_t2i(llm, scene, panel, visual_desc, char_refs, aspect_ratio, prompts=prompts, anchor_context=anchor_context)
+            img_bytes = _regenerate_t2i(llm, scene, panel, visual_desc, regen_refs, aspect_ratio, prompts=prompts, anchor_context=anchor_context, correction=panel_specific, config=config)
         else:
             logger.info(f"🎨 I2I refinement (fidelity={fidelity}, using {len(loaded_refs)} refs)...")
             disposition = panel.get('visual_disposition', '')
@@ -219,25 +293,42 @@ def refine_panel(
                 panel.get('lights_and_camera', ''),
             ]))
             actors_info = [
-                f"{a['name']}: {a['pose']} {a['position']}, looking at {a['gaze_target']}, body turned to {a['chest_direction']}, head turned to {a.get('head_direction')}."
-                for a in panel.get('state', {}).get('actors', []) if a['in_frame']
+                actor_line(a, a.get('name', ''))
+                for a in panel.get('state', {}).get('actors', []) if a.get('in_frame')
             ]
             actors_line = ' '.join(actors_info)
             correction = panel_specific.strip() or (
-                f"Refine character appearances to match the provided references. "
-                f"Fix face, hair, clothing, accessories, and location details. "
+                "Refine character appearances to match the provided references. "
+                "Fix face, hair, clothing, accessories, and location details. "
                 + (f"Actors: {actors_line}. " if actors_line else "")
                 + f"Panel description: {visual_desc}"
                 + (f" Spatial disposition: {disposition}" if disposition else "")
                 + (f"\n{anchor_context}" if anchor_context else "")
             )
-            single_panel_spec = f"Render a SINGLE {aspect_ratio} portrait image. One panel only — no grid."
+            single_panel_spec = f"Render a SINGLE {aspect_ratio} {orientation(aspect_ratio)} image. One panel only — no grid."
             imagery_rules = (prompts or {}).get('imagery', '').replace('{grid_layout}', single_panel_spec)
+            # The "preserve composition" lock is CONDITIONAL. It used to be
+            # appended unconditionally, which directly contradicted a QA
+            # request to reframe ("Reframe to a low-angle Medium Shot (MS)
+            # from the waist up" + "preserve composition and framing
+            # exactly" = an impossible instruction). Measured 2026-11-11:
+            # every model kept the source crop through a reframe instruction
+            # and the scale error survived every attempt.
+            #
+            # A SCALE/framing change also cannot be fixed by an I2I edit at
+            # all - the edit inherits the source crop. Those panels must be
+            # re-rendered from scratch (see force_regen below).
+            wants_reframe = _wants_reframe(correction)
+            preserve_lock = (
+                "" if wants_reframe else
+                " Preserve composition, framing, camera angle, lighting mood, "
+                "and character poses exactly."
+            )
             correction = (
                 (f"{imagery_rules}\n\n" if imagery_rules else "")
                 + correction
                 + (f" Required camera/lighting: {lighting_context}." if lighting_context else "")
-                + " Preserve composition, framing, camera angle, lighting mood, and character poses exactly."
+                + preserve_lock
             )
             try:
                 img_bytes = llm.edit_image(
@@ -249,7 +340,7 @@ def refine_panel(
                 )
             except Exception as e:
                 logger.warning(f"  ⚠️  edit_image failed ({e}), falling back to T2I regeneration...")
-                img_bytes = _regenerate_t2i(llm, scene, panel, visual_desc, char_refs, aspect_ratio, prompts=prompts)
+                img_bytes = _regenerate_t2i(llm, scene, panel, visual_desc, regen_refs, aspect_ratio, prompts=prompts, correction=panel_specific, config=config)
     except Exception as e:
         logger.error(f"❌ Generation error: {e}", exc_info=True)
         return False

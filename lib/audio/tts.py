@@ -5,10 +5,13 @@ Speech: via BaseLLM.make_speech (default: GeminiLLM with Gemini TTS)
 SFX:    ElevenLabs  (ELEVEN_API_KEY)
 """
 
+import logging
 import os
 from pathlib import Path
 
 from lib.llm.gemini import GeminiLLM
+
+logger = logging.getLogger(__name__)
 
 try:
     from elevenlabs import save as eleven_save
@@ -142,5 +145,5 @@ def generate_sfx(
         eleven_save(result, str(output_path))
         return True
     except Exception as e:
-        print(f"ElevenLabs SFX error: {e}")
+        logger.error(f"ElevenLabs SFX error: {e}")
         return False

@@ -1,6 +1,7 @@
 {
   "novels": [
-    "s01e01.txt"
+    "s01e01.txt",
+    "s01e02.txt"
   ],
   "scene_files": [
     {
@@ -16,7 +17,7 @@
     {
       "episode": 3,
       "has_refined": true,
-      "has_raw": false
+      "has_raw": true
     }
   ],
   "has_metadata": true,

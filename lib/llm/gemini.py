@@ -19,9 +19,58 @@ from google.api_core import exceptions as gapi_exceptions
 from google.genai import types
 from PIL import Image as PILImage
 
+from lib.llm.seeds import SeedCounter
 from lib.llm.base import BaseLLM, RateLimiter, parse_json, retry_on_errors
 
 logger = logging.getLogger(__name__)
+
+
+OPS_GET_TIMEOUT = 30  # s per operations.get() call
+
+
+def wait_for_operation(client, operation):
+    """Poll a long-running Veo operation until done; TimeoutError after AI_VIDEO_TIMEOUT seconds."""
+    max_wait_seconds = int(os.getenv('AI_VIDEO_TIMEOUT', '600'))
+    deadline = time.time() + max_wait_seconds
+    poll_interval = 10
+    ops_pool = ThreadPoolExecutor(max_workers=1)
+    try:
+        while not operation.done:
+            if time.time() >= deadline:
+                logger.warning(
+                    f"⚠️  Veo job timed out after {max_wait_seconds}s "
+                    f"(operation={getattr(operation, 'name', 'unknown')}). The server-side job may still be "
+                    "running and consuming quota. Cancel it via Google AI Studio or the API.")
+                raise TimeoutError(f"Veo job did not complete within {max_wait_seconds}s")
+            time.sleep(poll_interval)
+            poll_interval = min(poll_interval * 2, 60)
+            fut = ops_pool.submit(client.operations.get, operation)
+            try:
+                operation = fut.result(timeout=OPS_GET_TIMEOUT)
+            except FuturesTimeout:
+                logger.warning(f"⚠️  operations.get() hung for {OPS_GET_TIMEOUT}s; "
+                               "skipping poll — outer deadline will expire if persistent")
+    finally:
+        ops_pool.shutdown(wait=False, cancel_futures=True)  # a hung get() must not block the timeout
+    return operation
+
+
+def sanitize_schema_for_gemini(schema) -> dict | None:
+    """Strip OpenAPI-only fields Gemini's response_schema proto rejects.
+
+    Gemini's REST proto rejects 'additionalProperties' in response_schema
+    (google.genai 400: Unknown name "additional_properties"). The schema
+    enters the transport here once — sanitize here, keep everything else.
+    Does not mutate the input schema.
+    """
+    if not isinstance(schema, dict):
+        return schema
+    cleaned = {}
+    for key, value in schema.items():
+        if key == "additionalProperties":
+            continue
+        cleaned[key] = sanitize_schema_for_gemini(value) if isinstance(value, dict) else value
+    return cleaned
 
 # AI_SAFETY_LEVEL=permissive (default) disables all content filters — required for
 # fictional violence/adult content in creative pipelines.
@@ -41,21 +90,23 @@ class GeminiLLM(BaseLLM):
     def __init__(
         self,
         api_key: str,
-        text_model: str = "gemini-2.5-flash",
-        image_model: str = "gemini-3-pro-image-preview",
+        text_model: str = "google/gemini-3.8-flash",
+        image_model: str = "google/gemini-nano-banana-2.1",
         video_model: str = "veo-3.1-fast-generate-preview",
-        tts_model: str = "gemini-2.5-flash-preview-tts",
+        tts_model: str = "google/gemini-3.8-flash-tts",
         rpm: int = 30,
         system_prompt: str = "",
     ):
         self.api_key = api_key
-        self.text_model = text_model
+        self.text_model = text_model.removeprefix("google/")
         # Strip OpenRouter-style "google/" prefix — the native Gemini SDK doesn't use it
         self.image_model = image_model.removeprefix("google/")
         self.video_model = video_model
         self.tts_model = tts_model
         self.system_prompt = system_prompt
         self.limiter = RateLimiter(rpm)
+        # Vary the image seed per call (see lib/llm/seeds.py).
+        self.seeds = SeedCounter()
 
         self.client = genai.Client(api_key=api_key)
 
@@ -73,7 +124,7 @@ class GeminiLLM(BaseLLM):
         if self.system_prompt:
             config["system_instruction"] = self.system_prompt
         if schema:
-            config["response_schema"] = schema
+            config["response_schema"] = sanitize_schema_for_gemini(schema)
 
         @retry_on_errors(max_retries=3, backoff_factor=2)
         def _call():
@@ -135,7 +186,7 @@ class GeminiLLM(BaseLLM):
         Generate an image via Gemini.
 
         refs: mixed list of PIL.Image objects and str text blocks.
-        temperature: ignored (Imagen does not support temperature).
+        temperature: sampling temperature (default 0.45).
         Returns raw PNG bytes.
         """
         def _to_part(item):
@@ -159,8 +210,11 @@ class GeminiLLM(BaseLLM):
                     contents=contents,
                     config={
                         'response_modalities': ['Image'],
-                        'temperature': (temperature or 0.45),
-                        'seed': int(os.getenv('AI_SEED', '21')),
+                        'temperature': 0.45 if temperature is None else temperature,
+                        # Vary per call: the provider treats the seed as a
+                        # hint, so a fixed seed makes a "regenerate" return
+                        # a near-duplicate of its input (measured 2026-11-12).
+                        'seed': self.seeds.next(),
                         'top_p': 0.8,
                         'image_config': {
                             'aspect_ratio': aspect_ratio,
@@ -266,7 +320,7 @@ class GeminiLLM(BaseLLM):
         }
         if schema:
             config["response_mime_type"] = "application/json"
-            config["response_schema"] = schema
+            config["response_schema"] = sanitize_schema_for_gemini(schema)
 
         @retry_on_errors(max_retries=3, backoff_factor=2)
         def _call():
@@ -327,7 +381,7 @@ class GeminiLLM(BaseLLM):
         }
         if schema:
             config["response_mime_type"] = "application/json"
-            config["response_schema"] = schema
+            config["response_schema"] = sanitize_schema_for_gemini(schema)
 
         @retry_on_errors(max_retries=3, backoff_factor=2)
         def _call():
@@ -417,8 +471,6 @@ class GeminiLLM(BaseLLM):
             'aspect_ratio': "16:9",
             'resolution': '720p',
         }
-        max_wait_seconds = int(os.getenv('AI_VIDEO_TIMEOUT', '600'))
-        ops_get_timeout = 30  # max seconds to wait for a single operations.get() call
 
         try:
             source = types.GenerateVideosSource(prompt=prompt)
@@ -436,28 +488,7 @@ class GeminiLLM(BaseLLM):
                 config=veo_config,
             )
 
-            deadline = time.time() + max_wait_seconds
-            poll_interval = 10
-            with ThreadPoolExecutor(max_workers=1) as _ops_pool:
-                while not operation.done:
-                    if time.time() > deadline:
-                        op_name = getattr(operation, 'name', 'unknown')
-                        logger.warning(
-                            f"⚠️  Veo job timed out after {max_wait_seconds}s "
-                            f"(operation={op_name}). The server-side job may still be running "
-                            f"and consuming quota. Cancel it via Google AI Studio or the API."
-                        )
-                        raise TimeoutError(f"Veo job did not complete within {max_wait_seconds}s")
-                    time.sleep(poll_interval)
-                    poll_interval = min(poll_interval * 2, 60)
-                    fut = _ops_pool.submit(self.client.operations.get, operation)
-                    try:
-                        operation = fut.result(timeout=ops_get_timeout)
-                    except FuturesTimeout:
-                        logger.warning(
-                            f"⚠️  operations.get() hung for {ops_get_timeout}s; "
-                            "skipping poll — outer deadline will expire if persistent"
-                        )
+            operation = wait_for_operation(self.client, operation)
 
             if operation.error:
                 raise RuntimeError(f"Veo API error: {operation.error}")

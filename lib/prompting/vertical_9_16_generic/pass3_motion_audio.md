@@ -11,7 +11,7 @@ Input: `visual_start` + `visual_end` from Pass 2 and `motion_intent` + `motion_a
 
 ## IS_REVERSED — DECISION RULE
 
-The I2V model does NOT support image references — it cannot show a character *entering* the frame while staying reference-accurate. The only workaround is **reverse playback**: render the character *leaving*, then play the clip backwards.
+Only what the first frame shows is guaranteed to stay on-model (Veo and x.ai direct send no character references) — a character *entering* the frame mid-clip drifts from their reference. The only workaround is **reverse playback**: render the character *leaving*, then play the clip backwards.
 
 Set `is_reversed: true` for any panel where:
 - A character enters the scene, walks in, or appears from off-screen.
@@ -31,7 +31,7 @@ When `is_reversed: false`: set `motion_prompt_reversed` to `""`.
 
 ## MOTION PROMPT
 
-Describe what happens physically during the ~6s clip using the MANDATORY FORMAT below.
+Describe what happens physically during the panel's clip using the MANDATORY FORMAT below. The clip runs for the panel's `duration` (up to {{VIDEO_MAX_SECONDS}} s).
 
 **JUST BEFORE ACTION LAW**: At 0s every in-frame actor MUST be in the pre-action pose from `visual_start`. The image model renders `visual_start` as the first frame — if motion_prompt opens mid-action, the rendered frame and the animation diverge. FORBIDDEN: "At 0s arm is already mid-swing", "At 0s she is already turning". EXCEPTION: `cold_open` P1 panels only.
 
@@ -75,12 +75,25 @@ For panels with `scale=CU` or `scale=ECU`, background characters who are outside
 
 This applies to ALL out-of-frame characters regardless of their dramatic importance to the scene.
 
-### MOTION BUDGET — 6 seconds is real time. Use it.
+### MOTION BUDGET — the panel's own duration is real time. Use it.
+
+The clip runs for the panel's `duration` (up to {{VIDEO_MAX_SECONDS}} s). Every
+second of it must carry a change — see the screenplay's CONSTANT CHANGE LAW.
+A panel where nothing new happens between second 1 and second 5 is a failed
+panel; on a 9 s panel the same rule runs from second 1 to second 9.
 
 Real durations: button press 0.2s, pick up phone 0.5s, stand from chair 1s, cross small room 2s.
-Plan a complete physical arc: approach (1.5s) + action (1s) + reaction/settle (3.5s).
-If the core action takes <2s, add what happens before (approach) and after (contact, response, consequence).
-A panel where nothing new happens between second 1 and second 5 is a failed panel.
+Plan a complete physical arc that fills the panel: approach + action + reaction/settle.
+On a 6 s panel that is roughly approach (1.5s) + action (1s) + reaction/settle (3.5s).
+On a 9 s panel it is more beats, not the same three stretched — stretch one
+beat over nine seconds and you get a frozen frame the viewer swipes away from.
+If the core action takes <2s, add what happens before (approach) and after
+(contact, response, consequence).
+
+The beat timestamps in `motion_prompt` must land inside the panel's
+`duration`. If Pass 2 declared several shots for this panel, the arc must
+cover all of them — one beat per shot at minimum, so the cut has something
+on either side of it.
 
 ### LIVING POSE LAW — humans are never still
 

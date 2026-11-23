@@ -101,9 +101,16 @@ def ffmpeg_cut(input_path: Path, output_path: Path, start: float, end: float) ->
         "-c:a", "aac", "-b:a", "192k",
         str(output_path),
     ]
-    result = subprocess.run(cmd, capture_output=True)
-    if result.returncode != 0:
-        logger.error(f"ffmpeg failed ({result.returncode}): {result.stderr.decode()[:300]}")
+    try:
+        subprocess.run(cmd, capture_output=True, check=True, timeout=300)
+    except FileNotFoundError as e:
+        raise RuntimeError("ffmpeg not found on PATH") from e
+    except subprocess.CalledProcessError as e:
+        stderr = (e.stderr or b"").decode(errors="replace")[:300]
+        raise RuntimeError(
+            f"ffmpeg failed ({e.returncode}) for {input_path.name}: {stderr}") from e
+    except subprocess.TimeoutExpired as e:
+        raise RuntimeError(f"ffmpeg timed out for {input_path.name}") from e
 
 
 def run_autocut(
@@ -112,16 +119,23 @@ def run_autocut(
     clips_dir: str,
     out_dir: str,
     min_fidelity: int = 3,
+    edge_trim: float = 0.0,
 ) -> None:
     """
     Iterate scenes/panels from json_path, find matching clips in clips_dir,
     AI-analyze each, then write trimmed clips + JSON reports to out_dir.
+
+    edge_trim (Item 10a): when > 0, the cut window shrinks by this many
+    seconds on both head and tail after the gates pass (clip edges drift).
+    Negative values are rejected at parse time (--edge-trim).
     """
     clips = Path(clips_dir)
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
 
     data = json.loads(Path(json_path).read_text(encoding="utf-8"))
+    failures: list[str] = []
+    required = ("is_usable", "fidelity_score", "start_time", "end_time")
 
     for scene in data.get("scenes", []):
         s_id = scene["scene_id"]
@@ -141,15 +155,41 @@ def run_autocut(
             if not analysis:
                 continue
 
+            missing = [key for key in required if key not in analysis]
+            if missing:
+                logger.error(f"  ❌ {pattern}: analysis missing {', '.join(missing)}")
+                failures.append(pattern)
+                continue
+
             stem = f"clip_{s_id}_{p_idx:03d}_cut"
             out_video = out / f"{stem}.mp4"
             out_json = out / f"{stem}.json"
 
-            if analysis["is_usable"] and analysis["fidelity_score"] > min_fidelity:
-                ffmpeg_cut(src, out_video, analysis["start_time"], analysis["end_time"])
+            if analysis["is_usable"] and analysis["fidelity_score"] >= min_fidelity:
+                start = analysis["start_time"]
+                end = analysis["end_time"]
+                if edge_trim > 0:
+                    if edge_trim * 2 >= end - start:
+                        logger.warning(
+                            f"  Skipped: {pattern}  edge_trim {edge_trim}s x2 "
+                            f">= usable window {end - start:.1f}s")
+                        continue
+                    start += edge_trim
+                    end -= edge_trim
+                try:
+                    ffmpeg_cut(src, out_video, start, end)
+                except RuntimeError as e:
+                    logger.error(f"  ❌ {pattern}: {e}")
+                    failures.append(pattern)
+                    continue
                 out_json.write_text(
                     json.dumps(analysis, indent=2, ensure_ascii=False), encoding="utf-8"
                 )
                 logger.info(f"  Cut: {out_video.name}  score={analysis['fidelity_score']}")
             else:
-                logger.warning(f"  Rejected: {pattern}  score={analysis['fidelity_score']}  {analysis['edit_notes']}")
+                logger.warning(f"  Rejected: {pattern}  score={analysis['fidelity_score']}  {analysis.get('edit_notes', '')}")
+
+    if failures:
+        raise RuntimeError(
+            f"{len(failures)} clip(s) failed to cut: {', '.join(failures[:5])}"
+            + ("" if len(failures) <= 5 else f" (+{len(failures) - 5} more)"))

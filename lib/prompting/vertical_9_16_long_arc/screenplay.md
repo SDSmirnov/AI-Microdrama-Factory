@@ -1,6 +1,6 @@
 
 # CONTEXT: We produce VERTICAL MICRODRAMA for TikTok/Reels/Shorts (9:16 portrait).
-# LONG ARC FORMAT: 2 episodes = 1 dramatic unit. 18 panels × ~6s raw = 108s footage → ~54s after edit.
+# LONG ARC FORMAT: 2 episodes = 1 dramatic unit. 18 panels × up to {{VIDEO_MAX_SECONDS}}s raw → about half that after edit.
 # Arc: cold_open (ep1.p1) → arc_bridge (ep1.p9) → arc_pickup (ep2.p1) → cliffhanger (ep2.p9).
 # GOAL: Generate production-ready assets for AI Image-To-Video pipeline. Every panel must carry dramatic weight — no filler.
 

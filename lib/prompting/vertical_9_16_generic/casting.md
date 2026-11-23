@@ -10,7 +10,7 @@ For each NEW character:
 - **Name**: Full name
 - **Visual Description**: Photorealistic actor description with specific physical features, ethnicity, age, clothing textures
   - Face: Facial structure, eyes, hair color/style, ethnicity
-  - Build: Height, build, posture
+  - Build: Height in cm (a number, e.g. "~178 cm" — it sets relative scale between characters in shared frames), build, posture
   - Clothing: Contemporary attire with specific fabric textures
   - Age: Specific age or range
   - Distinctive features: Accessories, grooming, habitual gesture
@@ -22,19 +22,28 @@ For each NEW character:
     - Women: bag type (clutch / crossbody / tote / handbag / backpack — pick the right one for her archetype),
       what it visibly contains or implies (wallet, phone, keys, cosmetics pouch, notebook, etc.)
     - Both: if the character drives, they have car keys; if they live alone, home keys; if they work in
-      a secure building, a keycard or lanyard.
+      a secure building, a keycard or lanyard — when the era has them and the story does not say the
+      character carries nothing.
     State WHERE items are carried and WHAT the carrier looks like (e.g. "tan leather bifold in left
     breast pocket", "black structured tote hanging from right shoulder").
+    Visual Description draws only what shows: a bag, a holster, a watch, a pocket's bulge. Pocket contents
+    and props used once (a photo, a banknote, a knife taken out in one scene) are not drawn — they get
+    their own Object refs.
 - **Behavioral Signature**: How this character behaves under pressure — derive from their decisions, speech patterns, and reactions in the source text.
   - Default power move: their go-to strategy to assert control or dominance
   - Deflection strategy: how they redirect or absorb pressure when threatened
-  - Involuntary tell: the physical or verbal tic that betrays their true state (lying, fear, want)
-  E.g. "Under pressure: retreats to bureaucratic procedure — cites rules, demands paperwork, buys time through process. Power move: silence and stillness while the other person fills the void. Tell: touches left cuff link when lying."
+  - Involuntary tells WITH their triggers: the physical or verbal tic that betrays their true state (lying, fear, want) — a tic is usable acting data only when its trigger is named ("touches left cuff link **whenever numbers are questioned**")
+  - Mask + crack clause, closing the field: "However, when <X> — the visible change" — the crack that shows through the held mask
+  - Observable body behavior only (no inner monologue); together with Physical Vocabulary keep within 60 words
+  E.g. "Under pressure: retreats to bureaucratic procedure — cites rules, demands paperwork. Power move: silence and stillness while the other person fills the void. Tell: touches left cuff link whenever numbers are questioned. However, when cornered by rank — the bureaucratic patience cracks into a clipped, faster cadence and he grips the desk edge."
 - **Physical Vocabulary**: How this character habitually occupies space — derive from their role, psychology, and body language in the source.
   - Default posture: how they hold themselves at rest vs. under pressure
   - Space use: how they move through a room (invade / retreat / orbit / anchor to one spot)
+  - Named gait: ONE recognizable walk with its rhythm/speed — e.g. "officer's unhurried parade step, heel strikes audible", "priest-quick shuffle"
+  - Softening target: what the gait's sharpness gives way to when the character relaxes — e.g. "at home the parade step melts into a flat heel-first walk"
   - Signature gestures: 1–2 recurring physical behaviors that define this character on screen
-  E.g. "Never sits during confrontation — paces or leans against a surface. Invades space deliberately when he wants something, closing distance by 20cm. Hands always visible and deliberately still (controlled restraint). Retreating is not in his vocabulary — turns his back instead of stepping away."
+  - Observable body behavior only; together with Behavioral Signature keep within 60 words
+  E.g. "Never sits during confrontation — paces or leans against a surface. Closing distance deliberately by 20cm when he wants something. Named gait: officer's unhurried parade step, heel strikes audible. Softening target: at home the parade step melts into a flat heel-first walk. Hands always visible and deliberately still (controlled restraint)."
   NOTE: these behavioral patterns are character psychology — when realized in panel descriptions (visual_start / motion_prompt), "invades" becomes "camera sees him rotate to side profile, chest directed at [Other], closing 20cm"; "retreats" becomes "camera sees him in three-quarter rear profile, neck turned back." Use the compound camera-visible form per the INTER-CHARACTER BODY ORIENTATION LAW.
 
 ## Character Appearance Variations
@@ -108,16 +117,16 @@ For each NEW reference:
 
 ## Important for rooms:
 
-### Room visual_desc — use compass wall layout (MANDATORY format):
-Write the room description as a wall-by-wall inventory using cardinal directions.
-Assign the entrance door to a wall first, then describe all four walls consistently.
+### Room visual_desc — use entrance-relative wall layout (MANDATORY format):
+Write the room description as a wall-by-wall inventory named relative to the entrance: ENTRANCE WALL, FAR WALL, LEFT WALL, RIGHT WALL (left/right as seen when entering).
+FORBIDDEN for rooms: compass directions (North/South/East/West) — every downstream pass uses entrance-relative names only.
 Example format:
 ```
 ROOM SIZE: medium office, ~5×4 m, 2.7 m ceiling, parquet floor, white plaster walls.
-NORTH WALL (entrance): solid wood door center, narrow built-in bookshelf to the left of door, coat hook to the right.
-SOUTH WALL (opposite): single casement window with roll blinds, centered, city view.
-EAST WALL (right when entering): L-shaped work desk with laptop, monitor, desk lamp, filing cabinet underneath.
-WEST WALL (left when entering): two visitor chairs in dark leather, small side table between them, framed art above.
+ENTRANCE WALL: solid wood door center, narrow built-in bookshelf to the left of door, coat hook to the right.
+FAR WALL (opposite the entrance): single casement window with roll blinds, centered, city view.
+RIGHT WALL (right when entering): L-shaped work desk with laptop, monitor, desk lamp, filing cabinet underneath.
+LEFT WALL (left when entering): two visitor chairs in dark leather, small side table between them, framed art above.
 CENTER: no obstructions, open floor space.
 CEILING/FLOOR: recessed LED strip lighting, warm tone; dark oak parquet.
 ```
@@ -125,41 +134,56 @@ This format MUST be used for every Room ref so that per-view renders know exactl
 
 - For every room generate TWO SEPARATE ref entries (two distinct names, two distinct JSON objects):
   1. `{Room-Name}-View-From-Entrance` — wide shot from the entrance doorway looking toward the opposite wall. Shows: opposite wall, left wall, right wall, center. Single portrait image, empty room.
-  2. `{Room-Name}-View-To-Entrance` — wide shot from the opposite end looking BACK toward the entrance wall and door.
+  2. `{Room-Name}-View-To-Entrance` — wide shot from the opposite end of the room looking BACK toward the entrance wall and door. Shows: entrance wall with door, and the wall features behind the viewer's back (rear furniture, windows, decor only visible from this angle). Single portrait image, empty room.
      Set `style_reference` to `{Room-Name}-View-From-Entrance` so furniture materials and style are consistent.
-     CRITICAL — LEFT/RIGHT ARE SWAPPED in this view (180° turn from entrance): what was on the WEST wall (left when entering) is now on the RIGHT side of the image; what was on the EAST wall (right when entering) is now on the LEFT. Label each wall with its correct screen side in visual_desc — e.g. "EAST WALL (left when facing entrance)" and "WEST WALL (right when facing entrance)". Never reuse From-Entrance left/right phrasing here.
+     CRITICAL — LEFT/RIGHT ARE SWAPPED in this view (180° turn from entrance): what was on the LEFT WALL (left when entering) is now on the RIGHT side of the image; what was on the RIGHT WALL (right when entering) is now on the LEFT. Label each wall with its screen side in this view — e.g. "RIGHT WALL (image-left when facing entrance)" and "LEFT WALL (image-right when facing entrance)". Never reuse From-Entrance left/right phrasing here.
 
 ## Important for vehicles:
 - For every vehicle generate THREE SEPARATE ref entries:
   1. `{Vehicle-Name}-Exterior` — full exterior, three-quarter front angle, studio lighting.
-  2. `{Vehicle-Name}-Interior-From-Entrance` — interior looking IN from driver/main door.
+  2. `{Vehicle-Name}-Interior-From-Entrance` — interior looking IN from driver/main door. Dashboard, seats, controls, cabin details.
      Set `style_reference` to `{Vehicle-Name}-Exterior`.
   3. `{Vehicle-Name}-Interior-To-Entrance` — interior looking TOWARD the entrance from the back seat.
+     Rear cabin, headrests, door panels, details not visible from entrance side.
      Set `style_reference` to `{Vehicle-Name}-Interior-From-Entrance`.
 
 ## Important for outdoor locations:
 
 Open-air locations (streets, parks, courtyards, alleyways, rooftops, riverbanks, etc.) use type=Outdoor.
 
-### Outdoor visual_desc — use compass layout (MANDATORY format):
-Assign the primary camera direction first, then describe all four compass directions consistently.
+### Outdoor visual_desc — one camera station, four headings (MANDATORY format):
+Every outdoor location is shot like a street-view panorama: the camera stands at ONE spot, the STATION (the origin),
+and turns in place. AHEAD (+Y) is View-Primary, RIGHT (+X) is View-Ortho-Primary, BEHIND (−Y) is View-Opposite,
+LEFT (−X) is View-Ortho-Opposite. Describe what each heading sees, all relative to the PRIMARY DIRECTION.
+FORBIDDEN: compass directions (North/South/East/West) — every downstream pass uses these relative names only.
+- Streets: the station is in the roadway, where a passing or parked car would be; AHEAD runs ALONG the street, and the
+  story's main facade (the café, the house the scene plays at) is on the RIGHT, so View-Ortho-Primary faces it head-on.
+  Describe the full cross-section: near facade, its sidewalk, the roadway and lanes, the far sidewalk, the far facades.
+- Crossroads: the station is the intersection centre; AHEAD and BEHIND follow one street, RIGHT and LEFT the cross street.
+- Open ground (beach, field, forest, cemetery): the station is where the action happens; AHEAD faces the key landmark.
 Example format:
 ```
-LOCATION TYPE: narrow cobblestone alley, ~20 m long, 4 m wide.
-PRIMARY DIRECTION (camera faces): North — toward the archway at the far end.
-NORTH (background / far end): stone archway spanning full width, dim street lamp above.
-SOUTH (foreground / behind viewer): alley entrance, open street, daylight spill.
-EAST (right when facing North): brick wall, one iron drainpipe at mid-alley.
-WEST (left when facing North): row of three wooden doors, one slightly ajar.
-GROUND: uneven cobblestones, shallow puddle near EAST wall at mid-point.
-SKY/ATMOSPHERE: overcast, cool diffuse light.
-KEY LANDMARKS: iron drainpipe (EAST, mid-alley), three wooden doors (WEST), stone archway (far North).
+LOCATION TYPE: two-lane city street with shopfronts, ~40 m stretch, ~20 m facade to facade.
+STATION: in the near lane, beside the café entrance.
+AHEAD (+Y, View-Primary, along the street): roadway receding, café awning running along the RIGHT edge, far-side shopfronts along the LEFT, traffic light at the end of the block.
+RIGHT (+X, View-Ortho-Primary, facing the near facade head-on): curb, 4 m sidewalk with two café tables, glass café frontage under a green awning, brick apartment floors above.
+BEHIND (−Y, View-Opposite): roadway receding the other way; café facade now along the LEFT edge, far side along the RIGHT, corner burger stand at the block end.
+LEFT (−X, View-Ortho-Opposite, across the street): far lane, curb, sidewalk with a newsstand, row of five-storey facades.
+GROUND: asphalt with lane markings, concrete sidewalks.
+SKY/ATMOSPHERE: late afternoon, warm low sun, long shadows.
+KEY LANDMARKS: café entrance (RIGHT), newsstand (LEFT), traffic light (AHEAD), burger stand (BEHIND).
 ```
+This format MUST be used for every Outdoor ref so that per-view renders and anchor generation know exactly what is visible from each heading.
 
-- For every outdoor location generate TWO SEPARATE ref entries:
-  1. `{Outdoor-Name}-View-Primary` — wide establishing shot facing the PRIMARY DIRECTION. Empty location, no people.
-  2. `{Outdoor-Name}-View-Opposite` — wide shot facing the OPPOSITE direction (180-degree turn). CRITICAL: left and right are SWAPPED. Empty location, no people.
-     Set `style_reference` to `{Outdoor-Name}-View-Primary`.
+- For every outdoor location generate FOUR SEPARATE ref entries (four distinct names, four distinct JSON objects),
+  all empty (no people), single image each; entries 2–4 set `style_reference` to `{Outdoor-Name}-View-Primary`:
+  1. `{Outdoor-Name}-View-Primary` — from the station, facing AHEAD (the PRIMARY DIRECTION).
+  2. `{Outdoor-Name}-View-Opposite` — from the station, turned 180°. CRITICAL: left and right are SWAPPED — what was on the
+     LEFT in View-Primary is on the RIGHT here.
+  3. `{Outdoor-Name}-View-Ortho-Primary` — from the station, turned 90° RIGHT: what lined View-Primary's RIGHT side is
+     straight ahead, head-on; View-Primary's distance runs off to the image-LEFT.
+  4. `{Outdoor-Name}-View-Ortho-Opposite` — from the station, turned 90° LEFT: what lined View-Primary's LEFT side is
+     straight ahead, head-on; View-Primary's distance runs off to the image-RIGHT.
 
 ## Visual Description
 - Must be verbose, precise, and contain specific features so that AI model can implement without hallucinations

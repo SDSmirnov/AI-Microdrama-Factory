@@ -52,13 +52,13 @@ motion_action   — what THIS actor does during this panel (e.g. "walks to the t
   If the character is not the primary actor, use a reactive physical proxy: shifts weight, tightens grip, adjusts position, turns slightly, handles prop.
   WRONG: `"stays still, watching Robert"` → HARD FAILURE.
   RIGHT: `"shifts weight onto right foot, arms tighten around the blanket as Robert speaks"` → reactive physicality.
-vehicle_position — required when the scene is inside or immediately adjacent to a vehicle; null otherwise.
-                  Use ONLY these labels (no compass, no vague "back seat"):
-                  Interior: "driver seat" | "front passenger seat" | "rear left seat (behind driver)" |
-                            "rear right seat (behind front passenger)" | "rear center seat" | "cargo area"
-                  Exterior: "at the driver door (outside)" | "at the front passenger door (outside)" |
-                            "at the rear left door (outside)" | "at the rear right door (outside)" |
-                            "on the hood" | "on the roof" | "in the trunk"
+vehicle_position — REQUIRED for every actor when the scene is inside or immediately adjacent to a vehicle; "none" otherwise.
+                  One seat id (left/right = the vehicle's own sides, facing the hood; the driver sits left in LHD cars):
+                  "driver" | "front-passenger" | "rear-left" | "rear-center" | "rear-right" |
+                  "third-left" | "third-center" | "third-right" (third row: 3-row SUVs/minivans only) |
+                  "cargo" | "trunk" | "outside" (standing at/next to the vehicle) | "none".
+                  One person per seat. A seat holds for the whole scene unless the action moves the person
+                  (state the move in motion_action). Render prompts derive frame-left/right from this seat.
 in_frame        — boolean: is this actor physically within the camera frame at this panel's declared scale.
                   PRIMARY RULE: if `drama_requirements.focus_priority.primary_target` in the Pass 1 skeleton names THIS actor → in_frame=true regardless of distance. The camera will be positioned to capture them.
                   Scale-distance rules (apply to ALL other actors):
